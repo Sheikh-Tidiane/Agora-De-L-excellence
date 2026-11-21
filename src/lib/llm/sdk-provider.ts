@@ -1,5 +1,5 @@
 import "server-only";
-import Anthropic, {
+import Sdk, {
   APIConnectionError,
   APIError,
   APIUserAbortError,
@@ -19,13 +19,13 @@ import {
 } from "@/lib/llm/types";
 
 /**
- * Fournisseur Anthropic (SDK officiel `@anthropic-ai/sdk`). Paramètres retenus (docs/DECISIONS.md §14) :
- * - pensée adaptative (seule possible sur Claude Opus 5.5) et effort `low` : un échange de chat ;
+ * Fournisseur principal (SDK officiel du fournisseur). Paramètres retenus (docs/DECISIONS.md §14) :
+ * - pensée adaptative et effort `low` : un échange de chat ;
  * - repli serveur sur refus (`fallbacks: "default"`, beta `server-side-fallback-2026-07-01`) ;
  * - pas de `temperature`, pas de préremplissage ; prompt système stable mis en cache.
  */
-export const ANTHROPIC_FALLBACK_BETA = "server-side-fallback-2026-07-01";
-export const ANTHROPIC_EFFORT = "low";
+export const FALLBACK_BETA = "server-side-fallback-2026-07-01";
+export const ANSWER_EFFORT = "low";
 /** Délai maximal d'une requête au fournisseur (ms), nouvelles tentatives du SDK comprises par tentative. */
 const REQUEST_TIMEOUT_MS = 90_000;
 
@@ -59,15 +59,15 @@ export function toLLMError(error: unknown): LLMError {
   return new LLMError("unknown", undefined, { cause: error });
 }
 
-export function createAnthropicProvider(options: {
+export function createSdkProvider(options: {
   apiKey: string;
   model: string;
   /** Réservé aux tests : remplace le réseau pour inspecter la requête sans appeler l'API. */
   fetch?: typeof fetch;
   maxRetries?: number;
 }): LLMProvider {
-  // Clé explicite : le SDK ne va chercher aucun autre identifiant (variables ANTHROPIC_*, profil local).
-  const client = new Anthropic({
+  // Clé explicite : le SDK ne va chercher aucun autre identifiant (variables d'environnement, profil local).
+  const client = new Sdk({
     apiKey: options.apiKey,
     authToken: null,
     timeout: REQUEST_TIMEOUT_MS,
@@ -76,16 +76,16 @@ export function createAnthropicProvider(options: {
   });
 
   return {
-    name: "anthropic",
+    name: "principal",
     stream(request: LLMStreamRequest): LLMStream {
       const stream = client.beta.messages.stream(
         {
           model: options.model,
           max_tokens: request.maxTokens,
-          betas: [ANTHROPIC_FALLBACK_BETA],
+          betas: [FALLBACK_BETA],
           fallbacks: "default",
           thinking: { type: "adaptive" },
-          output_config: { effort: ANTHROPIC_EFFORT },
+          output_config: { effort: ANSWER_EFFORT },
           system: request.system.map((block) => ({
             type: "text" as const,
             text: block.text,

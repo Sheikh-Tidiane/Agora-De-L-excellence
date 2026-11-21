@@ -1,16 +1,16 @@
 import { APIConnectionError, APIError, APIUserAbortError } from "@anthropic-ai/sdk";
 import { describe, expect, it } from "vitest";
 import {
-  ANTHROPIC_EFFORT,
-  ANTHROPIC_FALLBACK_BETA,
-  createAnthropicProvider,
+  ANSWER_EFFORT,
+  FALLBACK_BETA,
+  createSdkProvider,
   mapStopReason,
   toLLMError,
-} from "@/lib/llm/anthropic";
+} from "@/lib/llm/sdk-provider";
 import { LLMError } from "@/lib/llm/types";
 
 /**
- * Fournisseur Anthropic avec le vrai SDK, mais un `fetch` simulé : on vérifie la requête qui
+ * Fournisseur principal avec le vrai SDK, mais un `fetch` simulé : on vérifie la requête qui
  * partirait et la lecture du flux SSE, sans jamais appeler l'API (aucune clé n'est utilisée).
  */
 type Captured = { url: string; headers: Headers; body: Record<string, unknown> };
@@ -19,7 +19,7 @@ function sse(events: { type: string; [key: string]: unknown }[]): string {
   return events.map((event) => `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`).join("");
 }
 
-function messageEvents(texts: string[], stopReason = "end_turn", model = "claude-opus-5-5") {
+function messageEvents(texts: string[], stopReason = "end_turn", model = "modele-de-test") {
   return sse([
     {
       type: "message_start",
@@ -95,14 +95,14 @@ async function collect(stream: AsyncIterable<string>): Promise<string> {
   return text;
 }
 
-describe("createAnthropicProvider", () => {
+describe("createSdkProvider", () => {
   it("envoie les paramètres retenus et diffuse seulement le texte", async () => {
     const { fetchImpl, captured } = fakeFetch(() =>
       streamResponse(messageEvents(["Un ", "palimpseste…"])),
     );
-    const provider = createAnthropicProvider({
+    const provider = createSdkProvider({
       apiKey: "cle-de-test",
-      model: "claude-opus-5-5",
+      model: "modele-de-test",
       fetch: fetchImpl,
     });
     const stream = provider.stream(request);
@@ -110,7 +110,7 @@ describe("createAnthropicProvider", () => {
     const result = await stream.result();
     expect(result).toEqual({
       stopReason: "end",
-      model: "claude-opus-5-5",
+      model: "modele-de-test",
       usage: { inputTokens: 120, outputTokens: 42, cacheReadTokens: 100, cacheWriteTokens: 0 },
     });
 
@@ -119,14 +119,15 @@ describe("createAnthropicProvider", () => {
     // SDK 1.8 : la clé part dans `Authorization` (constaté sur la requête), une seule fois.
     expect(sent.headers.get("authorization")).toBe("Bearer cle-de-test");
     expect(sent.headers.get("x-api-key")).toBeNull();
-    expect(sent.headers.get("anthropic-beta")).toContain(ANTHROPIC_FALLBACK_BETA);
+    // Le repli serveur passe par un en-tête « beta » du SDK.
+    expect([...sent.headers.values()].some((value) => value.includes(FALLBACK_BETA))).toBe(true);
     expect(sent.body).toMatchObject({
-      model: "claude-opus-5-5",
+      model: "modele-de-test",
       max_tokens: 8000,
       stream: true,
       fallbacks: "default",
       thinking: { type: "adaptive" },
-      output_config: { effort: ANTHROPIC_EFFORT },
+      output_config: { effort: ANSWER_EFFORT },
       messages: [{ role: "user", content: "palimpseste" }],
       system: [
         { type: "text", text: "Règles stables", cache_control: { type: "ephemeral" } },
@@ -134,7 +135,7 @@ describe("createAnthropicProvider", () => {
         { type: "text", text: "Mode : expliquer un mot." },
       ],
     });
-    expect(ANTHROPIC_EFFORT).toBe("low");
+    expect(ANSWER_EFFORT).toBe("low");
     // Paramètres retirés sur ce modèle : jamais envoyés.
     for (const key of ["temperature", "top_p", "top_k", "betas"])
       expect(sent.body).not.toHaveProperty(key);
@@ -143,9 +144,9 @@ describe("createAnthropicProvider", () => {
 
   it("refus : raison d'arrêt « refusal » remontée", async () => {
     const { fetchImpl } = fakeFetch(() => streamResponse(messageEvents([], "refusal")));
-    const provider = createAnthropicProvider({
+    const provider = createSdkProvider({
       apiKey: "k",
-      model: "claude-opus-5-5",
+      model: "modele-de-test",
       fetch: fetchImpl,
     });
     const stream = provider.stream(request);
@@ -167,9 +168,9 @@ describe("createAnthropicProvider", () => {
           },
         ),
     );
-    const provider = createAnthropicProvider({
+    const provider = createSdkProvider({
       apiKey: "k",
-      model: "claude-opus-5-5",
+      model: "modele-de-test",
       fetch: fetchImpl,
       maxRetries: 0,
     });
@@ -192,7 +193,7 @@ describe("createAnthropicProvider", () => {
           },
         ),
     );
-    const provider = createAnthropicProvider({
+    const provider = createSdkProvider({
       apiKey: "sk-secret-123",
       model: "m",
       fetch: fetchImpl,
@@ -209,7 +210,7 @@ describe("createAnthropicProvider", () => {
       controller.abort();
       return streamResponse(messageEvents(["x"]));
     });
-    const provider = createAnthropicProvider({
+    const provider = createSdkProvider({
       apiKey: "k",
       model: "m",
       fetch: fetchImpl,

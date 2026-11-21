@@ -76,7 +76,7 @@ Mode d'emploi : [`GUIDE-ADMINISTRATEUR.md`](GUIDE-ADMINISTRATEUR.md).
 - **Authentification** : Better Auth (e-mail et mot de passe, sessions en base) ; le
   super-administrateur se crée en ligne de commande (`pnpm create-admin`), jamais par le seed.
 - **E-mails** : une interface unique (`MailService`), SMTP (Mailpit en développement) ou Resend.
-- **Assistant** : interface `LLMProvider` abstraite, fournisseur Anthropic par défaut, choisi par
+- **Assistant** : interface `LLMProvider` abstraite ; fournisseur, clé et modèle choisis par
   variables d'environnement.
 - **Honnêteté du produit** : aucune fonction factice ; données de démonstration marquées et
   retirables (`pnpm db:clear-demo`) ; rien n'est affiché pour les informations que le comité n'a

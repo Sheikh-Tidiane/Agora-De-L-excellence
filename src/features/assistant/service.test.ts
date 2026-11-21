@@ -154,7 +154,7 @@ describe("closingNotice", () => {
 
   it("les notes sont en français et ne mentionnent ni modèle ni fournisseur", () => {
     for (const notice of Object.values(STREAM_NOTICES)) {
-      expect(notice).not.toMatch(/claude|anthropic|model|api/i);
+      expect(notice).not.toMatch(/model|\bapi\b|sdk|llm|fournisseur/i);
     }
   });
 });

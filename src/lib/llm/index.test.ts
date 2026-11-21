@@ -13,8 +13,9 @@ describe("variables de l'assistant", () => {
   it("toutes facultatives : sans clé, l'application démarre", () => {
     const env = parseEnv(base);
     expect(env.LLM_API_KEY).toBeUndefined();
-    expect(env.LLM_PROVIDER).toBe("anthropic");
-    expect(env.LLM_MODEL).toBe("claude-opus-5-5");
+    expect(env.LLM_PROVIDER).toBe("principal");
+    // Aucun modèle écrit dans le code : il se choisit dans la configuration.
+    expect(env.LLM_MODEL).toBeUndefined();
     expect(env.ASSISTANT_DAILY_LIMIT).toBe(20);
   });
 

@@ -37,9 +37,10 @@ export const envSchema = z
     MAILPIT_URL: z.preprocess(vide, z.url().optional()),
 
     /** Assistant IA. Sans clé, l'application démarre et affiche « Assistant non connecté ». */
-    LLM_PROVIDER: z.preprocess(vide, z.enum(["anthropic"]).default("anthropic")),
+    LLM_PROVIDER: z.preprocess(vide, z.enum(["principal"]).default("principal")),
     LLM_API_KEY: z.preprocess(vide, z.string().optional()),
-    LLM_MODEL: z.preprocess(vide, z.string().min(1).max(100).default("claude-opus-5-5")),
+    /** Identifiant du modèle chez le fournisseur. Sans lui, l'assistant reste « non connecté ». */
+    LLM_MODEL: z.preprocess(vide, z.string().min(1).max(100).optional()),
     /** Questions permises par membre et par jour (jour de Dakar). */
     ASSISTANT_DAILY_LIMIT: z.preprocess(vide, z.coerce.number().int().min(1).max(500).default(20)),
   })

@@ -342,17 +342,17 @@ Fait le 15/11/2026. Code : `src/features/scrabble/` (calcul pur `ranking.ts` et 
 
 ## 14. Phase 5 — Assistant IA « Le Compagnon des Lettres » (couche serveur)
 
-Fait le 15/11/2026. Code : `src/lib/llm/` (interface `LLMProvider`, fournisseur Anthropic), `src/features/assistant/` (`modes.ts`, `schemas.ts`, `prompt.ts`, `quota.ts`, `service.ts`, `queries.ts`), `src/app/api/assistant/route.ts`. **Aucune modification du schéma Prisma, aucune migration.** Le skill `claude-api` a été chargé et suivi ; aucun appel réel au modèle n'a été fait (aucune clé configurée).
+Fait le 15/11/2026. Code : `src/lib/llm/` (interface `LLMProvider`, fournisseur principal), `src/features/assistant/` (`modes.ts`, `schemas.ts`, `prompt.ts`, `quota.ts`, `service.ts`, `queries.ts`), `src/app/api/assistant/route.ts`. **Aucune modification du schéma Prisma, aucune migration.** Aucun appel réel au modèle n'a été fait (aucune clé configurée).
 
 ### Fournisseur et paramètres d'API
 
-- SDK officiel `@anthropic-ai/sdk` 1.8.0, jamais d'appel HTTP brut. Client construit avec la clé `LLM_API_KEY` explicite (`authToken: null`) : le SDK ne va chercher aucun autre identifiant de la machine (variables `ANTHROPIC_*`, profil local). Délai 90 s par tentative, 2 nouvelles tentatives (défaut du SDK) sur les erreurs passagères.
-- Modèle : `LLM_MODEL`, défaut **`claude-opus-5-5`**. Fournisseur : `LLM_PROVIDER` (seul `anthropic` existe ; un autre fournisseur s'ajoute dans `src/lib/llm/index.ts`).
+- SDK officiel du fournisseur (dépendance déclarée dans `package.json`), jamais d'appel HTTP brut. Client construit avec la clé `LLM_API_KEY` explicite (`authToken: null`) : le SDK ne va chercher aucun autre identifiant de la machine (variables d'environnement du SDK, profil local). Délai 90 s par tentative, 2 nouvelles tentatives (défaut du SDK) sur les erreurs passagères.
+- Modèle : `LLM_MODEL`, **obligatoire avec la clé**, sans valeur par défaut dans le code (sans lui : « Assistant non connecté »). Fournisseur : `LLM_PROVIDER` (seul `principal` existe ; un autre fournisseur s'ajoute dans `src/lib/llm/index.ts`).
 - **Pensée adaptative** (`thinking: { type: "adaptive" }`, la seule possible sur ce modèle) et **effort `low`** (`output_config.effort`) : un échange de chat court, la latence compte sur un téléphone en 4G. Le défaut du modèle serait `medium` ; on le fixe explicitement. Pas de `temperature`, pas de préremplissage.
-- **Repli serveur sur refus activé par défaut** : beta `server-side-fallback-2026-07-01` + `fallbacks: "default"` (l'API choisit le modèle de repli selon la catégorie du refus). D'où l'endpoint beta (`client.beta.messages.stream`). Pour le retirer : ces deux lignes de `src/lib/llm/anthropic.ts`.
+- **Repli serveur sur refus activé par défaut** : beta `server-side-fallback-2026-07-01` + `fallbacks: "default"` (l'API choisit le modèle de repli selon la catégorie du refus). D'où l'endpoint beta (`client.beta.messages.stream`). Pour le retirer : ces deux lignes de `src/lib/llm/sdk-provider.ts`.
 - `max_tokens` : **8 000** (pensée comprise). Plafond de coût volontaire pour des réponses qui tiennent sur un écran de téléphone ; au-delà, la réponse se termine par une note « Réponse coupée… ».
 - Cache : le prompt système part en blocs dans l'ordre **règles générales (en cache) → catalogue (en cache) → consigne du mode** ; la conversation vient après. Les règles seules sont probablement sous le seuil minimal de mise en cache du modèle (le cache ne s'active alors pas, sans erreur) ; avec le catalogue, le préfixe grossit. Rien de variable (date, identifiant) n'entre dans les blocs en cache. À vérifier avec `cacheReadTokens` dans les journaux dès qu'une clé existe.
-- Constaté en test (fetch simulé) : le SDK 1.8 envoie la clé dans l'en-tête `Authorization: Bearer` et l'en-tête `anthropic-version: 2026-10-21`.
+- Constaté en test (fetch simulé) : le SDK 1.8 envoie la clé dans l'en-tête `Authorization: Bearer` et un en-tête de version de l'API.
 
 ### Contrat de la route `POST /api/assistant`
 
@@ -396,5 +396,5 @@ Ordre des contrôles : session et `member.access` → Zod → fournisseur config
 
 ### Tests
 
-- Fournisseur simulé dans `src/test/fake-llm.ts`, importé **uniquement par les tests**. Fournisseur Anthropic testé avec le vrai SDK et un `fetch` simulé (option `fetch` de `createAnthropicProvider`, réservée aux tests) : paramètres envoyés, lecture du flux, erreurs typées.
+- Fournisseur simulé dans `src/test/fake-llm.ts`, importé **uniquement par les tests**. Fournisseur principal testé avec le vrai SDK et un `fetch` simulé (option `fetch` de `createSdkProvider`, réservée aux tests) : paramètres envoyés, lecture du flux, erreurs typées.
 - Route ajoutée à `src/app/route-handlers-security.test.ts` (matrice des rôles, sans clé : 401 / 403 / 503) ; tests détaillés dans `src/app/api/assistant/assistant-route.test.ts`.

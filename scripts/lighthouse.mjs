@@ -1,4 +1,4 @@
-// Lighthouse mobile sur les pages clés (CLAUDE.md §7 bis) : émulation d'un Android milieu de gamme
+// Lighthouse mobile sur les pages clés : émulation d'un Android milieu de gamme
 // (Moto G Power), 4G lente simulée, processeur ralenti 4 fois : les réglages mobiles par défaut
 // de Lighthouse. À lancer sur un build de production déjà servi :
 //   pnpm exec next build && pnpm exec next start -p 3210

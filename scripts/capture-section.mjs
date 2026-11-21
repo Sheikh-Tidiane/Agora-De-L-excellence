@@ -1,4 +1,4 @@
-// Capture d'une section précise, pour le contrôle qualité visuel (CLAUDE.md §7.5).
+// Capture d'une section précise, pour le contrôle qualité visuel.
 // Usage : node scripts/capture-section.mjs <largeur> <chemin> <sélecteur CSS> <fichier.png>
 // Le serveur est celui de BASE_URL (défaut : http://localhost:3000).
 // CAPTURE_EMAIL et CAPTURE_PASSWORD ouvrent une session avant la capture (pages protégées).

@@ -25,7 +25,7 @@ const statusByCode: Record<string, number> = {
  * Téléversement d'une image : couverture de livre ou photo d'un membre du comité.
  * Le dossier demandé (`?folder=`) fixe la permission exigée.
  * Le type est vérifié sur le contenu du fichier, la taille est plafonnée à 2 Mo
- * et le nom d'origine n'est jamais conservé (CLAUDE.md §4).
+ * et le nom d'origine n'est jamais conservé.
  */
 export async function POST(request: Request) {
   try {

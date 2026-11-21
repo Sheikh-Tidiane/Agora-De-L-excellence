@@ -1,7 +1,7 @@
 import { createHmac, hkdfSync, randomBytes, timingSafeEqual } from "node:crypto";
 
 /**
- * Jeton du QR code de la carte de membre (CLAUDE.md §4) : opaque, signé, sans donnée personnelle.
+ * Jeton du QR code de la carte de membre : opaque, signé, sans donnée personnelle.
  * Fonctions pures, sans base ni Next.js. Le service (lecture du membre, révocation, image) est
  * dans `card-service.ts`. Choix et justification : docs/DECISIONS.md, section 10.
  *

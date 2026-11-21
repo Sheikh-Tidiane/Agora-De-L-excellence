@@ -1,4 +1,4 @@
-// Captures du contrôle qualité visuel (CLAUDE.md §7.5).
+// Captures du contrôle qualité visuel.
 // Usage : node scripts/captures.mjs [dossier] [chemin...]   (serveur lancé sur le port 3000)
 // Mobile d'abord : 375 px, puis 768 px et 1440 px. VIEWPORTS=1440,1280,375 pour l'administration.
 // Pages protégées : CAPTURE_EMAIL et CAPTURE_PASSWORD (compte de test local) ouvrent une session avant les captures.

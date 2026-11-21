@@ -12,7 +12,7 @@ import { membershipReceivedEmail, membershipRejectedEmail } from "@/lib/mail/clu
 import { prisma, type Db } from "@/lib/prisma";
 
 /**
- * Parcours d'adhésion (CLAUDE.md §8) : un visiteur envoie une demande sans créer de compte →
+ * Parcours d'adhésion : un visiteur envoie une demande sans créer de compte →
  * un responsable valide ou refuse → à la validation, le système crée le compte, le numéro de membre
  * et la période d'adhésion, puis envoie le lien d'activation.
  */
@@ -61,7 +61,7 @@ export async function submitMembershipRequest(
       "Une demande est déjà en cours d’examen pour cette adresse e-mail. Vous recevrez une réponse par e-mail.",
     );
   }
-  // La version de la charte en vigueur est enregistrée avec la demande (CLAUDE.md §8).
+  // La version de la charte en vigueur est enregistrée avec la demande.
   const charter = await loadCharter();
   const now = new Date();
   const request = await prisma.membershipRequest.create({

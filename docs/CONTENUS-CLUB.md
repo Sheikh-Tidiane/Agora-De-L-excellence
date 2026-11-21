@@ -127,7 +127,7 @@ Principes retenus, en attente du texte définitif rédigé et validé par le com
 - Paiement mobile (Wave, Orange Money) : évolution possible plus tard, hors V1.
 
 ### Évolutions pour la V2 (Phase 4, pas maintenant)
-- **Quiz en ligne** : un responsable crée un quiz (questions à choix multiples, durée, période d’ouverture), les membres y répondent depuis leur téléphone, le score rapporte des points selon une `PointRule` et alimente un classement des quiz. Complète les Génies du soir. À ajouter au plan de la Phase 4 dans `docs/PROGRESS.md`.
+- **Quiz en ligne** : un responsable crée un quiz (questions à choix multiples, durée, période d’ouverture), les membres y répondent depuis leur téléphone, le score rapporte des points selon une `PointRule` et alimente un classement des quiz. Complète les Génies du soir.
 
 ### Données de démo
 - Le lancement du 26 décembre 2026 est un **vrai événement**, pas une donnée de démo : le créer via le seed avec `isDemo = false` et le statut « provisoire », lieu « à confirmer ».

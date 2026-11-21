@@ -6,7 +6,7 @@ points et badges, Scrabble, quiz, assistant « Le Compagnon des Lettres ») et a
 
 - Interface en français, conçue d'abord pour le téléphone.
 - Règles du club : [`docs/REGLES-METIER.md`](docs/REGLES-METIER.md). Choix techniques :
-  [`docs/DECISIONS.md`](docs/DECISIONS.md). Avancement : [`docs/PROGRESS.md`](docs/PROGRESS.md).
+  [`docs/DECISIONS.md`](docs/DECISIONS.md). Bilan : [`docs/RAPPORT-LIVRAISON.md`](docs/RAPPORT-LIVRAISON.md).
 - Guide des responsables : [`docs/GUIDE-ADMINISTRATEUR.md`](docs/GUIDE-ADMINISTRATEUR.md).
   Sauvegarde : [`docs/SAUVEGARDE.md`](docs/SAUVEGARDE.md). Hébergement :
   [`docs/HEBERGEMENT.md`](docs/HEBERGEMENT.md).

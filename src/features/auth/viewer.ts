@@ -7,7 +7,7 @@ import { can, getCurrentUser } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
 /**
- * Qui regarde la page, pour adapter les boutons d'action du site public (CLAUDE.md §5 : un
+ * Qui regarde la page, pour adapter les boutons d'action du site public (un
  * membre ne voit jamais d'appel à adhérer). Ce n'est PAS un contrôle d'accès : les pages et les
  * actions vérifient toujours la session et les permissions en base.
  */

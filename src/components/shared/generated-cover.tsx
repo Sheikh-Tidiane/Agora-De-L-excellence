@@ -3,7 +3,7 @@ import { Hemicycle, gradins } from "@/components/shared/hemicycle";
 
 /**
  * Couverture typographique générée à partir du titre, de l'auteur et de la catégorie.
- * Remplace les vraies couvertures tant que l'admin n'en a pas téléversé (CLAUDE.md §6).
+ * Remplace les vraies couvertures tant que l'admin n'en a pas téléversé.
  * La variation est déterministe : un même livre a toujours la même couverture.
  */
 

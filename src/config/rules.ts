@@ -1,5 +1,5 @@
 /**
- * Règles métier par défaut (CLAUDE.md §8), documentées dans docs/REGLES-METIER.md.
+ * Règles métier par défaut, documentées dans docs/REGLES-METIER.md.
  * Ce sont des valeurs de départ : celles qui doivent être modifiables depuis l'admin
  * seront lues dans la table `Setting` (même clé), avec ces valeurs comme repli.
  */

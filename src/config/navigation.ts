@@ -55,7 +55,7 @@ export const legalNav: NavItem[] = [
 /**
  * Onglets de l'espace membre : barre du bas sur mobile, colonne latérale sur desktop.
  * `ready: false` = la page n'existe pas encore (phase 4, parties B et C) : l'onglet n'est pas
- * affiché, pour ne jamais mener à une page vide (CLAUDE.md §5).
+ * affiché, pour ne jamais mener à une page vide.
  */
 export const memberTabs = [
   { label: "Accueil", key: "home", href: "/member", ready: true },

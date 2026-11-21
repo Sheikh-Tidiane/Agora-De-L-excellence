@@ -58,7 +58,7 @@ test("scan : carte, secours par recherche, participation et points", async ({
     if (await choice.count()) await choice.check();
     await expect(page.getByText(setup.eventTitle).first()).toBeVisible();
     await expect(page.getByRole("button", { name: "Activer la caméra" })).toBeVisible();
-    // Captures du contrôle visuel (CLAUDE.md §7.5) : 375 px sur mobile, 1440 px sur ordinateur.
+    // Captures du contrôle visuel : 375 px sur mobile, 1440 px sur ordinateur.
     const width = isMobile ? 375 : 1440;
     const shot = (name: string) =>
       page.screenshot({ path: `docs/captures/phase-4b/scan-${width}-${name}.png`, fullPage: true });

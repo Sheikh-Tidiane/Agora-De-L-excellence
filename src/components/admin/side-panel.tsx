@@ -18,7 +18,7 @@ type SidePanelProps = {
 
 /**
  * Panneau latéral : consulter ou modifier une ligne sans quitter la liste.
- * Desktop : volet à droite. Mobile : feuille qui monte du bas (CLAUDE.md §7 bis).
+ * Desktop : volet à droite. Mobile : feuille qui monte du bas.
  * <dialog> natif : focus piégé, Échap et clic sur le fond pour fermer.
  */
 export function SidePanel({

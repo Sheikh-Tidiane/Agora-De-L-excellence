@@ -133,8 +133,8 @@ expiration de la carte de membre. Rien n'est affiché à leur place.
 
 ## 8. Problèmes connus
 
-Liste tenue à jour dans [`PROGRESS.md`](PROGRESS.md), section « Problèmes connus », et choix à
-trancher dans les bilans de chaque phase. Les principaux :
+Choix à trancher détaillés dans [`REVUE-SECURITE.md`](REVUE-SECURITE.md) et
+[`REVUE-DESIGN.md`](REVUE-DESIGN.md). Les principaux points :
 
 - Aucun dépôt distant : à créer avant toute chose.
 - Une adresse inconnue de livre, d'article, de rencontre ou de tournoi affiche la page

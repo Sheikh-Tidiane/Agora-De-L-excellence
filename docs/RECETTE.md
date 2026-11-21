@@ -87,7 +87,7 @@ Non exécuté : la publication programmée à une date future (règle testée un
 
 Réserve levée le 14/11 :
 
-- **Tests unitaires** (`src/features/actions-security.test.ts`, écrits par le sous-agent `relecteur-expert`) : chacune des 36 Server Actions protégées est appelée sans session, avec un compte suspendu et avec chacun des six rôles ; un rôle sans la permission reçoit `FORBIDDEN` **sans aucune lecture ni écriture métier**. Le vrai `requirePermission` s'exécute, seule la base est simulée. Un test échoue si une action exportée n'est pas couverte. Retirer un `requirePermission` fait échouer cinq tests (vérifié, puis remis).
+- **Tests unitaires** (`src/features/actions-security.test.ts`) : chacune des 36 Server Actions protégées est appelée sans session, avec un compte suspendu et avec chacun des six rôles ; un rôle sans la permission reçoit `FORBIDDEN` **sans aucune lecture ni écriture métier**. Le vrai `requirePermission` s'exécute, seule la base est simulée. Un test échoue si une action exportée n'est pas couverte. Retirer un `requirePermission` fait échouer cinq tests (vérifié, puis remis).
 - **Navigateur** (`e2e/requetes-forgees.spec.ts`) : la requête réelle d'une action d'administration, captée chez un super-administrateur, rejouée telle quelle avec la session d'un responsable bibliothèque → `FORBIDDEN` ; sans session → refusée ; les paramètres n'ont pas changé.
 - **Route Handlers** (`src/app/route-handlers-security.test.ts`) : 401 sans session, 403 sans la permission, sur les trois.
 
@@ -108,7 +108,7 @@ Réserve levée le 14/11 :
 
 - Les 27 pages publiques, `/member` et les 19 pages d'administration ouvertes à 375 px : aucune ne déborde.
 - Tous les parcours publics tournent aussi dans le projet « mobile » de Playwright ; l'inscription d'un visiteur est faite depuis un téléphone émulé.
-- Lighthouse mobile (voir `PROGRESS.md`) : accessibilité 100 sur les cinq pages mesurées ; performance entre 84 et 95 en médiane.
+- Lighthouse mobile : accessibilité 100 sur les cinq pages mesurées ; performance entre 84 et 95 en médiane.
 - Hors ligne : la page de repli s'affiche et la navigation reprend au retour du réseau (`e2e/seo-pwa.spec.ts`).
 
 **Non fait : aucun essai sur un vrai téléphone**, ni sur une vraie connexion 4G. L'installation sur l'écran d'accueil n'a pas été essayée.

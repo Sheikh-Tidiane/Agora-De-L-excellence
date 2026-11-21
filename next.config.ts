@@ -14,7 +14,7 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   allowedDevOrigins: lanAddresses,
   // Next journalise par défaut les arguments des Server Actions en développement :
-  // ils contiennent des mots de passe et des jetons (CLAUDE.md §4 : ne jamais les logger).
+  // ils contiennent des mots de passe et des jetons (ne jamais les logger).
   logging: { serverFunctions: false },
   partialPrefetching: true,
   async headers() {

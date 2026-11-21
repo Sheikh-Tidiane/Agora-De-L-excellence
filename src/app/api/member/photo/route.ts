@@ -19,7 +19,7 @@ const statusByCode: Record<string, number> = {
 /**
  * Photo de profil du membre connecté (Route Handler : un envoi de 2 Mo dépasse la limite
  * de corps des Server Actions). Le compte visé vient toujours de la session, jamais de la requête.
- * Type vérifié sur le contenu, taille plafonnée, nom régénéré (CLAUDE.md §4).
+ * Type vérifié sur le contenu, taille plafonnée, nom régénéré.
  */
 export async function POST(request: Request) {
   try {

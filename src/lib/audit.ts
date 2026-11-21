@@ -3,7 +3,7 @@ import { redact } from "@/lib/logger";
 import { prisma, type Db } from "@/lib/prisma";
 
 /**
- * Journal des actions sensibles (CLAUDE.md §4) : rôles, points, scores,
+ * Journal des actions sensibles : rôles, points, scores,
  * validation d'adhésion, suspension, activation et sécurité des comptes.
  */
 export type AuditAction =

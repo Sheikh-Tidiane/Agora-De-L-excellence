@@ -7,8 +7,5 @@ test-results
 playwright-report
 .lighthouse
 AGENTS.md
-CLAUDE.md
-docs/PROMPTS.md
-.claude
 src/generated
 prisma/migrations

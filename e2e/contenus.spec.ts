@@ -24,7 +24,7 @@ test.use({
 const h1 = (page: Page) => page.getByRole("heading", { level: 1 });
 
 /**
- * Captures du contrôle qualité visuel (CLAUDE.md §7.5), prises au fil du parcours quand
+ * Captures du contrôle qualité visuel, prises au fil du parcours quand
  * `CAPTURES=1` : l'administration à 1440 px d'abord, puis 1280 px et 375 px.
  */
 async function shot(page: Page, name: string, widths = [1440, 1280, 375]) {

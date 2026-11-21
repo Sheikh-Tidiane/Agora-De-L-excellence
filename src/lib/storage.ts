@@ -6,7 +6,7 @@ import { AppError } from "@/lib/errors";
 import { isStoredImage, type ImageFolder } from "@/lib/storage-names";
 
 /**
- * Stockage des images téléversées (CLAUDE.md §4) : type vérifié sur le contenu du fichier
+ * Stockage des images téléversées : type vérifié sur le contenu du fichier
  * (pas sur son nom ni sur l'en-tête envoyé), taille plafonnée, nom régénéré.
  * Implémentation disque local (`UPLOAD_DIR`, hors dépôt). Voir docs/DECISIONS.md :
  * un hébergement sans disque persistant demandera une autre implémentation de `StorageService`.

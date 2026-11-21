@@ -1,6 +1,6 @@
 import { hasDemoData } from "@/lib/demo";
 
-/** Bandeau discret affiché tant qu'il existe des lignes `isDemo` en base (CLAUDE.md §5). */
+/** Bandeau discret affiché tant qu'il existe des lignes `isDemo` en base. */
 export async function DemoBanner() {
   if (!(await hasDemoData())) return null;
   return (

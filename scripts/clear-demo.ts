@@ -2,7 +2,7 @@ import "dotenv/config";
 import { clearDemoData } from "@/lib/demo-data";
 import { prisma } from "@/lib/prisma";
 
-// pnpm db:clear-demo — supprime toutes les données marquées `isDemo` (CLAUDE.md §5).
+// pnpm db:clear-demo — supprime toutes les données marquées `isDemo`.
 // Les données de référence (rôles, permissions, barème, badges, catégories) et les vrais contenus restent.
 async function main() {
   const counts = await clearDemoData();

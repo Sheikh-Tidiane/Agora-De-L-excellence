@@ -1,5 +1,5 @@
 /*
- * Service worker minimal de L’Agora (CLAUDE.md §7 bis) :
+ * Service worker minimal de L’Agora :
  *  - une page hors ligne propre quand la connexion tombe pendant une navigation ;
  *  - les fichiers statiques déjà téléchargés (code, polices, logos) resservis depuis le cache.
  *  - une seule exception : la carte de membre (/member/card), gardée pour être présentée

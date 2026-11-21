@@ -1,7 +1,7 @@
 # REGLES-METIER.md — Règles métier par défaut
 
 > Valeurs de départ, validées globalement par le porteur du projet le 12/11/2026.
-> Toutes sont modifiables : la colonne « Où » dit à quel endroit. Les numéros renvoient aux ambiguïtés de `PROGRESS.md`.
+> Toutes sont modifiables : la colonne « Où » dit à quel endroit.
 > Colonne « État » : **appliquée** = codée et testée ; **schéma** = prévue par la base, logique à écrire dans la phase indiquée.
 
 ## Comptes et connexion

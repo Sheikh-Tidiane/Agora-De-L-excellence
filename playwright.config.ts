@@ -6,7 +6,7 @@ import { defineConfig, devices } from "@playwright/test";
 const dev = !!process.env.PW_DEV;
 const port = Number(process.env.PORT ?? (dev ? 3000 : 3210));
 
-/** Parcours critiques. Mobile d'abord : c'est la cible principale (CLAUDE.md §7 bis). */
+/** Parcours critiques. Mobile d'abord : c'est la cible principale. */
 export default defineConfig({
   testDir: "./e2e",
   outputDir: "./test-results",

@@ -1,6 +1,6 @@
 # DECISIONS.md — Choix techniques et schéma de données
 
-> Journal des décisions prises en cours de route (CLAUDE.md §8 et §9). Les règles métier sont dans `REGLES-METIER.md`.
+> Journal des décisions prises en cours de route. Les règles métier sont dans `REGLES-METIER.md`.
 
 ## 1. Infrastructure (phase 2)
 
@@ -150,7 +150,7 @@ Corrections faites au passage, sur du code de la phase 3 jamais exécuté jusque
 
 ## 10. Phase 4, partie A — schéma de la V2 Communauté et carte de membre
 
-Fait par le sous-agent `architecte-expert` le 14/11/2026. Migration : `prisma/migrations/20261114120000_phase4_communaute`.
+Fait le 14/11/2026. Migration : `prisma/migrations/20261114120000_phase4_communaute`.
 
 ### Schéma
 
@@ -214,7 +214,7 @@ Code : `src/features/members/card-token.ts` (fonctions pures) et `card-service.t
 
 ## 11. Phase 4, partie B — moteur de points et badges, scan des présences
 
-Fait par le sous-agent `architecte-expert` le 14/11/2026. Code : `src/features/gamification/` (moteur), `src/features/attendance/` (scan), `src/app/api/admin/attendance/` (Route Handlers), `src/app/admin/scan/` (page).
+Fait le 14/11/2026. Code : `src/features/gamification/` (moteur), `src/features/attendance/` (scan), `src/app/api/admin/attendance/` (Route Handlers), `src/app/admin/scan/` (page).
 
 ### Moteur de points
 
@@ -258,7 +258,7 @@ Fait par le sous-agent `architecte-expert` le 14/11/2026. Code : `src/features/g
 
 ## 12. Phase 4, partie C — quiz en ligne (anti-triche)
 
-Fait par le sous-agent `architecte-expert` le 15/11/2026. Code : `src/features/quizzes/`. Aucune modification du schéma.
+Fait le 15/11/2026. Code : `src/features/quizzes/`. Aucune modification du schéma.
 
 ### Parcours du membre
 
@@ -296,7 +296,7 @@ Fait par le sous-agent `architecte-expert` le 15/11/2026. Code : `src/features/q
 
 ## 13. Phase 4, partie C — Scrabble (couche serveur)
 
-Fait par le sous-agent `architecte-expert` le 15/11/2026. Code : `src/features/scrabble/` (calcul pur `ranking.ts` et `rules.ts`, services, lectures, actions). **Aucune modification du schéma** ; une correction dans `src/lib/demo-data.ts` (voir plus bas).
+Fait le 15/11/2026. Code : `src/features/scrabble/` (calcul pur `ranking.ts` et `rules.ts`, services, lectures, actions). **Aucune modification du schéma** ; une correction dans `src/lib/demo-data.ts` (voir plus bas).
 
 ### Classement d'un tournoi (`ranking.ts`, pur)
 
@@ -342,14 +342,14 @@ Fait par le sous-agent `architecte-expert` le 15/11/2026. Code : `src/features/s
 
 ## 14. Phase 5 — Assistant IA « Le Compagnon des Lettres » (couche serveur)
 
-Fait par le sous-agent `architecte-expert` le 15/11/2026. Code : `src/lib/llm/` (interface `LLMProvider`, fournisseur Anthropic), `src/features/assistant/` (`modes.ts`, `schemas.ts`, `prompt.ts`, `quota.ts`, `service.ts`, `queries.ts`), `src/app/api/assistant/route.ts`. **Aucune modification du schéma Prisma, aucune migration.** Le skill `claude-api` a été chargé et suivi ; aucun appel réel au modèle n'a été fait (aucune clé configurée).
+Fait le 15/11/2026. Code : `src/lib/llm/` (interface `LLMProvider`, fournisseur Anthropic), `src/features/assistant/` (`modes.ts`, `schemas.ts`, `prompt.ts`, `quota.ts`, `service.ts`, `queries.ts`), `src/app/api/assistant/route.ts`. **Aucune modification du schéma Prisma, aucune migration.** Le skill `claude-api` a été chargé et suivi ; aucun appel réel au modèle n'a été fait (aucune clé configurée).
 
 ### Fournisseur et paramètres d'API
 
 - SDK officiel `@anthropic-ai/sdk` 1.8.0, jamais d'appel HTTP brut. Client construit avec la clé `LLM_API_KEY` explicite (`authToken: null`) : le SDK ne va chercher aucun autre identifiant de la machine (variables `ANTHROPIC_*`, profil local). Délai 90 s par tentative, 2 nouvelles tentatives (défaut du SDK) sur les erreurs passagères.
 - Modèle : `LLM_MODEL`, défaut **`claude-opus-5-5`**. Fournisseur : `LLM_PROVIDER` (seul `anthropic` existe ; un autre fournisseur s'ajoute dans `src/lib/llm/index.ts`).
 - **Pensée adaptative** (`thinking: { type: "adaptive" }`, la seule possible sur ce modèle) et **effort `low`** (`output_config.effort`) : un échange de chat court, la latence compte sur un téléphone en 4G. Le défaut du modèle serait `medium` ; on le fixe explicitement. Pas de `temperature`, pas de préremplissage.
-- **Repli serveur sur refus activé par défaut** (recommandation du skill pour ce modèle) : beta `server-side-fallback-2026-07-01` + `fallbacks: "default"` (l'API choisit le modèle de repli selon la catégorie du refus). D'où l'endpoint beta (`client.beta.messages.stream`). Pour le retirer : ces deux lignes de `src/lib/llm/anthropic.ts`.
+- **Repli serveur sur refus activé par défaut** : beta `server-side-fallback-2026-07-01` + `fallbacks: "default"` (l'API choisit le modèle de repli selon la catégorie du refus). D'où l'endpoint beta (`client.beta.messages.stream`). Pour le retirer : ces deux lignes de `src/lib/llm/anthropic.ts`.
 - `max_tokens` : **8 000** (pensée comprise). Plafond de coût volontaire pour des réponses qui tiennent sur un écran de téléphone ; au-delà, la réponse se termine par une note « Réponse coupée… ».
 - Cache : le prompt système part en blocs dans l'ordre **règles générales (en cache) → catalogue (en cache) → consigne du mode** ; la conversation vient après. Les règles seules sont probablement sous le seuil minimal de mise en cache du modèle (le cache ne s'active alors pas, sans erreur) ; avec le catalogue, le préfixe grossit. Rien de variable (date, identifiant) n'entre dans les blocs en cache. À vérifier avec `cacheReadTokens` dans les journaux dès qu'une clé existe.
 - Constaté en test (fetch simulé) : le SDK 1.8 envoie la clé dans l'en-tête `Authorization: Bearer` et l'en-tête `anthropic-version: 2026-10-21`.

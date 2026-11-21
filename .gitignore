@@ -50,7 +50,7 @@ next-env.d.ts
 # client Prisma généré
 /src/generated
 
-# captures du contrôle visuel (CLAUDE.md §7.5) : conservées en local seulement
+# captures du contrôle visuel : conservées en local seulement
 /docs/captures/
 
 # Sauvegardes locales de la base (scripts/backup.sh)

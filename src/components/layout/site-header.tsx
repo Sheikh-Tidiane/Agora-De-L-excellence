@@ -7,7 +7,7 @@ import { site } from "@/config/site";
 
 /**
  * En-tête du site public.
- * Mobile : symbole + « L’Agora » en texte (CLAUDE.md §7.6), action d'adhésion et menu.
+ * Mobile : symbole + « L’Agora » en texte, action d'adhésion et menu.
  * Desktop : logo horizontal complet, rubriques, espace membre.
  * Seuls les boutons de compte dépendent du visiteur : ils sont lus côté serveur (header-account.tsx),
  * sans jamais montrer un faux état en attendant ; le reste fait partie de la coquille statique.

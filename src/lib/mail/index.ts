@@ -15,7 +15,7 @@ export type MailMessage = {
 };
 
 /**
- * Interface unique d'envoi (CLAUDE.md §2). Dev : SMTP vers Mailpit.
+ * Interface unique d'envoi. Dev : SMTP vers Mailpit.
  * Prod : SMTP ou Resend, choisi par `MAIL_PROVIDER`.
  */
 export interface MailService {

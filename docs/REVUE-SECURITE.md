@@ -1,6 +1,6 @@
 # Revue de sécurité — phase 6
 
-> Phase 6, point 4 de `docs/PROMPTS.md`. Revue faite le 20/11/2026 par le sous-agent `relecteur-expert` (sur Opus 5.5), sur le code du commit `416308a` plus les fichiers non commités présents à ce moment-là. Référence : `CLAUDE.md` §4 (sécurité, non négociable).
+> Phase 6, revue de sécurité faite le 20/11/2026, sur le code du commit `416308a` plus les fichiers non commités présents à ce moment-là.
 
 ## 1. Périmètre
 
@@ -73,7 +73,7 @@ Aussi relus : `src/proxy.ts`, `src/lib/permissions/`, `src/lib/rate-limit.ts`, `
 ### S3 — Échappement sans effet dans les données structurées de l'accueil (gravité : faible, corrigé)
 
 - **Où** : `src/app/(public)/page.tsx:37` (avant correctif) : `JSON.stringify(organization).replace(/</g, "<")`. Dans une chaîne JavaScript, `"<"` **est** le caractère `<` : le remplacement ne faisait rien. Les trois autres pages (`events/[slug]`, `library/[slug]`, `news/[slug]`) écrivaient bien `"\\u003c"`.
-- **Scénario** : aujourd'hui sans conséquence (l'accueil ne sérialise que `src/config/site.ts`). Le jour où le nom ou le slogan viendront de la table `Setting` (prévu par `CLAUDE.md` §1), un `</script>` saisi dans l'administration fermerait la balise.
+- **Scénario** : aujourd'hui sans conséquence (l'accueil ne sérialise que `src/config/site.ts`). Le jour où le nom ou le slogan viendront de la table `Setting` (prévu par le cahier des charges), un `</script>` saisi dans l'administration fermerait la balise.
 - **Correctif** : `src/lib/json-ld.ts` (`serializeJsonLd`), utilisé par les quatre pages.
 - **Test** : `src/lib/json-ld.test.ts` : un titre `</script><script>…` ne ferme pas la balise, et chaque `application/ld+json` de `src/app` doit passer par `serializeJsonLd` (échoue avec l'ancienne page d'accueil).
 

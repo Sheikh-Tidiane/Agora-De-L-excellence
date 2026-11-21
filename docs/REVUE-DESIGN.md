@@ -1,7 +1,7 @@
 # Revue design finale — phase 6
 
 > Relecture des 51 captures de `docs/captures/phase-6/` (build de production, données de démonstration), le 20/11/2026.
-> Référentiel : CLAUDE.md §7 et §7 bis, `docs/DIRECTION-ARTISTIQUE.md`.
+> Référentiel : exigences de design du projet et `docs/DIRECTION-ARTISTIQUE.md`.
 > Aucun fichier de code n'a été modifié pendant cette revue : les corrections proposées sont à faire dans la session principale.
 
 ## 1. Méthode
@@ -132,7 +132,7 @@ Aucune page ne ressemble à un template. L'identité tient partout : tuiles-init
 **P1-6. Pas de bandeau « Données de démonstration » dans l'espace membre ni dans l'admin.**
 
 - Captures : toutes les `membre-*` et `admin-*`. Le bandeau n'est monté que dans `src/app/(public)/layout.tsx` (l. 14).
-- Problème : l'espace membre montre des données de démonstration (classement « Absa D. », quiz, tournoi du 6 mars 2027 déjà « terminé »), sans le bandeau que le §5 de CLAUDE.md, non négociable, demande « tant qu'il en existe ». Rien dans `docs/DECISIONS.md` ne limite le bandeau au site public.
+- Problème : l'espace membre montre des données de démonstration (classement « Absa D. », quiz, tournoi du 6 mars 2027 déjà « terminé »), sans le bandeau que les règles du projet, non négociable, demande « tant qu'il en existe ». Rien dans `docs/DECISIONS.md` ne limite le bandeau au site public.
 - Correction : monter `<DemoBanner />` au-dessus de `<SiteHeader />` dans `src/app/member/layout.tsx`, et en haut de la colonne de contenu dans `src/app/admin/layout.tsx` (ou dans `admin-chrome.tsx`, au-dessus du header collant). **À confirmer avec le porteur du projet** si l'omission était voulue ; dans ce cas, la noter dans DECISIONS.md.
 
 **P1-7. Journal : codes techniques bruts.**
@@ -181,7 +181,7 @@ Aucune page ne ressemble à un template. L'identité tient partout : tuiles-init
 
 **P2-8. Agenda public sans filtre par activité.**
 
-- Capture : `public-events-375`. Les Archives en ont (pastilles « Toutes les activités »…), l'Agenda non, alors que le §1 de CLAUDE.md prévoit des filtres par activité.
+- Capture : `public-events-375`. Les Archives en ont (pastilles « Toutes les activités »…), l'Agenda non, alors que le cahier des charges prévoit des filtres par activité.
 - Correction : reprendre la rangée de pastilles des Archives (même composant) au-dessus des mois, dans `src/app/(public)/events/page.tsx`, avec un paramètre `?type=`.
 
 **P2-9. Adhésion : bloc des montants à l'étroit.**

@@ -1,4 +1,4 @@
-# Infrastructure locale : PostgreSQL + Mailpit (CLAUDE.md §2).
+# Infrastructure locale : PostgreSQL + Mailpit.
 # PostgreSQL écoute sur le port hôte 5433 : un PostgreSQL local occupe souvent le 5432.
 name: agora-excellence
 

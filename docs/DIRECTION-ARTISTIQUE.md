@@ -1,6 +1,6 @@
 # Direction artistique — « La page et le gradin »
 
-> Référence pour toutes les pages. Toute nouvelle page se vérifie contre ce document (CLAUDE.md §7.5).
+> Référence pour toutes les pages. Toute nouvelle page se vérifie contre ce document.
 
 ## 1. Le concept
 

@@ -6,7 +6,7 @@ import { countDemoData } from "@/lib/demo-data";
 export const DEMO_CACHE_TAG = "demo-data";
 
 /**
- * Reste-t-il des données de démonstration en base ? Pilote le bandeau (CLAUDE.md §5).
+ * Reste-t-il des données de démonstration en base ? Pilote le bandeau.
  * Mis en cache : le serveur revérifie chaque minute. `pnpm db:clear-demo` s'exécute hors de Next.js
  * et ne peut pas invalider le cache : le bandeau disparaît dans les minutes qui suivent.
  */

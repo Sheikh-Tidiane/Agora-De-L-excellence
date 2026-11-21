@@ -7,7 +7,7 @@ import { displayName } from "@/features/auth/service";
 import { audit } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 
-// pnpm create-admin — crée le super-administrateur initial (CLAUDE.md §4).
+// pnpm create-admin — crée le super-administrateur initial.
 // Interactif : l'e-mail et le mot de passe sont demandés au clavier, jamais lus dans un fichier
 // ni passés en argument, et le mot de passe n'est ni affiché ni journalisé.
 

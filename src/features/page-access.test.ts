@@ -5,7 +5,7 @@ import { PERMISSIONS } from "@/lib/permissions/catalog";
 
 /**
  * Phase 6 : chaque page des zones protégées vérifie l'accès côté serveur. Masquer un lien ne
- * suffit jamais (CLAUDE.md §4) : une page ajoutée sans `requirePageAccess` fait échouer ce test.
+ * suffit jamais : une page ajoutée sans `requirePageAccess` fait échouer ce test.
  */
 function pages(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {

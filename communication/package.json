@@ -1,0 +1,31 @@
+{
+  "name": "agora-communication",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Communication audiovisuelle de L’Agora de l’Excellence (Remotion)",
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio",
+    "typecheck": "tsc --noEmit",
+    "still": "remotion still",
+    "images-cles": "node scripts/images-cles.mjs",
+    "export": "node scripts/export.mjs",
+    "controle": "node scripts/controle.mjs"
+  },
+  "dependencies": {
+    "@fontsource/work-sans": "5.3.0",
+    "@fontsource/young-serif": "5.3.0",
+    "@remotion/bundler": "4.0.545",
+    "@remotion/cli": "4.0.545",
+    "@remotion/fonts": "4.0.545",
+    "@remotion/renderer": "4.0.545",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "remotion": "4.0.545"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/react": "^19.3.0",
+    "typescript": "6.0.3"
+  }
+}

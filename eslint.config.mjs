@@ -19,6 +19,8 @@ const eslintConfig = defineConfig([
     // Sorties de Playwright, écrites pendant les parcours
     "test-results/**",
     "playwright-report/**",
+    // Projet de communication (Remotion), indépendant de l’application
+    "communication/**",
   ]),
 ]);
 

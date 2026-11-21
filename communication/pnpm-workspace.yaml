@@ -1,0 +1,3 @@
+# Projet indépendant de l'application : ce fichier en fait sa propre racine pnpm.
+allowBuilds:
+  esbuild: true

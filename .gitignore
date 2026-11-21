@@ -55,3 +55,7 @@ next-env.d.ts
 
 # Sauvegardes locales de la base (scripts/backup.sh)
 /backups/
+
+# Communication (Remotion) : dépendances et rendus
+/communication/node_modules
+/communication/out/

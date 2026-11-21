@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { DemoBanner } from "@/components/layout/demo-banner";
 import { TileLoader } from "@/components/shared/states";
 import { visibleAdminNav } from "@/config/admin-navigation";
 import { authRoutes } from "@/config/auth";
@@ -57,9 +56,6 @@ async function Frame({ children }: { children: React.ReactNode }) {
         />
       }
     >
-      <Suspense fallback={null}>
-        <DemoBanner />
-      </Suspense>
       {children}
     </AdminChrome>
   );

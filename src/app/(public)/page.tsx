@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BackToTop } from "@/components/layout/back-to-top";
 import { site } from "@/config/site";
 import { ActivitiesSection } from "@/features/home/components/activities-section";
 import { Dimensions } from "@/features/home/components/dimensions";
@@ -47,6 +48,7 @@ export default function HomePage() {
       <ForVisitors>
         <MembershipCall />
       </ForVisitors>
+      <BackToTop />
     </>
   );
 }

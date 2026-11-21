@@ -1,6 +1,6 @@
 @import "tailwindcss";
 /* La documentation cite des classes en exemple : Tailwind ne doit pas les générer. */
-@source not "../../docs";
+@source not "../../docs/**";
 @source not "../../Communication";
 
 /*

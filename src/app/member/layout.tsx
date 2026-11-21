@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { MemberBottomBar, MemberSideNav } from "@/components/layout/member-nav";
 import { SiteFooter } from "@/components/layout/site-footer";
-import { DemoBanner } from "@/components/layout/demo-banner";
 import { SiteHeader } from "@/components/layout/site-header";
 import { TileLoader } from "@/components/shared/states";
 import { authRoutes } from "@/config/auth";
@@ -68,9 +67,6 @@ export default function MemberLayout({ children }: LayoutProps<"/member">) {
       >
         Aller au contenu
       </a>
-      <Suspense fallback={null}>
-        <DemoBanner />
-      </Suspense>
       <SiteHeader />
       <div className="page flex-1 py-8 lg:grid lg:grid-cols-12 lg:gap-10 lg:py-14">
         <aside className="hidden lg:col-span-3 lg:block">

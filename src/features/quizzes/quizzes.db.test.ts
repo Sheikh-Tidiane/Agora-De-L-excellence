@@ -36,8 +36,7 @@ async function member(
       email: `${PREFIX}-${u}@test.localhost`,
       status: extra.status ?? "ACTIVE",
       memberNumber: extra.memberNumber === undefined ? `VQ-${u}` : extra.memberNumber,
-      // Pas `isDemo` : ces données sont validées hors transaction, et `clearDemoData` (testé en
-      // parallèle par le Scrabble) ne doit pas les voir. Le nettoyage passe par le préfixe.
+      // Données validées hors transaction : le nettoyage passe par le préfixe.
       isDemo: false,
     },
   });
@@ -63,8 +62,7 @@ async function makeQuiz(
       opensAt: options.opensAt ?? new Date(now - 60 * MIN),
       closesAt: options.closesAt ?? new Date(now + 60 * MIN),
       status: options.status ?? "PUBLISHED",
-      // Pas `isDemo` : ces données sont validées hors transaction, et `clearDemoData` (testé en
-      // parallèle par le Scrabble) ne doit pas les voir. Le nettoyage passe par le préfixe.
+      // Données validées hors transaction : le nettoyage passe par le préfixe.
       isDemo: false,
       questions: {
         create: Array.from({ length: options.questions ?? 3 }, (_, position) => ({

@@ -3,7 +3,10 @@ import { expect, test } from "@playwright/test";
 test("l'accueil présente le club et mène à l'adhésion", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Le savoir comme flamme");
-  await expect(page.getByText("Données de démonstration")).toBeVisible();
+  // Plus de bandeau « Données de démonstration » (décision du 21/11/2026). Le mot
+  // « démonstration » reste possible dans les vrais contenus (programme du lancement).
+  await expect(page.getByText(/Données de démonstration|sont fictifs/i)).toHaveCount(0);
+  await expect(page.getByRole("note")).toHaveCount(0);
 
   // Aucun défilement horizontal de page.
   const overflow = await page.evaluate(

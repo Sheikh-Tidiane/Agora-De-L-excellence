@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { BackToTop } from "@/components/layout/back-to-top";
 import { serializeJsonLd } from "@/lib/json-ld";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -139,8 +140,11 @@ function ArticleSkeleton() {
 
 export default function ArticlePage({ params }: Props) {
   return (
-    <Suspense fallback={<ArticleSkeleton />}>
-      <Article params={params} />
-    </Suspense>
+    <>
+      <Suspense fallback={<ArticleSkeleton />}>
+        <Article params={params} />
+      </Suspense>
+      <BackToTop />
+    </>
   );
 }

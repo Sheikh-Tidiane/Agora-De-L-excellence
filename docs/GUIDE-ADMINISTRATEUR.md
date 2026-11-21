@@ -117,10 +117,12 @@ que les rubriques de son rôle ; un même compte peut cumuler plusieurs rôles. 
 - **Journal** : trace des actions sensibles (rôles, adhésions, encaissements, points, scores,
   suspensions…), consultable par l'administrateur.
 
-## 10. Données de démonstration
+## 10. Contenus à vérifier
 
-Le site livré contient des données d'exemple (livres, rencontres, tournoi, quiz), signalées par un
-bandeau. Avant l'ouverture au public, un informaticien les retire avec `pnpm db:clear-demo`.
+Les livres, rencontres, articles, le tournoi et le quiz déjà présents ont été créés à l'origine
+comme exemples ; ils sont désormais des contenus réels du site. Chacun est à relire et à corriger
+depuis l'administration : la liste, avec un lien vers chaque page d'édition, est dans
+`docs/A-CORRIGER.md`.
 
 ## 11. En cas de souci
 

@@ -105,6 +105,17 @@ test("espace membre : onglets, profil, photo et carte", async ({ page, request, 
     await nav.getByRole("link", { name: "Profil" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Mon profil" })).toBeVisible();
 
+    // Mobile : un toucher sur l'onglet déjà actif remonte en haut de la page, sans la recharger.
+    if (isMobile) {
+      await page.evaluate(() =>
+        window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "instant" }),
+      );
+      expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+      await nav.getByRole("link", { name: "Profil" }).click();
+      await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+      await expect(page).toHaveURL(/\/member\/profile$/);
+    }
+
     // Téléphone : refusé s'il est invalide, normalisé sinon ; retrait des classements.
     await page.getByLabel(/Téléphone/).fill("abc");
     await page.getByRole("button", { name: "Enregistrer" }).click();

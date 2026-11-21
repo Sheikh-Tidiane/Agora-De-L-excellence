@@ -1,14 +1,11 @@
 import React from "react";
 import { interpolate, useCurrentFrame } from "remotion";
 import {
-  DUREE_PASSAGE_FOND,
   Emplacement,
   FondIndigo,
   PageDeLivre,
   Tuile,
   courbes,
-  couleurs,
-  interpolerOklch,
   valeurLettre,
   type TextePage,
 } from "../src/kit";
@@ -44,27 +41,23 @@ export const TuilesSurLaTable: React.FC<{ posees?: boolean }> = ({ posees = fals
  * sans les cases colorées d’un plateau du commerce) sur lequel des tuiles se posent.
  * Plan 1 : « LIRE ». Plan 2 : « SAVOIR » croise « LIRE » sur le I.
  */
-const TUILE_PLATEAU = 148;
-const PAS = 165;
+export const TUILE_PLATEAU = 148;
+export const PAS = 165;
 const CASE = 156;
 
-type Pose = { lettre: string; col: number; ligne: number; ordre: number };
-const LIRE: Pose[] = [..."LIRE"].map((lettre, i) => ({ lettre, col: i - 1, ligne: 0, ordre: i }));
+export type Pose = { lettre: string; col: number; ligne: number; ordre: number };
+export const LIRE: Pose[] = [..."LIRE"].map((lettre, i) => ({ lettre, col: i - 1, ligne: 0, ordre: i }));
 // SAVOIR à la verticale, le I (5e lettre) partagé avec LIRE.
-const SAVOIR: Pose[] = [..."SAVOIR"]
+export const SAVOIR: Pose[] = [..."SAVOIR"]
   .map((lettre, i) => ({ lettre, col: 0, ligne: i - 4, ordre: i < 4 ? i : i - 1 }))
   .filter((p) => p.ligne !== 0);
 
-export const Plateau: React.FC<{ plan: 1 | 2 }> = ({ plan }) => {
-  // Origine (la case du I) : plan 1, LIRE au centre ; plan 2, la croix entière au centre.
-  // Caméra fixe : une dérive de moins d’un pixel par image faisait sauter le plateau et les
-  // lettres d’un pixel une image sur deux (contrôle de la vidéo encodée).
-  const ox = W / 2 - 0.5 * PAS;
-  const oy = plan === 1 ? 930 : 930 + 1.5 * PAS;
-
+/** Les cases du plateau, en creux, autour de l’origine (ox, oy) : la case du I. */
+export const GrilleDuPlateau: React.FC<{ ox: number; oy: number; opacite?: number }> = ({ ox, oy, opacite = 1 }) => {
+  if (opacite <= 0) return null;
   const cases: React.ReactNode[] = [];
   for (let c = -5; c <= 6; c++) {
-    for (let l = -8; l <= 8; l++) {
+    for (let l = -9; l <= 9; l++) {
       const x = ox + c * PAS;
       const y = oy + l * PAS;
       if (x < -PAS || x > W + PAS || y < -PAS || y > H + PAS) continue;
@@ -85,6 +78,15 @@ export const Plateau: React.FC<{ plan: 1 | 2 }> = ({ plan }) => {
       );
     }
   }
+  return <div style={{ position: "absolute", inset: 0, opacity: opacite }}>{cases}</div>;
+};
+
+export const Plateau: React.FC<{ plan: 1 | 2 }> = ({ plan }) => {
+  // Origine (la case du I) : plan 1, LIRE au centre ; plan 2, la croix entière au centre.
+  // Caméra fixe : une dérive de moins d’un pixel par image faisait sauter le plateau et les
+  // lettres d’un pixel une image sur deux (contrôle de la vidéo encodée).
+  const ox = W / 2 - 0.5 * PAS;
+  const oy = plan === 1 ? 930 : 930 + 1.5 * PAS;
 
   const tuile = (p: Pose, debut: number | undefined, k: string) => (
     <div key={k} style={{ position: "absolute", left: ox + p.col * PAS, top: oy + p.ligne * PAS }}>
@@ -100,7 +102,7 @@ export const Plateau: React.FC<{ plan: 1 | 2 }> = ({ plan }) => {
 
   return (
     <FondIndigo>
-      {cases}
+      <GrilleDuPlateau ox={ox} oy={oy} />
       {plan === 1
         ? LIRE.map((p) => tuile(p, 6 + p.ordre * 5, `l${p.ordre}`))
         : [...LIRE.map((p) => tuile(p, undefined, `l${p.ordre}`)), ...SAVOIR.map((p) => tuile(p, 4 + p.ordre * 5, `s${p.ordre}`))]}
@@ -135,53 +137,45 @@ const OBJECTIFS: [TextePage, TextePage] = [
   { titre: "Objectifs", paragraphes: ["Cultiver l’excellence."], ornement: true },
 ];
 
-/** Le livre ouvert sur la table : la page se tourne et découvre la dernière ligne des objectifs. */
+/**
+ * Le livre ouvert, posé sur la table. Il entre et sort en glissant (déjà ivoire, entièrement
+ * opaque) : ni fondu, ni changement de couleur, donc aucun ton intermédiaire.
+ * `glissement` : décalage vertical en px (0 : en place).
+ */
+export const Livre: React.FC<{ glissement: number; progression: number }> = ({ glissement, progression }) =>
+  glissement > -H && glissement < H ? (
+    <div style={{ position: "absolute", inset: 0, transform: `translateY(${glissement}px)` }}>
+      <PageDeLivre dos={150} haut={330} largeur={850} hauteur={1260} progression={progression} textes={OBJECTIFS} cadre={{ largeur: W, hauteur: H }} />
+    </div>
+  ) : null;
+
+/** Course du livre : il entre par le bas et sort par le haut, entièrement hors du cadre. */
+export const COURSE_LIVRE = 1700;
+
+/** Glissement du livre à l’image `frame` : entrée [e, e+d], sortie [s, s+d]. */
+export const glissementLivre = (frame: number, entree: number, sortie: number, duree: number) =>
+  interpolate(frame, [entree, entree + duree], [COURSE_LIVRE, 0], { ...borne, easing: courbes.deplacement }) +
+  interpolate(frame, [sortie, sortie + duree], [0, -COURSE_LIVRE], { ...borne, easing: courbes.deplacement });
+
+/** Version avec plan filmé : le livre seul sur la table, entre deux extraits du plan. */
 export const PageQuiSeTourne: React.FC = () => {
   const frame = useCurrentFrame();
   const t = tempsPage;
   const progression = interpolate(frame, [t.tour, t.tour + t.dureeTour], [0, 1], { ...borne, easing: courbes.deplacement });
-  // Le papier apparaît et disparaît par un passage de couleur en OKLCH (indigo ↔ ivoire, par
-  // les bleus, deux images intermédiaires), comme le passage de fond validé : jamais par
-  // transparence. Le texte entre après l’apparition et sort avant la disparition.
-  const entree = courbes.fondu(Math.min(1, Math.max(0, (frame - t.apparition) / DUREE_PASSAGE_FOND)));
-  const sortie = courbes.fondu(Math.min(1, Math.max(0, (frame - t.disparition) / DUREE_PASSAGE_FOND)));
-  const presence = Math.min(entree, 1 - sortie);
-  const papier = interpolerOklch(couleurs.ivoire, couleurs.indigo, 1 - presence, { sens: "croissant", avanceTeinte: 0.1 });
-  const opaciteTexte = Math.min(
-    interpolate(frame, [t.texte, t.texte + 6], [0, 1], { ...borne, easing: courbes.entree }),
-    interpolate(frame, [t.sortieTexte, t.sortieTexte + 6], [1, 0], { ...borne, easing: courbes.sortie }),
-  );
-  // Caméra fixe (voir Plateau) : le texte de la page reste net et immobile pendant le tour.
   return (
     <FondIndigo>
-      {presence > 0 ? (
-        <div style={{ position: "absolute", inset: 0 }}>
-          <PageDeLivre
-            dos={150}
-            haut={330}
-            largeur={850}
-            hauteur={1260}
-            progression={progression}
-            textes={OBJECTIFS}
-            papier={papier}
-            presence={presence}
-            opaciteTexte={opaciteTexte}
-            cadre={{ largeur: W, hauteur: H }}
-          />
-        </div>
-      ) : null}
+      <Livre glissement={glissementLivre(frame, t.entree, t.sortie, t.dureeGlissement)} progression={progression} />
     </FondIndigo>
   );
 };
 
-/** Repères du plan de la page, en images relatives au début du plan (60 images, voir minutage.ts). */
+/** Repères du plan de la page (version avec plan filmé), en images relatives au début du plan. */
 export const tempsPage = {
-  /** Le fondu d’entrée (0,4 s, indigo sur indigo) est fini : le papier apparaît. */
-  apparition: 12,
-  texte: 15,
-  tour: 17,
-  dureeTour: 24,
-  /** Le texte sort, puis le papier se fond dans la table, avant le fondu vers le plateau. */
-  sortieTexte: 41,
-  disparition: 47,
+  /** Après le fondu d’entrée (indigo sur indigo), le livre glisse dans le cadre. */
+  entree: 12,
+  tour: 32,
+  dureeTour: 22,
+  /** Le livre est sorti du cadre avant le fondu vers le plan suivant. */
+  sortie: 52,
+  dureeGlissement: 14,
 } as const;

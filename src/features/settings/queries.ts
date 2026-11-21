@@ -53,7 +53,8 @@ const actionLabels: Record<AuditAction, string> = {
   "event.registration_removed": "Inscription retirée",
   "data.exported": "Liste exportée (CSV)",
   "settings.updated": "Paramètres modifiés",
-  "demo.cleared": "Données de démonstration supprimées",
+  // Action d’une ancienne commande de nettoyage, encore présente dans les journaux.
+  "demo.cleared": "Données d’exemple supprimées (ancienne commande)",
 };
 
 export const auditActionLabels: Record<string, string> = {
@@ -63,7 +64,7 @@ export const auditActionLabels: Record<string, string> = {
 };
 
 const entityLabels: Record<string, string> = {
-  Demo: "Données de démonstration",
+  Demo: "Données d’exemple (ancienne commande)",
   MembershipRequest: "Demande d’adhésion",
   Membership: "Adhésion",
   Event: "Événement",

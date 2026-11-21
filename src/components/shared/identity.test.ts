@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { coverDesign } from "@/components/shared/generated-cover";
 import { gradins, hemicycleGeometry } from "@/components/shared/hemicycle";
 import { LETTER_VALUES } from "@/components/shared/letter-tile";
-import { books } from "../../../prisma/demo-data";
+import { books } from "@/app/design-system/exemples";
 import { hashString } from "@/lib/utils";
 
 describe("hashString", () => {
@@ -30,7 +30,7 @@ describe("couvertures générées", () => {
     expect(a).toEqual(b);
   });
 
-  it("varie suffisamment sur l'étagère de démonstration", () => {
+  it("varie suffisamment sur une étagère d'exemples", () => {
     const designs = books.map((b) => coverDesign(b.title, b.author, b.category));
     const distinct = new Set(designs.map((d) => `${d.gabarit}-${d.palette}`));
     expect(new Set(designs.map((d) => d.gabarit)).size).toBeGreaterThanOrEqual(3);

@@ -45,6 +45,8 @@
 
 ## 5. Données de démonstration
 
+> **Remplacé le 21/11/2026** (voir « Fin des données de démonstration » en fin de fichier) : plus de bandeau, plus de `pnpm db:clear-demo`. Ce qui suit est l’historique.
+
 - Le bandeau lit la base (`hasDemoData`, mis en cache, revérifié chaque minute) **ou** le drapeau `usesHardcodedDemoContent` : tant que l'accueil affiche le contenu en dur de la phase 1, le bandeau reste, même base vide. Drapeau à supprimer en phase 3.
 - La durée de cache a un `stale` de 5 minutes : en dessous, Next exclut le bandeau de la coquille statique (saut de mise en page).
 - `pnpm db:clear-demo` s'exécute hors de Next : le bandeau disparaît dans les minutes qui suivent, pas instantanément.
@@ -398,3 +400,14 @@ Ordre des contrôles : session et `member.access` → Zod → fournisseur config
 
 - Fournisseur simulé dans `src/test/fake-llm.ts`, importé **uniquement par les tests**. Fournisseur principal testé avec le vrai SDK et un `fetch` simulé (option `fetch` de `createSdkProvider`, réservée aux tests) : paramètres envoyés, lecture du flux, erreurs typées.
 - Route ajoutée à `src/app/route-handlers-security.test.ts` (matrice des rôles, sans clé : 401 / 403 / 503) ; tests détaillés dans `src/app/api/assistant/assistant-route.test.ts`.
+
+## Fin des données de démonstration (21/11/2026)
+
+Décision du porteur du projet : la base ne contient plus de données de démonstration. Les contenus existants sont des contenus réels, à corriger par l’administrateur depuis l’admin ; rien n’est supprimé.
+
+- **Conversion** : `scripts/convertir-donnees-demo.ts` (versionné). Sans option, il compte ; avec `--appliquer`, il passe `isDemo` à `false` en SQL direct (Prisma aurait modifié `updatedAt`), dans une transaction qui compare, pour chacune des 43 tables, le nombre de lignes et une empreinte de toutes les colonnes hors `isDemo`, avant et après : la moindre différence annule tout. Appliqué le 21/11/2026 sur la base locale, après sauvegarde (`backups/agora-20261121-172035.dump`) : 32 enregistrements (8 livres, 8 auteurs, 6 rencontres, 3 articles, 3 demandes d’adhésion, 1 livre du mois, 1 tournoi, 1 record, 1 quiz, 0 compte), aucune ligne ajoutée ni supprimée, contenu identique. Sur une autre base (production), le relancer de la même façon ; relancé sur une base déjà convertie, il ne fait rien et ne réécrit pas la liste.
+- **Liste à corriger** : `docs/A-CORRIGER.md`, un lien vers la page d’édition de chaque enregistrement.
+- **Interface** : bandeau « Données de démonstration » retiré du site public, de l’espace membre et de l’admin (`DemoBanner`, `hasDemoData`, étiquette de cache supprimés). Les anciennes entrées du journal `demo.cleared` restent lisibles sous le libellé « Données d’exemple supprimées (ancienne commande) ». Le mot « démonstration » qui reste dans le programme du lancement (« courte démonstration » de chaque activité) vient de `docs/CONTENUS-CLUB.md` et désigne une animation réelle.
+- **Seed** : référence (rôles, permissions, barème, badges, niveaux, catégories, réglages) et contenus officiels (lancement, comité) seulement. `prisma/demo-data.ts`, `prisma/seed-scrabble.ts`, `src/lib/demo-data.ts`, `scripts/clear-demo.ts` et la commande `pnpm db:clear-demo` sont retirés : plus rien à nettoyer. Les exemples de la page interne `/design-system` (absente en production) et du test des couvertures générées vivent dans `src/app/design-system/exemples.ts`, jamais écrits en base.
+- **Champ `isDemo`** : gardé dans le schéma (le retirer demanderait une migration sans bénéfice immédiat) ; l’application ne le lit plus. Les comptes de test des parcours Playwright le portent encore ; ils sont nettoyés par leur adresse `@e2e.agora.test` ou leur préfixe `E2E-`.
+- **Tests** : les tests de `db:clear-demo` et du quiz de démonstration sont retirés avec ce qu’ils vérifiaient. Le parcours public `phase3-pages` crée désormais son propre livre et son propre article (`test-user.ts create-content`) au lieu de compter sur les contenus semés. `accueil.spec.ts` vérifie que le bandeau a disparu.

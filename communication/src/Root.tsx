@@ -5,6 +5,9 @@ import { PlancheKit } from "../demo-kit/PlancheKit";
 import { ReferenceLogo } from "../demo-kit/ReferenceLogo";
 import { DUREE_TEASER, Teaser } from "../semaine-1/Teaser";
 import { VisuelLogo, VisuelQuestion, VisuelSlogan } from "../semaine-1/Visuels";
+import { DUREE_PRESENTATION } from "../semaine-2/minutage";
+import { Presentation } from "../semaine-2/Presentation";
+import { SaveTheDate } from "../semaine-2/SaveTheDate";
 import { FPS, chargerPolices, formats } from "./kit";
 
 chargerPolices();
@@ -60,6 +63,29 @@ export const Root: React.FC = () => (
           <Still id={`${nom}-Portrait`} component={Visuel} defaultProps={{ format: "portrait" as const }} width={portrait.largeur} height={portrait.hauteur} />
         </React.Fragment>
       ))}
+    </Folder>
+    <Folder name="Semaine-2">
+      <Composition
+        id="Presentation-Vertical"
+        component={Presentation}
+        defaultProps={{ apercuPlans: false }}
+        durationInFrames={DUREE_PRESENTATION}
+        fps={FPS}
+        width={vertical.largeur}
+        height={vertical.hauteur}
+      />
+      <Composition
+        id="PresentationPlans-Vertical"
+        component={Presentation}
+        defaultProps={{ apercuPlans: true }}
+        durationInFrames={DUREE_PRESENTATION}
+        fps={FPS}
+        width={vertical.largeur}
+        height={vertical.hauteur}
+      />
+      <Still id="SaveTheDate-Vertical" component={SaveTheDate} defaultProps={{ format: "vertical" as const }} width={vertical.largeur} height={vertical.hauteur} />
+      <Still id="SaveTheDate-Carre" component={SaveTheDate} defaultProps={{ format: "carre" as const }} width={carre.largeur} height={carre.hauteur} />
+      <Still id="SaveTheDate-Portrait" component={SaveTheDate} defaultProps={{ format: "portrait" as const }} width={portrait.largeur} height={portrait.hauteur} />
     </Folder>
   </>
 );

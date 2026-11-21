@@ -20,7 +20,7 @@ import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { site } from "@/config/site";
 import { eventTypeLabels } from "@/config/activities";
 import { eventDateParts } from "@/lib/dates";
-import { books, events } from "../../../prisma/demo-data";
+import { books, events } from "./exemples";
 import { Block, Swatch } from "./parts";
 
 export const metadata: Metadata = { title: "Design system", robots: { index: false } };
@@ -227,7 +227,7 @@ export default function DesignSystemPage() {
       </Block>
 
       <Block title="Couvertures générées">
-        <p className="petit mb-5 text-gris">Les cinq gabarits, puis les livres de démonstration.</p>
+        <p className="petit mb-5 text-gris">Les cinq gabarits, puis des exemples de couvertures.</p>
         <ul className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
           {gabarits.map((g, i) => (
             <li key={g}>

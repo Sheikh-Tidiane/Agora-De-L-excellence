@@ -5,7 +5,8 @@ import { randomClient, signInAsAdmin, testUser } from "./support/parcours";
  * Pages de la phase 3 hors adhésion et événements : bibliothèque, actualités, contact,
  * confidentialité, puis livres, articles, paramètres, équipe et journal côté administration.
  * Chaque page est ouverte, son geste principal exécuté, et la console doit rester sans erreur.
- * Prérequis : `docker compose up -d`, migrations et seed (données de démonstration) appliqués.
+ * Prérequis : `docker compose up -d`, migrations et seed appliqués. Le parcours public crée
+ * lui-même le livre et l'article qu'il consulte : il ne dépend d'aucun contenu préexistant.
  */
 test.use({ extraHTTPHeaders: randomClient() });
 
@@ -44,68 +45,85 @@ test("site public : bibliothèque, actualités, contact, confidentialité", asyn
   page,
   request,
 }, testInfo) => {
-  test.setTimeout(240_000);
+  test.setTimeout(300_000);
   const capture = testInfo.project.name === "desktop";
   const problems = watch(page);
+  const prefix = `E2E-P3pub-${Date.now()}-${testInfo.project.name}`;
+  // Même calcul que `test-user.ts create-content`.
+  const slug = prefix
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+  testUser("create-content", prefix);
 
-  // --- Bibliothèque : catalogue, recherche, fiche ---
-  await page.goto("/library");
-  await expect(h1(page)).toHaveText("Sur l’étagère du club.");
-  const books = page.getByRole("main").locator('a[href^="/library/"]');
-  await expect(books.first()).toBeVisible();
-  if (capture) await shot(page, "library", publicWidths);
-  const search = page.locator("#q");
-  await search.fill("zzzz-introuvable");
-  await search.press("Enter");
-  await expect(page.getByText("Rien sur cette étagère")).toBeVisible();
-  await page.goto("/library");
-  await books.first().click();
-  await expect(page).toHaveURL(/\/library\/[a-z0-9-]+$/);
-  await expect(h1(page)).toBeVisible();
-  if (capture) await shot(page, "library-fiche", publicWidths);
-  await page.goto("/library/livre-qui-n-existe-pas");
-  await expect(
-    page.getByRole("link", { name: /bibliothèque|catalogue|accueil/i }).first(),
-  ).toBeVisible();
+  try {
+    // --- Bibliothèque : catalogue, recherche, fiche ---
+    // Les listes publiques sont en cache (revérifié chaque minute) : le livre créé y apparaît
+    // sur un serveur qui vient de démarrer ; sa fiche, jamais encore servie, est toujours à jour.
+    await page.goto("/library");
+    await expect(h1(page)).toHaveText("Sur l’étagère du club.");
+    const books = page.getByRole("main").locator('a[href^="/library/"]');
+    await expect(books.first()).toBeVisible();
+    if (capture) await shot(page, "library", publicWidths);
+    const search = page.locator("#q");
+    await search.fill("zzzz-introuvable");
+    await search.press("Enter");
+    await expect(page.getByText("Rien sur cette étagère")).toBeVisible();
+    await page.goto("/library");
+    await books.first().click();
+    await expect(page).toHaveURL(/\/library\/[a-z0-9-]+$/);
+    await expect(h1(page)).toBeVisible();
+    await page.goto(`/library/${slug}-livre`);
+    await expect(h1(page)).toHaveText(`${prefix} Livre`);
+    if (capture) await shot(page, "library-fiche", publicWidths);
+    await page.goto("/library/livre-qui-n-existe-pas");
+    await expect(
+      page.getByRole("link", { name: /bibliothèque|catalogue|accueil/i }).first(),
+    ).toBeVisible();
 
-  // --- Actualités : liste, article ---
-  await page.goto("/news");
-  await expect(h1(page)).toHaveText("À lire entre deux rencontres.");
-  const articles = page.getByRole("main").locator('a[href^="/news/"]');
-  await expect(articles.first()).toBeVisible();
-  if (capture) await shot(page, "news", publicWidths);
-  await articles.first().click();
-  await expect(page).toHaveURL(/\/news\/[a-z0-9-]+$/);
-  await expect(h1(page)).toBeVisible();
-  if (capture) await shot(page, "news-article", publicWidths);
+    // --- Actualités : liste, article ---
+    await page.goto("/news");
+    await expect(h1(page)).toHaveText("À lire entre deux rencontres.");
+    const articles = page.getByRole("main").locator('a[href^="/news/"]');
+    await expect(articles.first()).toBeVisible();
+    if (capture) await shot(page, "news", publicWidths);
+    await articles.first().click();
+    await expect(page).toHaveURL(/\/news\/[a-z0-9-]+$/);
+    await expect(h1(page)).toBeVisible();
+    if (capture) await shot(page, "news-article", publicWidths);
+    await page.goto(`/news/${slug}-article`);
+    await expect(h1(page)).toHaveText(`${prefix} Article`);
 
-  // --- Contact : le message part vraiment par e-mail ---
-  const subject = `E2E contact ${Date.now()}-${testInfo.project.name}`;
-  await page.goto("/contact");
-  await expect(h1(page)).toHaveText("Écrivez-nous.");
-  if (capture) await shot(page, "contact", publicWidths);
-  await page.getByRole("button", { name: "Envoyer le message" }).click();
-  await expect(page.getByText("Message envoyé.")).toHaveCount(0);
-  await page.getByLabel("Votre nom").fill("Awa Essai");
-  await page.getByLabel("Adresse e-mail").fill("awa.essai@e2e.agora.test");
-  await page.getByLabel("Objet").fill(subject);
-  await page.getByLabel("Votre message").fill("Bonjour, à quelle heure commence la rencontre ?");
-  await page.getByRole("button", { name: "Envoyer le message" }).click();
-  await expect(page.getByText(/Message envoyé\./)).toBeVisible();
-  await expect(async () => {
-    const found = await request.get(`${mailpit}/api/v1/search`, {
-      params: { query: `subject:"${subject}"`, limit: "1" },
-    });
-    const { messages } = (await found.json()) as { messages: unknown[] };
-    expect(messages.length).toBe(1);
-  }).toPass({ timeout: 30_000 });
+    // --- Contact : le message part vraiment par e-mail ---
+    const subject = `E2E contact ${Date.now()}-${testInfo.project.name}`;
+    await page.goto("/contact");
+    await expect(h1(page)).toHaveText("Écrivez-nous.");
+    if (capture) await shot(page, "contact", publicWidths);
+    await page.getByRole("button", { name: "Envoyer le message" }).click();
+    await expect(page.getByText("Message envoyé.")).toHaveCount(0);
+    await page.getByLabel("Votre nom").fill("Awa Essai");
+    await page.getByLabel("Adresse e-mail").fill("awa.essai@e2e.agora.test");
+    await page.getByLabel("Objet").fill(subject);
+    await page.getByLabel("Votre message").fill("Bonjour, à quelle heure commence la rencontre ?");
+    await page.getByRole("button", { name: "Envoyer le message" }).click();
+    await expect(page.getByText(/Message envoyé\./)).toBeVisible();
+    await expect(async () => {
+      const found = await request.get(`${mailpit}/api/v1/search`, {
+        params: { query: `subject:"${subject}"`, limit: "1" },
+      });
+      const { messages } = (await found.json()) as { messages: unknown[] };
+      expect(messages.length).toBe(1);
+    }).toPass({ timeout: 30_000 });
 
-  // --- Confidentialité ---
-  await page.goto("/privacy");
-  await expect(h1(page)).toHaveText("Vos données, en clair.");
-  if (capture) await shot(page, "privacy", [375, 1440]);
+    // --- Confidentialité ---
+    await page.goto("/privacy");
+    await expect(h1(page)).toHaveText("Vos données, en clair.");
+    if (capture) await shot(page, "privacy", [375, 1440]);
 
-  expect(problems, "erreurs relevées pendant le parcours").toEqual([]);
+    expect(problems, "erreurs relevées pendant le parcours").toEqual([]);
+  } finally {
+    testUser("delete-content", prefix);
+  }
 });
 
 test("administration : livres, articles, paramètres, équipe, journal", async ({

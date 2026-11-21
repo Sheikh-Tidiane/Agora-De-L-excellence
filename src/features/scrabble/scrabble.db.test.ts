@@ -8,7 +8,6 @@ const svc = await import("@/features/scrabble/service");
 const { readPublicTournament, readPalmares } = await import("@/features/scrabble/public-read");
 const { readMemberTournamentHistory, readAdminTournament } =
   await import("@/features/scrabble/admin-read");
-const { clearDemoData } = await import("@/lib/demo-data");
 
 /**
  * Services du Scrabble contre la vraie base, chaque test dans une transaction annulée : aucune
@@ -331,14 +330,6 @@ describe.skipIf(!reachable)("Scrabble (base réelle, transaction annulée)", () 
       await svc.setParticipantWithdrawn(pc.id, true, tx);
       const res = await svc.validateResults(t.id, actor.id, tx);
       expect(res.winners.map((w) => w.userId)).toEqual([b.id]);
-      // `pnpm db:clear-demo` retire un tournoi de démonstration malgré ses parties (`Restrict`).
-      await tx.tournament.update({ where: { id: t.id }, data: { isDemo: true } });
-      const client = {
-        $transaction: (fn: (inner: Tx) => unknown) => fn(tx),
-      } as unknown as typeof realPrisma;
-      await clearDemoData(client);
-      expect(await tx.tournament.count({ where: { id: t.id } })).toBe(0);
-      expect(await tx.match.count({ where: { id: m.id } })).toBe(0);
     });
   });
 

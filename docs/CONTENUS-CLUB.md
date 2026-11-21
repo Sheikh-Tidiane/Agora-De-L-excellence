@@ -70,7 +70,7 @@ Tous les trois mois, la projection d’un film historique ou qui stimule l’int
 
 ## 8. Lancement
 
-**Samedi 26 décembre 2026, à partir de 16 h** (date provisoire, lieu à confirmer).
+**Samedi 2 janvier 2027, à partir de 16 h** (date communiquée par le porteur du projet le 21/11/2026, à la place du samedi 26 décembre 2026 ; lieu à confirmer).
 
 | Horaire | Programme |
 |---|---|
@@ -103,14 +103,14 @@ Principes retenus, en attente du texte définitif rédigé et validé par le com
 ## 9. Conséquences pour la plateforme
 
 ### Textes et pages
-- **Accueil** : le slogan dans le hero ; la section « trois piliers » devient « trois dimensions » ; une section « Activités » présente les cinq activités ; le lancement du 26 décembre est mis en avant tant qu'il n'est pas passé.
+- **Accueil** : le slogan dans le hero ; la section « trois piliers » devient « trois dimensions » ; une section « Activités » présente les cinq activités ; le lancement du 2 janvier 2027 est mis en avant tant qu'il n'est pas passé.
 - **À propos** : objectifs, trois dimensions, comité de pilotage, rythme des rencontres, conditions d’adhésion.
 - **Activités** : une section ou page par activité (A à E), avec les événements à venir de ce type.
 - **Adhésion** : afficher clairement les 1 000 F CFA et les 100 F CFA par séance avant le formulaire.
 - **Pied de page** : nom, slogan, Dakar, lien vers la Charte.
 - **Charte** : page publique `/charte` reprenant la section 8 bis, avec la mention « version provisoire » tant que le comité n’a pas validé le texte (contenu modifiable depuis l’admin). La case « J’accepte la charte du club » du formulaire d’adhésion renvoie vers cette page ; la version acceptée est enregistrée avec la demande.
 - **Archives de l’Agora** : chaque événement passé peut recevoir un **compte rendu** (synthèse du débat, résumé du film ou du documentaire, livre discuté, résultats du tournoi, photos avec consentement), rédigé par un responsable dans l’admin. Il s’affiche sur la page de l’événement passé et dans une page `/archives`, filtrable par activité et par date. Les fiches de lecture validées des membres et les palmarès Scrabble y sont reliés. Objectif : que la plateforme devienne peu à peu une bibliothèque des connaissances produites par le club.
-- **Lancement** : la page de l’événement du 26 décembre affiche le programme ; prévoir une page ou un QR code imprimable qui mène directement au formulaire d’adhésion (`/membership`), optimisé pour un remplissage rapide sur téléphone.
+- **Lancement** : la page de l’événement du lancement affiche le programme ; prévoir une page ou un QR code imprimable qui mène directement au formulaire d’adhésion (`/membership`), optimisé pour un remplissage rapide sur téléphone.
 - Corriger la langue des textes sources si besoin, sans changer le sens.
 
 ### Modèle de données
@@ -130,7 +130,7 @@ Principes retenus, en attente du texte définitif rédigé et validé par le com
 - **Quiz en ligne** : un responsable crée un quiz (questions à choix multiples, durée, période d’ouverture), les membres y répondent depuis leur téléphone, le score rapporte des points selon une `PointRule` et alimente un classement des quiz. Complète les Génies du soir.
 
 ### Données de démo
-- Le lancement du 26 décembre 2026 est un **vrai événement**, pas une donnée de démo : le créer via le seed avec `isDemo = false` et le statut « provisoire », lieu « à confirmer ».
+- Le lancement (2 janvier 2027) est un **vrai événement**, pas une donnée de démo : le créer via le seed avec `isDemo = false` et le statut « provisoire », lieu « à confirmer ».
 
 ---
 

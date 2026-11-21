@@ -49,8 +49,9 @@ pnpm db:seed                  # barème, badges, niveaux et données de démonst
 ```
 
 - Le seed est idempotent : il peut être relancé sans créer de doublons.
-- Les données de démonstration sont marquées `isDemo` ; un bandeau l'indique sur le site tant
-  qu'il en reste. Pour les retirer : `pnpm db:clear-demo`.
+- Le seed ne crée que les données de référence (rôles, permissions, barème, badges, niveaux,
+  catégories, réglages) et les contenus officiels du club (lancement, comité). Aucun contenu
+  fictif : livres, rencontres et articles se créent depuis l'administration.
 - En production, appliquer les migrations avec `pnpm db:deploy` (jamais `db push`).
 
 ## Compte super-administrateur

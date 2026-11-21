@@ -1,7 +1,7 @@
 import React from "react";
 import { useCurrentFrame } from "remotion";
 import { echelleHauteur, etatPose, ombreDouce, versRepereLocal, type Depart } from "./mouvement";
-import { valeurLettre } from "./scrabble";
+import { lettreDeBase, valeurLettre } from "./scrabble";
 import { couleurs, polices } from "./tokens";
 
 export type VarianteTuile = "ivoire" | "indigo" | "terracotta" | "terracottaClair";
@@ -123,7 +123,8 @@ export const Tuile: React.FC<TuileProps> = ({
             fontSize={70}
             fill={encre}
           >
-            {lettre.toUpperCase()}
+            {/* Comme au Scrabble : jamais d’accent ni de cédille sur une tuile. */}
+            {lettreDeBase(lettre)}
           </text>
           {valeurAffichee !== null ? (
             <text

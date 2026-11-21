@@ -1,9 +1,10 @@
 /**
- * Données de démonstration du seed (marquées `isDemo`, supprimées par `pnpm db:clear-demo`).
- * Les livres cités existent ; les mots du club, dates, rencontres et articles sont fictifs.
+ * Exemples de la page interne /design-system (absente en production) et des tests des
+ * couvertures générées. Ils ne sont jamais écrits en base. Les livres cités existent ; les
+ * mots du club et les rencontres sont des exemples de mise en page.
  */
 
-export type DemoBook = {
+export type LivreExemple = {
   slug: string;
   title: string;
   author: string;
@@ -14,7 +15,7 @@ export type DemoBook = {
   note: string;
 };
 
-export const books: DemoBook[] = [
+export const books: LivreExemple[] = [
   {
     slug: "une-si-longue-lettre",
     year: 1979,
@@ -81,16 +82,7 @@ export const books: DemoBook[] = [
   },
 ];
 
-export const bookOfTheMonth = {
-  book: books[0],
-  /** Premier jour du mois de la sélection (UTC). */
-  month: "2026-11-01",
-  pitch:
-    "Ramatoulaye écrit à son amie Aïssatou pendant son deuil. Un roman court, une langue limpide, et de quoi discuter tout un après-midi : le mariage, l’amitié, ce qu’une femme se doit à elle-même.",
-  meetingSlug: "rendez-vous-lecture-une-si-longue-lettre",
-};
-
-export type DemoEvent = {
+export type RencontreExemple = {
   slug: string;
   /** Date ISO, heure de Dakar. */
   iso: string;
@@ -108,11 +100,9 @@ export type DemoEvent = {
 };
 
 /**
- * Rencontres fictives, une tous les quinze jours après le lancement du 26 décembre 2026
- * (qui, lui, est un vrai événement : voir prisma/seed.ts). Une par activité du club.
- * Lieu laissé vide : il n'a pas été communiqué.
+ * Une rencontre par activité du club, pour montrer les gabarits.
  */
-export const events: DemoEvent[] = [
+export const events: RencontreExemple[] = [
   {
     slug: "rendez-vous-lecture-une-si-longue-lettre",
     iso: "2027-01-09T16:00",
@@ -175,85 +165,3 @@ export const events: DemoEvent[] = [
       "La projection d’un documentaire, suivie d’un débat sur l’interprétation et l’appréciation du thème.\n\nLa rencontre dure deux heures au maximum.",
   },
 ];
-
-export type DemoArticle = {
-  slug: string;
-  category: string;
-  title: string;
-  excerpt: string;
-  date: string;
-  iso: string;
-  readingTime: string;
-};
-
-export const articles: DemoArticle[] = [
-  {
-    slug: "pourquoi-commencer-par-mariama-ba",
-    category: "Le livre du mois",
-    title: "Pourquoi nous commençons par Mariama Bâ",
-    excerpt:
-      "Pour un premier livre commun, il fallait un texte court, que tout le monde puisse trouver, et sur lequel personne ne soit d’accord. Nous n’avons pas cherché longtemps.",
-    date: "9 novembre 2026",
-    iso: "2026-11-09",
-    readingTime: "4 min de lecture",
-  },
-  {
-    slug: "mot-de-la-semaine-palabre",
-    category: "Le mot de la semaine",
-    title: "Palabre",
-    excerpt:
-      "On l’emploie pour une discussion qui s’éternise. Le mot désignait pourtant l’assemblée où l’on règle un différend par la parole.",
-    date: "2 novembre 2026",
-    iso: "2026-11-02",
-    readingTime: "2 min de lecture",
-  },
-  {
-    slug: "duplicate-ou-classique",
-    category: "Scrabble",
-    title: "Duplicate ou classique : deux façons de jouer",
-    excerpt:
-      "En classique, on affronte un adversaire et son tirage. En duplicate, tout le monde a les mêmes lettres : il ne reste que le vocabulaire.",
-    date: "26 octobre 2026",
-    iso: "2026-10-26",
-    readingTime: "3 min de lecture",
-  },
-];
-
-/**
- * Quiz de démonstration : questions de culture générale vérifiables, sans rien affirmer du club.
- * La première proposition de chaque question est la bonne (l'ordre d'affichage est celui de `position`).
- */
-export const demoQuiz = {
-  slug: "echauffement-des-genies-du-soir",
-  title: "Échauffement des Génies du soir",
-  instructions:
-    "Cinq questions de lettres et de Scrabble, une seule bonne réponse à chaque fois. Vous avez cinq minutes, une seule tentative.",
-  durationMinutes: 5,
-  questions: [
-    {
-      prompt: "Qui a écrit « Une si longue lettre » ?",
-      choices: ["Mariama Bâ", "Aminata Sow Fall", "Ken Bugul", "Fatou Diome"],
-      correct: 0,
-    },
-    {
-      prompt: "Qui est l’auteur de « L’Aventure ambiguë » ?",
-      choices: ["Ousmane Sembène", "Cheikh Hamidou Kane", "Birago Diop", "Camara Laye"],
-      correct: 1,
-    },
-    {
-      prompt: "Au Scrabble en français, combien de points vaut la lettre Z ?",
-      choices: ["4", "8", "10", "12"],
-      correct: 2,
-    },
-    {
-      prompt: "Combien de jetons compte un jeu de Scrabble en français, jokers compris ?",
-      choices: ["98", "100", "104", "102"],
-      correct: 3,
-    },
-    {
-      prompt: "De quelle langue le mot « palabre » est-il emprunté ?",
-      choices: ["L’espagnol", "Le wolof", "L’arabe", "L’anglais"],
-      correct: 0,
-    },
-  ],
-};

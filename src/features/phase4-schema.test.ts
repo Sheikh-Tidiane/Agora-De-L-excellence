@@ -1,11 +1,9 @@
 import { readFileSync } from "node:fs";
-import { describe, expect, it, vi } from "vitest";
-import { demoQuiz } from "../../prisma/demo-data";
+import { describe, expect, it } from "vitest";
 import { levelStanding, type LevelRow } from "@/features/gamification/levels";
 
 /**
- * Phase 4 (partie A) : schéma, contraintes écrites à la main, données de départ et suppression
- * des données de démonstration. Les contraintes ont aussi été vérifiées par exécution sur une
+ * Phase 4 (partie A) : schéma, contraintes écrites à la main et données de départ. Les contraintes ont aussi été vérifiées par exécution sur une
  * base vide (voir docs/DECISIONS.md, section 10) ; ici, on s'assure qu'elles restent dans la migration.
  */
 const migration = readFileSync(
@@ -89,20 +87,6 @@ describe("données de départ", () => {
   it("sème la règle de points du quiz, notée « à valider par le comité »", () => {
     expect(seed).toMatch(/code: "quiz_completed"[\s\S]{0,200}à valider par le comité/);
   });
-
-  it("le quiz de démonstration : quatre propositions et une seule bonne réponse par question", () => {
-    expect(demoQuiz.questions.length).toBeGreaterThanOrEqual(3);
-    expect(demoQuiz.durationMinutes).toBeGreaterThanOrEqual(1);
-    expect(demoQuiz.durationMinutes).toBeLessThanOrEqual(180);
-    for (const question of demoQuiz.questions) {
-      expect(question.choices).toHaveLength(4);
-      expect(new Set(question.choices).size).toBe(4);
-      expect(question.correct).toBeGreaterThanOrEqual(0);
-      expect(question.correct).toBeLessThan(4);
-    }
-    // La bonne réponse n'est pas toujours à la même place.
-    expect(new Set(demoQuiz.questions.map((q) => q.correct)).size).toBeGreaterThan(1);
-  });
 });
 
 describe("niveaux", () => {
@@ -131,58 +115,5 @@ describe("niveaux", () => {
   it("un total négatif (après corrections) compte comme zéro ; sans niveau défini : rien", () => {
     expect(levelStanding(levels, -40)).toMatchObject({ current: { code: "a" }, remaining: 100 });
     expect(levelStanding([], 50)).toEqual({ current: null, next: null, remaining: 0, progress: 0 });
-  });
-});
-
-describe("pnpm db:clear-demo", () => {
-  it("retire quiz, tentatives et points liés, dans un ordre que les clés étrangères acceptent", async () => {
-    const calls: string[] = [];
-    const tx = new Proxy(
-      {},
-      {
-        get: (_t, model: string) =>
-          new Proxy(
-            {},
-            {
-              get: (_m, method: string) => async (args?: { where?: unknown }) => {
-                calls.push(`${model}.${method}`);
-                if (method === "count") return 1;
-                if (method === "findMany") return [{ id: `${model}-demo` }];
-                if (method === "deleteMany") {
-                  calls.push(JSON.stringify(args?.where));
-                  return { count: 1 };
-                }
-                return {};
-              },
-            },
-          ),
-      },
-    );
-    const client = { $transaction: (fn: (db: unknown) => unknown) => fn(tx) };
-    vi.doMock("@/lib/prisma", () => ({ prisma: client }));
-    const { clearDemoData } = await import("@/lib/demo-data");
-    const counts = await clearDemoData(client as never);
-
-    expect(counts.quizzes).toBe(1);
-    const order = calls.filter((call) => call.endsWith(".deleteMany"));
-    const at = (target: string) => order.indexOf(target);
-    // Points et tentatives avant les quiz et les membres ; quiz avant les rencontres liées.
-    expect(at("pointTransaction.deleteMany")).toBeLessThan(at("quizAttempt.deleteMany"));
-    expect(at("quizAttempt.deleteMany")).toBeLessThan(at("quiz.deleteMany"));
-    expect(at("quiz.deleteMany")).toBeLessThan(at("event.deleteMany"));
-    expect(at("quizAttempt.deleteMany")).toBeLessThan(at("user.deleteMany"));
-    // Les points gagnés sur le quiz de démonstration, même par un vrai membre, sont visés.
-    const where = calls.join("\n");
-    expect(where).toContain('"sourceType":"QUIZ","sourceId":{"in":["quiz-demo"]}');
-    expect(where).toContain(
-      '"sourceType":"EVENT_ATTENDANCE","sourceId":{"in":["eventRegistration-demo"]}',
-    );
-    // Les corrections d'abord : elles référencent la ligne corrigée.
-    const pointDeletes = calls
-      .map((call, i) => (call === "pointTransaction.deleteMany" ? calls[i + 1]! : null))
-      .filter(Boolean);
-    expect(pointDeletes[0]).toContain('"reverses"');
-    expect(calls).toContain("auditLog.create");
-    vi.doUnmock("@/lib/prisma");
   });
 });

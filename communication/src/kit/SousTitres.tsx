@@ -16,6 +16,11 @@ export type SousTitresProps = {
   format?: NomFormat;
   /** Sur fond clair, le bandeau est indigo ; sur fond sombre, ivoire. */
   surFondSombre?: boolean;
+  /**
+   * Haut du bandeau, en px, pour le placer juste sous l’élément qu’il explique (dans la zone
+   * de sécurité). Par défaut, il est posé au-dessus de la zone de sécurité du bas.
+   */
+  haut?: number;
 };
 
 /**
@@ -23,7 +28,7 @@ export type SousTitresProps = {
  * téléphone), dans un bandeau plein (pas de transparence floutée), posé juste
  * au-dessus de la zone de sécurité du bas. Deux lignes au plus par sous-titre.
  */
-export const SousTitres: React.FC<SousTitresProps> = ({ cues, format = "vertical", surFondSombre = false }) => {
+export const SousTitres: React.FC<SousTitresProps> = ({ cues, format = "vertical", surFondSombre = false, haut }) => {
   const frame = useCurrentFrame();
   const { width } = useVideoConfig();
   const zone = formats[format].securite;
@@ -44,7 +49,7 @@ export const SousTitres: React.FC<SousTitresProps> = ({ cues, format = "vertical
         position: "absolute",
         left: zone.cotes,
         right: zone.cotes,
-        bottom: zone.bas + 24,
+        ...(haut === undefined ? { bottom: zone.bas + 24 } : { top: haut }),
         display: "flex",
         justifyContent: "center",
         opacity: opacite,

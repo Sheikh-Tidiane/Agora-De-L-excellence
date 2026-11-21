@@ -10,7 +10,6 @@ export const cacheTags = {
   settings: "settings",
   committee: "committee",
   scrabble: "scrabble",
-  demo: "demo-data",
 } as const;
 
 /**

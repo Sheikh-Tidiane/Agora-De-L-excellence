@@ -17,6 +17,17 @@ export const memberTabIcons: Record<MemberTabKey, LucideIcon> = {
 const readyTabs = memberTabs.filter((tab) => tab.ready);
 
 /**
+ * Un toucher sur l'onglet déjà actif remonte en haut de la page (comme dans les applis),
+ * en douceur, ou instantanément si l'on préfère réduire les animations.
+ */
+function remonterSiActif(event: React.MouseEvent<HTMLAnchorElement>, current: boolean) {
+  if (!current || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  event.preventDefault();
+  const reduit = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  window.scrollTo({ top: 0, behavior: reduit ? "auto" : "smooth" });
+}
+
+/**
  * Barre d'onglets du bas (mobile, sous 1024 px) : fixée dans la zone du pouce,
  * cibles de 64 px de haut, onglet courant marqué par un trait terracotta.
  */
@@ -39,6 +50,7 @@ export function MemberBottomBar() {
               <Link
                 href={tab.href}
                 aria-current={current ? "page" : undefined}
+                onClick={(event) => remonterSiActif(event, current)}
                 className={cn(
                   "relative flex h-16 flex-col items-center justify-center gap-1 text-[0.6875rem] font-semibold transition-colors duration-200 active:bg-ivoire",
                   current ? "text-indigo" : "text-gris",

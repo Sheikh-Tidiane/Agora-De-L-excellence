@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { BackToTop } from "@/components/layout/back-to-top";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageIntro } from "@/components/layout/page-intro";
@@ -243,6 +244,7 @@ export default function ArchivesPage({ searchParams }: Props) {
           <Archive searchParams={searchParams} />
         </Suspense>
       </div>
+      <BackToTop />
     </>
   );
 }

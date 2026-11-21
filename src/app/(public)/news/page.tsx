@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BackToTop } from "@/components/layout/back-to-top";
 import Link from "next/link";
 import { PageIntro } from "@/components/layout/page-intro";
 import { Reveal } from "@/components/shared/motion";
@@ -100,6 +101,7 @@ export default async function NewsPage() {
           </>
         )}
       </div>
+      <BackToTop />
     </>
   );
 }

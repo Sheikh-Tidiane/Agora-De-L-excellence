@@ -15,6 +15,8 @@ import { prisma } from "@/lib/prisma";
 //     Supprime les rencontres de test dont le titre commence ainsi.
 //   tsx e2e/support/test-user.ts delete-committee E2E-<début du nom>
 //     Retire du comité les membres de test dont le nom commence ainsi.
+//   tsx e2e/support/test-user.ts create-content E2E-<préfixe>
+//     Crée un livre visible et un article publié, titrés « <préfixe> Livre » et « <préfixe> Article ».
 //   tsx e2e/support/test-user.ts delete-content E2E-<début du titre>
 //     Supprime les livres, auteurs et articles de test dont le titre ou le nom commence ainsi.
 //   tsx e2e/support/test-user.ts delete-tournaments E2E-<début du nom>
@@ -25,7 +27,11 @@ import { prisma } from "@/lib/prisma";
 //     Supprime le compte de test, sa demande d'adhésion, ses adhésions et ses encaissements.
 async function main() {
   const [command, email, firstName, role = "member"] = process.argv.slice(2);
-  if (!command?.startsWith("delete-") && !email?.endsWith("@e2e.agora.test")) {
+  if (
+    !command?.startsWith("delete-") &&
+    command !== "create-content" &&
+    !email?.endsWith("@e2e.agora.test")
+  ) {
     throw new Error("Par sécurité, ce script n’agit que sur des adresses @e2e.agora.test.");
   }
   if (command === "create" && firstName) {
@@ -79,6 +85,36 @@ async function main() {
     await prisma.event.deleteMany({ where });
   } else if (command === "delete-committee" && email?.startsWith("E2E-")) {
     await prisma.committeeMember.deleteMany({ where: { name: { startsWith: email } } });
+  } else if (command === "create-content" && email?.startsWith("E2E-")) {
+    // Un livre visible et un article publié : le parcours public ne dépend plus d'aucun contenu
+    // préexistant (le seed n'en crée plus). Retirés ensuite par `delete-content` avec le même préfixe.
+    const prefix = email;
+    const slug = prefix
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+    const category = await prisma.category.findFirstOrThrow({ orderBy: { position: "asc" } });
+    await prisma.book.create({
+      data: {
+        slug: `${slug}-livre`,
+        title: `${prefix} Livre`,
+        summary: "Un résumé de test, rédigé pour le club.",
+        categoryId: category.id,
+        isPublished: true,
+        authors: { create: { slug: `${slug}-auteur`, name: `${prefix} Auteur` } },
+      },
+    });
+    await prisma.article.create({
+      data: {
+        slug: `${slug}-article`,
+        title: `${prefix} Article`,
+        excerpt: "Un article de test.",
+        content: "Le contenu d’un article de test.",
+        category: "Compte rendu",
+        status: "PUBLISHED",
+        publishedAt: new Date(),
+      },
+    });
   } else if (command === "delete-content" && email?.startsWith("E2E-")) {
     await prisma.book.deleteMany({ where: { title: { startsWith: email } } });
     await prisma.author.deleteMany({ where: { name: { startsWith: email } } });

@@ -126,3 +126,16 @@ Copie de l’ensemble, pour la publication : `out/semaine-1/final/`.
 - **Couleurs** : zones comparées au rendu PNG direct : 3/255 d’écart au plus (fond indigo et tuile A1 du logo, image 470 ; papier final, image 577 ; page, image 150).
 - **Logo** : image 470 identique au pixel près à l’image de contrôle `ReferenceLogo-Vertical` avant encodage ; 3/255 au plus après.
 - **Non vérifié** : la lecture sur un vrai téléphone et le passage par WhatsApp, qui recompresse.
+
+## Corrections du porteur (version 1.2, rendue)
+
+1. **LIRE et SAVOIR deviennent AGORA par un vrai mouvement** (version animée). Le plateau, le livre et le second plateau forment maintenant un seul plan continu sur la même table (`semaine-1/TableAnimee.tsx`, images 78 à 316) : plus de fondu entre deux plans de tuiles. Après la pose de SAVOIR, la grille s’efface ; L, I, S et le R de SAVOIR s’envolent hors du cadre (7,6 – 8,0 s) ; A, V, O (de SAVOIR), R et E (de LIRE) volent jusqu’à la rangée centrale (7,67 – 9,2 s). En vol, le V devient G et le E devient A, sur une seule tuile opaque : la lettre s’efface, puis la nouvelle apparaît (nouveau cas dans `TuileEnMigration`). Jamais deux tuiles semi-transparentes l’une sur l’autre. La finale prend le relais à 316 sans aucun écart (au plus 1/255).
+2. **La page entre en glissant, déjà ivoire.** Le livre glisse dans le cadre par le bas (4,2 – 4,8 s), entièrement opaque, et ressort par le haut (6,07 – 6,67 s) : plus aucun changement de couleur, donc plus de ton gris-lavande. Pendant que le livre couvre le plateau, le cadre se recentre (invisible) pour accueillir SAVOIR.
+
+La version avec plan filmé garde ses fondus entre plans filmés (le livre y glisse aussi) ; son passage vers AGORA sera à revoir avec le vrai plan, une fois `tuiles-plateau.mp4` déposé.
+
+Images de contrôle : `out/semaine-1/corrections/` (planches `planche-a.png` 4,2 – 4,8 s, `planche-b.png` 6,8 – 7,6 s, `planche-c.png` 7,8 – 9,2 s).
+
+**Rendu muet 1.2** (21/11/2026, son reporté à plus tard par le porteur) : `out/TeaserAnime-Vertical/TeaserAnime-Vertical-HQ.mp4` (2,7 Mo) et `-WhatsApp.mp4` (1,7 Mo), 578 images, 19,27 s ; copies dans `out/semaine-1/final/`. Contrôle sur les deux : aucun saut ni clignotement isolé, aucune alternance d’une image à l’autre ; glissement du livre (130 – 143, 182 – 196) et vol des tuiles vers AGORA (228 – 272) en courbes continues ; seul pic isolé : le passage de fond (497), voulu ; couleurs à 3/255 près du rendu direct.
+
+**Son : reporté.** Le dossier `communication/assets/sons/` (bruitages et musiques) et les règles audio n’existent pas encore dans le projet.

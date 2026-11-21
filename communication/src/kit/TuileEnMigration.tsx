@@ -76,6 +76,31 @@ export const TuileEnMigration: React.FC<TuileEnMigrationProps> = ({
 
   const memeAspect = depuis.variante === vers.variante && depuis.lettre === vers.lettre;
 
+  // Une lettre qui en devient une autre en vol (même teinte) : une seule tuile, opaque.
+  // La première lettre s’efface, puis la nouvelle apparaît : jamais deux lettres ni deux
+  // tuiles l’une sur l’autre.
+  if (!memeAspect && depuis.lettre && vers.lettre && depuis.variante === vers.variante) {
+    const sortie = interpolate(t, [duree * 0.1, duree * 0.42], [1, 0], { ...borne, easing: courbes.sortie });
+    const entree = interpolate(t, [duree * 0.5, duree * 0.85], [0, 1], { ...borne, easing: courbes.entree });
+    const seconde = t >= duree * 0.5;
+    return (
+      <div style={{ position: "absolute", left: x, top: y }}>
+        <Tuile
+          lettre={seconde ? vers.lettre : depuis.lettre}
+          valeur={seconde ? vers.valeur : depuis.valeur}
+          taille={taille}
+          ratio={ratio}
+          arrondi={arrondi}
+          variante={vers.variante}
+          opaciteLettre={seconde ? entree : sortie}
+          rotationFinale={rotation}
+          hauteur={hauteur}
+          matiere={matiere}
+        />
+      </div>
+    );
+  }
+
   // Une lettre qui devient une place : une seule tuile, dont la lettre s’efface au
   // début du vol et dont la couleur passe d’une teinte à l’autre (pas de fondu entre
   // deux tuiles semi-transparentes, qui laisserait voir un fantôme de lettre).

@@ -56,12 +56,12 @@ import { FondPapier, RangeeDeTuiles, TexteCinetique, couleurs } from "../src/kit
 |---|---|
 | `tokens.ts` | Couleurs, polices, courbes d’animation par type de mouvement, durées de transition, formats et zones de sécurité, `tempsLecture()` (1 s pour 3 mots, 1,5 s au moins). |
 | `scrabble.ts` | Valeurs des lettres au Scrabble francophone, `valeurMot()`. |
-| `<Tuile lettre valeur />` | Une tuile avec sa matière (relief, ombre douce qui se resserre au contact, rotation en vol, rebond amorti). Sans `debut`, elle est déjà posée. Variantes : ivoire, indigo, terracotta, terracotta clair. |
+| `<Tuile lettre valeur />` (jamais d’accent sur une tuile : il les retire) | Une tuile avec sa matière (relief, ombre douce qui se resserre au contact, rotation en vol, rebond amorti). Sans `debut`, elle est déjà posée. Variantes : ivoire, indigo, terracotta, terracotta clair. |
 | `<RangeeDeTuiles mot />` | Un mot qui s’écrit tuile par tuile, avec les valeurs. `dureeRangee(mot)` donne sa durée. |
 | `<Hemicycle />` | Les gradins du logo qui se remplissent rang après rang, puis la tuile A1. `auRepos` pour une image fixe. |
 | `<RevelationLogo />` | Hémicycle, puis logo officiel par fondu (géométrie identique), puis logotype. `chronologieRevelation()` donne tous les repères temporels. |
 | `<TexteCinetique lignes />` | Texte mot par mot ou ligne par ligne, avec le temps de lecture des règles. `dureeTexteCinetique()` pour caler la suite. |
-| `<SousTitres cues />` | Sous-titres intégrés, au-dessus de la zone de sécurité du bas. |
+| `<SousTitres cues />` | Sous-titres intégrés, au-dessus de la zone de sécurité du bas ; `haut` pour les poser juste sous ce qu’ils expliquent. |
 | `<FondPapier />`, `<FondIndigo />` | Les deux fonds, avec la lumière unique d’en haut à gauche. |
 | `<PassageDeFond debut />` | Passage du papier ivoire à l’indigo : couleur interpolée en OKLCH par les bleus (jamais le gris-mauve d’un mélange RVB), deux images intermédiaires seulement, textures croisées. Le décor du papier se passe en enfant et part avec lui. Faire sortir texte et lettres **avant** son début. `vers="ivoire"` : le même chemin à rebours, de l’indigo au papier. |
 | `couleur.ts` (`interpolerOklch`) | Interpolation de deux couleurs en OKLCH, avec choix du sens de rotation de la teinte. À utiliser pour tout changement de couleur animé. |

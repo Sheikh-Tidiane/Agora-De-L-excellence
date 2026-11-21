@@ -113,8 +113,12 @@ const CartonFinal: React.FC = () => {
   );
 };
 
-/** Scènes 3 à 5, en un seul plan continu. Images relatives au début du plan. */
-export const Finale: React.FC = () => {
+/**
+ * Scènes 3 à 5, en un seul plan continu. Images relatives au début du plan.
+ * `rangement` : faux dans la version animée, où AGORA est déjà écrit par les tuiles du
+ * plateau (TableAnimee) quand la finale prend le relais.
+ */
+export const Finale: React.FC<{ rangement?: boolean }> = ({ rangement = true }) => {
   const frame = useCurrentFrame();
   const opaciteLogo = interpolate(frame, [f.sortieLogo, f.sortieLogo + durees.transitionCourte], [1, 0], {
     ...borne,
@@ -123,7 +127,7 @@ export const Finale: React.FC = () => {
   return (
     <AbsoluteFill>
       <PassageDeFond debut={f.passage} vers="ivoire" />
-      {frame < f.migration ? <Rangement /> : null}
+      {rangement && frame < f.migration ? <Rangement /> : null}
       {opaciteLogo > 0 ? (
         <div style={{ position: "absolute", left: LOGO_X, top: LOGO_Y, opacity: opaciteLogo }}>
           <RevelationLogo

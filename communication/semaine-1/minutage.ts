@@ -10,13 +10,19 @@ export const H = 1920;
 /** Fondu entre deux plans du moment de lecture : 0,4 s. */
 export const FONDU = durees.transitionCourte;
 
-/** Plans successifs (images absolues). Deux plans voisins se chevauchent de FONDU. */
+/**
+ * Plans successifs (images absolues). Deux plans voisins se chevauchent de FONDU.
+ * Version avec plan filmé : plateau1, page, plateau2, puis la finale.
+ * Version animée : un seul plan continu sur la table (TableAnimee, de 78 à 316),
+ * par-dessus la finale, qui prend le relais à 316.
+ */
 export const plans = {
   chute: { debut: 0, duree: 90 },
   plateau1: { debut: 78, duree: 54 },
-  page: { debut: 120, duree: 60 },
-  plateau2: { debut: 168, duree: 54 },
+  page: { debut: 120, duree: 66 },
+  plateau2: { debut: 186, duree: 36 },
   finale: { debut: 210 },
+  table: { debut: 78, duree: 316 - 78 },
 } as const;
 
 /** Tuiles de la scène 1 : leur lettre, leur place « au hasard » sur la table, leur ordre de chute. */

@@ -64,5 +64,30 @@ next-env.d.ts
 # Déploiement : état local du serveur (versions en service)
 /.deploy/
 
+
+# Médias lourds : jamais dans Git (rendus, vidéos, sons, plans de tournage)
+*.mp4
+*.mov
+*.webm
+*.mkv
+*.mp3
+*.wav
+*.m4a
+*.aac
+*.ogg
+*.flac
+/communication/assets/sons/
+/communication/assets/plans/*
+!/communication/assets/plans/.gitkeep
+/communication/*.mp4
+
+# Médias personnels déposés à la racine (photos et vidéos WhatsApp)
+/Deos/
+
+# Sauvegardes et exports de base : données personnelles, jamais dans Git
+*.dump
+*.sql.gz
+*.age
+
 # Export des contenus (scripts/contenus-export.ts) : données du club, jamais dans Git
 /export-contenus/

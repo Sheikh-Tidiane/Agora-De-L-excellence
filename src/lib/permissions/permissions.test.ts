@@ -68,7 +68,7 @@ function signedInAs(roles: RoleCode[], status = "ACTIVE") {
 /** Matrice attendue, écrite à la main : le test échoue si le catalogue s'en écarte. */
 const expected: Record<RoleCode, PermissionCode[]> = {
   member: ["member.access"],
-  communication: ["admin.access", "articles.manage", "quizzes.manage"],
+  communication: ["admin.access", "articles.manage", "quizzes.manage", "contact.manage"],
   library: ["admin.access", "books.manage", "readings.validate", "reviews.moderate"],
   scrabble: ["admin.access", "tournaments.manage", "scores.enter", "results.publish"],
   admin: [
@@ -88,6 +88,7 @@ const expected: Record<RoleCode, PermissionCode[]> = {
     "points.rules.manage",
     "badges.award",
     "quizzes.manage",
+    "contact.manage",
     "data.export",
     "settings.manage",
     "audit.read",

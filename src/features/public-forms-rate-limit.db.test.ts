@@ -69,6 +69,7 @@ describe.skipIf(!reachable)("formulaires publics : limites de débit", () => {
 
   afterAll(async () => {
     await db.membershipRequest.deleteMany({ where: { email: { endsWith: `@${domain}` } } });
+    await db.contactMessage.deleteMany({ where: { email: { endsWith: `@${domain}` } } });
     await db.rateLimit.deleteMany({ where: { key: { in: keys } } });
     await db.$disconnect();
   });

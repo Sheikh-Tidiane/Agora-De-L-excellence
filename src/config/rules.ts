@@ -12,6 +12,8 @@ export const rules = {
   "fees.session": 100,
   /** Une demande d'adhésion refusée est supprimée après ce délai, en mois. */
   "membership.rejectedRetentionMonths": 12,
+  /** Un message de contact traité est supprimé après ce délai, en mois. */
+  "contact.handledRetentionMonths": 12,
   /** Délai d'annulation d'une inscription avant le début de l'événement, en heures. */
   "events.cancellationDeadlineHours": 24,
   /** Avis publics sur le catalogue (critique validée + accord du membre). */

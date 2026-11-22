@@ -16,3 +16,4 @@ export { ZoneSecurite } from "./ZoneSecurite";
 export { ArcDeGradins, type ArcDeGradinsProps } from "./ArcDeGradins";
 export { TuileEnMigration, type TuileEnMigrationProps, type EtatTuile } from "./TuileEnMigration";
 export { PageDeLivre, type PageDeLivreProps, type TextePage } from "./PageDeLivre";
+export { Reglette, placeSurReglette, type RegletteProps } from "./Reglette";

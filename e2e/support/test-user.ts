@@ -23,6 +23,8 @@ import { prisma } from "@/lib/prisma";
 //     Supprime les tournois de test (parties d'abord : elles retiennent les joueurs).
 //   tsx e2e/support/test-user.ts delete-quizzes E2E-<début du titre>
 //     Supprime les quiz de test (tentatives d'abord : elles retiennent le quiz).
+//   tsx e2e/support/test-user.ts delete-contact E2E-<début de l'objet>
+//     Supprime les messages de contact de test dont l'objet commence ainsi.
 //   tsx e2e/support/test-user.ts delete <email>
 //     Supprime le compte de test, sa demande d'adhésion, ses adhésions et ses encaissements.
 async function main() {
@@ -123,6 +125,8 @@ async function main() {
     const where = { name: { startsWith: email } };
     await prisma.match.deleteMany({ where: { round: { tournament: where } } });
     await prisma.tournament.deleteMany({ where });
+  } else if (command === "delete-contact" && email?.startsWith("E2E-")) {
+    await prisma.contactMessage.deleteMany({ where: { subject: { startsWith: email } } });
   } else if (command === "delete-quizzes" && email?.startsWith("E2E-")) {
     const where = { title: { startsWith: email } };
     await prisma.quizAttempt.deleteMany({ where: { quiz: where } });

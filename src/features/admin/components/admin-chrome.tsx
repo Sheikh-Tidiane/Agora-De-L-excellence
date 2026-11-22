@@ -82,7 +82,13 @@ function Nav({
                     {item.badge && (counts[item.badge] ?? 0) > 0 ? (
                       <span className="rounded-pastille bg-terracotta-clair px-2 text-[0.75rem] leading-5 font-bold text-indigo tabular-nums">
                         {counts[item.badge]}
-                        <span className="sr-only"> en attente</span>
+                        <span className="sr-only">
+                          {item.badge === "newMessages"
+                            ? counts[item.badge] === 1
+                              ? " nouveau"
+                              : " nouveaux"
+                            : " en attente"}
+                        </span>
                       </span>
                     ) : null}
                   </Link>

@@ -28,12 +28,13 @@ Le premier rendu télécharge une fois le navigateur sans interface de Remotion 
 | `pnpm images-cles <Id> <image>… [--sortie <dossier>]` | Rend des images clés en PNG. Les images se donnent en numéro (30 par seconde) ou en secondes (`3.5s`). Exemple : `pnpm images-cles DemoKit-Vertical 20 100 290 --sortie out/demo-kit/images-cles`. Sert aussi pour les visuels fixes (`pnpm images-cles PlancheKit-Portrait 0`). |
 | `pnpm export <Id> [<Id>…]` | Rendu final d’une ou plusieurs vidéos : `out/<Id>/<Id>-HQ.mp4` (haute qualité : archives, Instagram, TikTok) et `out/<Id>/<Id>-WhatsApp.mp4` (compressée, 16 Mo au plus, texte net). MP4 H.264, BT.709 en plage standard (ce que lisent correctement les applis et les téléphones), 30 i/s, sans son. |
 | `pnpm export <Id> --essai` | Même chaîne sur la première seconde seulement, dans `out/_essais/`, pour vérifier que tout fonctionne. |
+| `pnpm sonoriser <Id> <bande.mjs> [--lufs -14] [--pic -1]` | Ajoute une bande son à la version WhatsApp déjà exportée (`out/<Id>/<Id>-WhatsApp.mp4`, image recopiée telle quelle) : construit la bande du module (fonction `bande()`), la normalise à −14 LUFS avec un pic vrai ≤ −1 dBTP (limiteur à anticipation, plusieurs passes), garde la bande en WAV (`out/<Id>/<Id>-bande-son.wav`), mesure le fichier final et refuse de le remplacer si la cible n’est pas tenue. Exemple : `semaine-5/son-texte-lancement.mjs`. |
 | `pnpm controle <fichier.mp4> [--pixel x,y,image,référence]…` | Contrôle qualité d’une vidéo exportée : caractéristiques, fluidité image par image (sauts, clignotements), couleur d’une zone de 4 × 4 px comparée à une couleur (`#1F2A55`) ou, mieux, à la même image rendue en PNG par `images-cles` (les fonds ont une lumière et un grain, donc pas exactement la couleur du token). |
 | `pnpm typecheck` | Vérifie le code TypeScript du projet. |
 
 Toutes les sorties vont dans `out/`, exclu de Git. Les identifiants de composition suivent la forme `<Production>-<Format>` (`DemoKit-Vertical`, plus tard `Teaser-Vertical`, `SaveTheDate-Carre`…) ; la liste complète est dans `src/Root.tsx` et dans le Studio.
 
-Pas de musique dans les fichiers : on l’ajoute depuis la bibliothèque d’Instagram ou de TikTok au moment de publier.
+Pas de musique dans les fichiers : on l’ajoute depuis la bibliothèque d’Instagram ou de TikTok au moment de publier. Exception, à la demande du porteur : une version WhatsApp peut être sonorisée (un statut ne permet pas d’ajouter de musique), avec `pnpm sonoriser`. Les sons sont synthétisés dans le projet (`scripts/son/synthese.mjs` : chocs de tuiles, cordes pincées façon kora, bourdon, impacts feutrés, cloche, réverbération, limiteur) : rien n’est téléchargé.
 
 ## Déposer tes plans filmés et tes photos
 
@@ -66,6 +67,7 @@ import { FondPapier, RangeeDeTuiles, TexteCinetique, couleurs } from "../src/kit
 | `<PassageDeFond debut />` | Passage du papier ivoire à l’indigo : couleur interpolée en OKLCH par les bleus (jamais le gris-mauve d’un mélange RVB), deux images intermédiaires seulement, textures croisées. Le décor du papier se passe en enfant et part avec lui. Faire sortir texte et lettres **avant** son début. `vers="ivoire"` : le même chemin à rebours, de l’indigo au papier. |
 | `couleur.ts` (`interpolerOklch`) | Interpolation de deux couleurs en OKLCH, avec choix du sens de rotation de la teinte. À utiliser pour tout changement de couleur animé. |
 | `<Transition duree />` | Le langage de transition commun (glissement ou fondu). Chevaucher les deux `<Sequence>` de la durée de la transition, la nouvelle scène déclarée en second. |
+| `<Reglette />`, `placeSurReglette()` | Le chevalet du Scrabble : la barre terracotta sous une rangée de tuiles, et la position de chaque tuile dessus (semaines 3 et 5). |
 | `<ArcDeGradins />` | Motif de gradins en arc, plat, pour habiller un fond. |
 | `<TuileEnMigration depuis vers />` | Une tuile posée qui se soulève, voyage et se repose ailleurs, en changeant de taille, d’orientation et d’aspect (une lettre qui devient une place des gradins). Avec `geometrieRevelation()`, elle amène les lettres d’un mot sur les places exactes de l’hémicycle (exemple : `demo-kit/DemoKit.tsx`). |
 | `geometrieHemicycle()`, `geometrieRevelation()` | Position, rotation et taille de chaque place et de la tuile A1, en px, dans l’hémicycle ou dans le logo vertical. `<Hemicycle>` et `<RevelationLogo>` acceptent `avecA1={false}` et `exclusInterieur` / `exclusExterieur` pour laisser ces places aux tuiles venues d’ailleurs. |

@@ -94,8 +94,8 @@ test("site public : bibliothèque, actualités, contact, confidentialité", asyn
     await page.goto(`/news/${slug}-article`);
     await expect(h1(page)).toHaveText(`${prefix} Article`);
 
-    // --- Contact : le message part vraiment par e-mail ---
-    const subject = `E2E contact ${Date.now()}-${testInfo.project.name}`;
+    // --- Contact : le message part vraiment par e-mail (et s'enregistre, voir messagerie-contact) ---
+    const subject = `E2E-contact ${Date.now()}-${testInfo.project.name}`;
     await page.goto("/contact");
     await expect(h1(page)).toHaveText("Écrivez-nous.");
     if (capture) await shot(page, "contact", publicWidths);
@@ -123,6 +123,7 @@ test("site public : bibliothèque, actualités, contact, confidentialité", asyn
     expect(problems, "erreurs relevées pendant le parcours").toEqual([]);
   } finally {
     testUser("delete-content", prefix);
+    testUser("delete-contact", "E2E-contact");
   }
 });
 

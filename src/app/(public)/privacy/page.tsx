@@ -13,6 +13,7 @@ export const metadata: Metadata = {
 export default async function PrivacyPage() {
   const club = await getClubSettings();
   const retention = rules["membership.rejectedRetentionMonths"];
+  const contactRetention = rules["contact.handledRetentionMonths"];
 
   const sections: { id: string; title: string; body: React.ReactNode }[] = [
     {
@@ -42,7 +43,8 @@ export default async function PrivacyPage() {
           </li>
           <li>
             <strong>Formulaire de contact</strong>&nbsp;: votre nom, votre adresse e-mail et votre
-            message, transmis par e-mail au club. Le site n’en garde pas de copie.
+            message, transmis par e-mail au club et conservés dans son espace d’administration,
+            consultable seulement par les responsables chargés d’y répondre.
           </li>
           <li>
             <strong>Compte membre</strong>&nbsp;: les informations de l’adhésion, un mot de passe
@@ -69,6 +71,10 @@ export default async function PrivacyPage() {
       body: (
         <ul>
           <li>Une demande d’adhésion refusée est supprimée au bout de {retention} mois.</li>
+          <li>
+            Un message envoyé par le formulaire de contact est supprimé {contactRetention} mois
+            après que le club l’a traité.
+          </li>
           <li>
             Les données d’un membre sont conservées pendant son adhésion. Un membre qui quitte le
             club peut demander que son compte soit anonymisé.

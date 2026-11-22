@@ -11,27 +11,23 @@ Légende : 🔴 bloque l'ouverture · 🟠 à faire avant l'ouverture, sans bloq
 
 | Vérification                                                         | Résultat du 22/11/2026                                                                                                                                                                        |
 | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Tests unitaires (`pnpm test`)                                        | ✅ 2 696 / 2 696, 36 fichiers                                                                                                                                                                 |
+| Tests unitaires (`pnpm test`)                                        | ✅ 2 733 / 2 733, 39 fichiers (après fusion de `main`)                                                                                                                                        |
 | Types (`pnpm typecheck`) et lint (`pnpm lint`)                       | ✅ (un avertissement ancien : directive `eslint-disable` inutile dans `opengraph-image.tsx`)                                                                                                  |
 | Parcours de production (`pnpm test:prod`, Docker + Caddy HTTPS)      | ✅ 3 / 3                                                                                                                                                                                      |
 | Restauration après destruction totale                                | ✅ base et fichiers identiques (`docs/SAUVEGARDE.md`)                                                                                                                                         |
-| Parcours Playwright complets (`pnpm test:e2e`, mobile et ordinateur) | 🟠 85 réussis, 3 en échec, 16 sautés (voir ci-dessous)                                                                                                                                        |
+| Parcours Playwright complets (`pnpm test:e2e`, mobile et ordinateur) | ✅ 89 réussis, 0 échec, 17 sautés exprès (parcours réservés à un format)                                                                                                                      |
 | Format (`pnpm format:check`)                                         | 🟢 47 fichiers à reformater, tous antérieurs (surtout `communication/`) : sans effet sur le site                                                                                              |
 | Dépendances (`pnpm audit --prod`)                                    | 🟢 1 alerte « haute » : `effect` ≤ 3.22.0 (ReDoS), utilisé par la configuration de Prisma en ligne de commande, jamais par une saisie de visiteur. Disparaîtra avec une mise à jour de Prisma |
 
-Détail des 3 échecs Playwright (sur une base de ce conteneur avec 3 livres, 4 rencontres et
-3 articles publiés : les parcours supposent des contenus réels) :
+Les 3 échecs du premier passage sont réglés (mise à jour du 22/11, après décisions) :
 
-- 🟠 `e2e/contenus.spec.ts:113` : le test attend encore « Date provisoire » cochée sur le lancement
-  (ligne 217), alors que la date est confirmée et que le même fichier vérifie ailleurs
-  (ligne 58) qu'elle n'est plus provisoire. **Test périmé** depuis la confirmation du
-  16 janvier, pas un défaut du site : à mettre à jour.
-- 🟠 `e2e/lectures.spec.ts:113`, **mobile seulement, reproductible** : juste après « Lecture
-  enregistrée », un toucher sur « Lectures » dans la barre de l'espace membre ne navigue pas (la
-  page se rafraîchit au même moment). Un membre aurait à toucher deux fois. À vérifier sur un vrai
-  téléphone et à corriger si confirmé.
-- 🟢 `e2e/scrabble-quiz.spec.ts:38` : échoue dans la suite complète, **passe seul** : instabilité
-  du test (ordre ou lenteur), pas un défaut constaté.
+- `e2e/contenus.spec.ts:113` : test périmé, mis à jour pour le lancement confirmé (16 janvier
+  2027, 16 h – 19 h, Foyer des jeunes de Yeumbeul Nord, date non provisoire).
+- `e2e/lectures.spec.ts:113` (mobile) : **vrai défaut, corrigé**. Toucher l'onglet du bas déjà
+  actif remontait en haut de la page au lieu de naviguer ; l'onglet étant actif sur ses
+  sous-pages (fiche d'une lecture, carte de membre, quiz), il ne ramenait jamais à sa page
+  principale. La remontée ne vaut plus que sur la page principale de l'onglet.
+- `e2e/scrabble-quiz.spec.ts:38` : instable une fois dans la suite complète ; passe depuis.
 
 Pendant cette revue, j'ai trouvé et corrigé une erreur de ma part : le fichier d'essai local
 s'appelait `.env.production.local`, nom que Next.js charge tout seul ; le premier passage
@@ -126,16 +122,12 @@ Réglé par la configuration de production :
 
 Restent à trancher (`docs/REVUE-SECURITE.md` § 5), aucun ne bloque à lui seul :
 
-- 🟠 **Jeton de réinitialisation du mot de passe stocké en clair** en base (60 min de validité) ;
-  Better Auth sait le hacher (`verification.storeIdentifier: "hashed"`). Recommandé avant
-  l'ouverture, puisque la base part chaque nuit en sauvegarde.
-- 🔴 Les trois formulaires publics (adhésion, contact, inscription d'un visiteur) partagent un
-  compteur de **5 envois par heure et par adresse IP** (`src/lib/rate-limit.ts`, `public.form.ip`).
-  Le jour du lancement, l'adhésion se fait sur place par QR code : tous les téléphones branchés sur
-  le Wi-Fi du Foyer sortent par **une seule adresse**, et les opérateurs mobiles partagent aussi
-  une adresse entre de nombreux abonnés. Au-delà de 5 adhésions par heure, les suivantes seraient
-  refusées. À relever (par exemple 60 par heure pour l'adhésion, à décider ensemble), avec un
-  test.
+- ✅ **Formulaires publics** (était 🔴) : la limite unique de 5 envois par heure et par IP est
+  remplacée. Adhésion : 3 demandes par adresse e-mail et par jour, 100 par heure et par IP (une
+  salle entière sur le même Wi-Fi peut adhérer) ; inscription d'un visiteur : même logique ;
+  contact : 5 par heure et par IP. Test sur la vraie base : 50 adhésions depuis la même IP.
+- ✅ **Jeton de réinitialisation** (était 🟠) : stocké en empreinte SHA-256 ; un ancien jeton en
+  clair est refusé et supprimé (migration et garde dans l'action). Test avec le vrai Better Auth.
 - 🟢 Politique de sécurité du contenu complète (`script-src`) : à poser en mode « rapport seul »
   après l'ouverture.
 - 🟢 Export CSV en GET, objet du message de contact dans le journal, pas de limite de débit sur le
@@ -147,8 +139,8 @@ Restent à trancher (`docs/REVUE-SECURITE.md` § 5), aucun ne bloque à lui seul
    healthchecks.io (partie A de `DEPLOIEMENT.md`).
 2. Toi et le comité : corriger les contenus de `A-CORRIGER.md` et la charte définitive, sur ton
    poste ; puis lancer l'**aperçu de l'export** et me montrer la liste.
-3. Moi, après ton feu vert : compteur des formulaires publics relevé (🔴), jeton de
-   réinitialisation haché et adresse inconnue en 404 (🟠), sur la branche, avec tests.
+3. ~~Moi : compteur des formulaires publics, jeton de réinitialisation haché~~ (fait le 22/11) ;
+   reste l'adresse inconnue en 404 (🟠), après ton feu vert.
 4. Moi, après ton feu vert et la commande du VPS : sécurisation, premier déploiement, sauvegardes,
    restauration testée sur le serveur, import des contenus validés.
 5. Ensemble : recette sur un vrai téléphone en 4G, e-mails vers plusieurs messageries, puis

@@ -15,9 +15,28 @@ Légende : 🔴 bloque l'ouverture · 🟠 à faire avant l'ouverture, sans bloq
 | Types (`pnpm typecheck`) et lint (`pnpm lint`)                       | ✅ (un avertissement ancien : directive `eslint-disable` inutile dans `opengraph-image.tsx`)                                                                                                  |
 | Parcours de production (`pnpm test:prod`, Docker + Caddy HTTPS)      | ✅ 3 / 3                                                                                                                                                                                      |
 | Restauration après destruction totale                                | ✅ base et fichiers identiques (`docs/SAUVEGARDE.md`)                                                                                                                                         |
-| Parcours Playwright complets (`pnpm test:e2e`, mobile et ordinateur) | en cours (complété dans le commit suivant)                                                                                                                                                    |
+| Parcours Playwright complets (`pnpm test:e2e`, mobile et ordinateur) | 🟠 85 réussis, 3 en échec, 16 sautés (voir ci-dessous)                                                                                                                                        |
 | Format (`pnpm format:check`)                                         | 🟢 47 fichiers à reformater, tous antérieurs (surtout `communication/`) : sans effet sur le site                                                                                              |
 | Dépendances (`pnpm audit --prod`)                                    | 🟢 1 alerte « haute » : `effect` ≤ 3.22.0 (ReDoS), utilisé par la configuration de Prisma en ligne de commande, jamais par une saisie de visiteur. Disparaîtra avec une mise à jour de Prisma |
+
+Détail des 3 échecs Playwright (sur une base de ce conteneur avec 3 livres, 4 rencontres et
+3 articles publiés : les parcours supposent des contenus réels) :
+
+- 🟠 `e2e/contenus.spec.ts:113` : le test attend encore « Date provisoire » cochée sur le lancement
+  (ligne 217), alors que la date est confirmée et que le même fichier vérifie ailleurs
+  (ligne 58) qu'elle n'est plus provisoire. **Test périmé** depuis la confirmation du
+  16 janvier, pas un défaut du site : à mettre à jour.
+- 🟠 `e2e/lectures.spec.ts:113`, **mobile seulement, reproductible** : juste après « Lecture
+  enregistrée », un toucher sur « Lectures » dans la barre de l'espace membre ne navigue pas (la
+  page se rafraîchit au même moment). Un membre aurait à toucher deux fois. À vérifier sur un vrai
+  téléphone et à corriger si confirmé.
+- 🟢 `e2e/scrabble-quiz.spec.ts:38` : échoue dans la suite complète, **passe seul** : instabilité
+  du test (ordre ou lenteur), pas un défaut constaté.
+
+Pendant cette revue, j'ai trouvé et corrigé une erreur de ma part : le fichier d'essai local
+s'appelait `.env.production.local`, nom que Next.js charge tout seul ; le premier passage
+Playwright prenait donc les réglages de l'essai (e-mails vers un hôte inexistant). Renommé en
+`.env.essai-local`.
 
 ## 2. Contenus (`docs/A-CORRIGER.md`)
 

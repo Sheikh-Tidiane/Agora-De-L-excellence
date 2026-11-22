@@ -19,7 +19,7 @@ const compose = (...args: string[]) =>
     encoding: "utf8",
     env: {
       ...process.env,
-      ENV_FILE: process.env.ENV_FILE ?? ".env.production.local",
+      ENV_FILE: process.env.ENV_FILE ?? ".env.essai-local",
       COMPOSE_EXTRA: process.env.COMPOSE_EXTRA ?? "docker-compose.prod-local.yml",
     },
     input: "",
@@ -77,7 +77,7 @@ test.beforeAll(() => {
       encoding: "utf8",
       env: {
         ...process.env,
-        ENV_FILE: process.env.ENV_FILE ?? ".env.production.local",
+        ENV_FILE: process.env.ENV_FILE ?? ".env.essai-local",
         COMPOSE_EXTRA: process.env.COMPOSE_EXTRA ?? "docker-compose.prod-local.yml",
       },
       input: `Aïssatou\nEssai\n${admin.email}\n${admin.password}\n${admin.password}\n`,

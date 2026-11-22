@@ -2,7 +2,7 @@
 # Ajoute Mailpit pour recevoir les e-mails ; le site est servi sur un faux domaine (ex. agora.test)
 # avec un certificat de l'autorité interne de Caddy (CADDY_TLS="internal").
 #
-#   ENV_FILE=.env.production.local COMPOSE_EXTRA=docker-compose.prod-local.yml CURL_INSECURE=1 \
+#   ENV_FILE=.env.essai-local COMPOSE_EXTRA=docker-compose.prod-local.yml CURL_INSECURE=1 \
 #     bash scripts/deploy.sh --no-pull
 # Boîte de réception : http://127.0.0.1:8025. Voir docs/DEPLOIEMENT.md, « Essai en local ».
 services:

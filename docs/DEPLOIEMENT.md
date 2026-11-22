@@ -309,17 +309,20 @@ au lieu de Let's Encrypt, et Mailpit à la place du vrai fournisseur d'e-mails
    127.0.0.1 agora.test www.agora.test
    ```
 
-2. Créer `.env.production.local` à partir de `.env.production.example` (le fichier est ignoré par Git),
+2. Créer `.env.essai-local` à partir de `.env.production.example` (le fichier est ignoré par Git),
    avec : `SITE_DOMAIN="agora.test"`, `CADDY_TLS="internal"`, `APP_URL="https://agora.test"`,
    `SMTP_HOST="mailpit"`, `SMTP_PORT="1025"`, `MAIL_FROM="ne-pas-repondre@agora.test"`, et un
    `POSTGRES_PASSWORD` et un `BETTER_AUTH_SECRET` générés par `openssl rand -hex 32`.
-   Puis `chmod 600 .env.production.local`.
+   Puis `chmod 600 .env.essai-local`.
+   **Ne pas l'appeler `.env.production.local`** : Next.js charge ce nom tout seul en mode
+   production, et le build des tests e2e (`pnpm test:e2e`) prendrait alors ces réglages (erreur
+   commise puis corrigée le 22/11 : les e-mails des tests partaient vers l'hôte `mailpit`).
 3. Les ports 80 et 443 du poste doivent être libres.
 
 ### Lancer
 
 ```bash
-export ENV_FILE=.env.production.local COMPOSE_EXTRA=docker-compose.prod-local.yml CURL_INSECURE=1
+export ENV_FILE=.env.essai-local COMPOSE_EXTRA=docker-compose.prod-local.yml CURL_INSECURE=1
 ```
 
 ```bash

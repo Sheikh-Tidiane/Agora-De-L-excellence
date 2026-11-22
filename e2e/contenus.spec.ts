@@ -214,7 +214,12 @@ test("adhésion avec charte, validation, carte encaissée, encaissements", async
       .first()
       .click();
     await expect(page.getByLabel("Déroulé")).toHaveValue(/Mise en place/);
-    await expect(page.getByLabel(/Date provisoire/)).toBeChecked();
+    // Lancement confirmé par le comité : samedi 16 janvier 2027, 16 h – 19 h (Dakar = UTC),
+    // au Foyer des jeunes de Yeumbeul Nord ; la date n'est plus provisoire.
+    await expect(page.getByLabel("Début")).toHaveValue("2027-01-16T16:00");
+    await expect(page.getByLabel("Fin")).toHaveValue("2027-01-16T19:00");
+    await expect(page.getByLabel("Lieu")).toHaveValue("Foyer des jeunes de Yeumbeul Nord");
+    await expect(page.getByLabel(/Date provisoire/)).not.toBeChecked();
 
     // --- Une séance aujourd'hui : inscription, pointage (présent, payé), participation encaissée ---
     const title = `E2E-Debat ${stamp}`;

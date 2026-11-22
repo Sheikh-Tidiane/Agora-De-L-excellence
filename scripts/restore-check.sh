@@ -10,7 +10,11 @@
 # À lancer juste après une sauvegarde : si la base en service a changé entre-temps, des écarts
 # sont normaux (le script les affiche).
 #
-# Restaurer pour de bon (remplace la base en service) : voir docs/SAUVEGARDE.md.
+# COMPARE=0 : ne compare pas à la base en service (sauvegarde ancienne, ou essai hebdomadaire
+# automatique) ; vérifie seulement que la restauration aboutit et que les tables ne sont pas vides.
+# En production : PG_CONTAINER=agora-prod-postgres-1 (voir deploy/systemd/).
+#
+# Restaurer pour de bon (remplace la base en service) : scripts/restore-prod.sh, docs/SAUVEGARDE.md.
 set -euo pipefail
 
 DUMP="${1:?Usage : bash scripts/restore-check.sh <fichier.dump>}"
@@ -18,6 +22,7 @@ PG_CONTAINER="${PG_CONTAINER:-agora-excellence-postgres-1}"
 POSTGRES_USER="${POSTGRES_USER:-agora}"
 POSTGRES_DB="${POSTGRES_DB:-agora}"
 CHECK_DB="agora_restore_check"
+COMPARE="${COMPARE:-1}"
 export MSYS_NO_PATHCONV=1
 
 test -s "$DUMP" || { echo "Fichier introuvable ou vide : $DUMP" >&2; exit 1; }
@@ -47,12 +52,24 @@ docker exec "$PG_CONTAINER" pg_restore -U "$POSTGRES_USER" -d "$CHECK_DB" \
   --no-owner --no-privileges --exit-on-error /tmp/agora-restore.dump
 
 RESTORED="$(counts "$CHECK_DB")"
-LIVE="$(counts "$POSTGRES_DB")"
 TABLES="$(printf '%s\n' "$RESTORED" | grep -c '=')"
 ROWS="$(printf '%s\n' "$RESTORED" | awk -F= '{s+=$2} END {print s+0}')"
 MIGRATIONS="$(psql -d "$CHECK_DB" -c 'select count(*) from "_prisma_migrations" where finished_at is not null;')"
 
 echo "Restauré dans $CHECK_DB : $TABLES tables, $ROWS lignes, $MIGRATIONS migrations appliquées."
+
+if [ "$COMPARE" = "0" ]; then
+  # Sans comparaison : il faut au moins les tables de référence (rôles, permissions) remplies.
+  ROLES="$(printf '%s\n' "$RESTORED" | awk -F= '$1=="Role"{print $2}')"
+  if [ "$MIGRATIONS" -gt 0 ] && [ "${ROLES:-0}" -gt 0 ]; then
+    echo "OK : la sauvegarde se restaure (sans comparaison à la base en service)."
+    exit 0
+  fi
+  echo "ÉCHEC : restauration incomplète (migrations : $MIGRATIONS, rôles : ${ROLES:-0})." >&2
+  exit 1
+fi
+
+LIVE="$(counts "$POSTGRES_DB")"
 
 if [ "$RESTORED" = "$LIVE" ]; then
   echo "OK : chaque table a le même nombre de lignes que la base en service."

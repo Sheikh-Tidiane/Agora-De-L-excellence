@@ -34,9 +34,11 @@ sauvegardes. OVHcloud Object Storage reste possible (même script, autre destina
 ### Ce qui est prêt (22 novembre 2026)
 
 - `Dockerfile`, `docker-compose.prod.yml`, `deploy/Caddyfile`, `.env.production.example`.
-- `scripts/deploy.sh` (première version), `scripts/prod-compose.sh`, `scripts/backup-prod.sh`.
-- Build de l'image, démarrage, HTTPS (certificat local), redirections `http://` et `www.`, en-têtes
-  de sécurité : vérifiés sur un poste avec le faux domaine `agora.test`.
+- `scripts/deploy.sh`, `scripts/prod-compose.sh`, `scripts/backup-prod.sh`, `scripts/restore-prod.sh`,
+  minuteries systemd de sauvegarde (`deploy/systemd/`).
+- Essai complet sur un poste avec le faux domaine `agora.test` : parcours d'adhésion à
+  l'administration (`docs/DEPLOIEMENT.md`, « Essai en local ») et restauration après destruction
+  totale (`docs/SAUVEGARDE.md`).
 
 ### Une contrainte à connaître : le build a besoin de la base
 

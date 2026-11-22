@@ -84,7 +84,7 @@ if [ "$LOCAL_ONLY" = 0 ] && [ -n "$RCLONE_REMOTE" ]; then
   done
   # `copy` et jamais `sync` : rien n'est supprimé à distance. --immutable : rien n'est écrasé.
   rclone copy --immutable --no-traverse "$WORK" "$RCLONE_REMOTE/${STAMP:0:8}/"
-  rclone check --one-way "$WORK" "$RCLONE_REMOTE/${STAMP:0:8}/" > /dev/null
+  rclone check -q --one-way "$WORK" "$RCLONE_REMOTE/${STAMP:0:8}/" > /dev/null
   REMOTE="copie chiffrée envoyée vers $RCLONE_REMOTE/${STAMP:0:8}/"
 else
   REMOTE="pas de copie distante"

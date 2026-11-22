@@ -86,7 +86,7 @@ if [ -n "${BUILD_EXTRA_CA:-}" ]; then extra_ca=(--secret "id=extra_ca,src=$BUILD
 for var in HTTPS_PROXY NO_PROXY; do
   if [ -n "${!var:-}" ]; then extra_ca+=(--build-arg "$var=${!var}"); fi
 done
-docker build "${extra_ca[@]}" --target tools -t "agora-tools:$TAG" .
+docker build "${extra_ca[@]}" --network host --target tools -t "agora-tools:$TAG" .
 
 step "Base de données"
 compose up -d --wait postgres

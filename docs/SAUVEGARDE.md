@@ -1,91 +1,230 @@
-# SAUVEGARDE.md — Sauvegarder et restaurer la base
+# SAUVEGARDE.md — Sauvegarder et restaurer
 
-> État au 20 novembre 2026 : procédure **testée en local** (PostgreSQL dans Docker), refaite pour la phase 6.
-> L'automatisation en production (heure, copie hors du serveur, alerte en cas d'échec) dépend de
-> l'hébergement, qui n'est pas encore choisi : cette partie reste à faire et à tester en ligne.
+> État au 22 novembre 2026 : procédure de **production** écrite et **testée en local** de bout en bout
+> (sauvegarde chiffrée hors du serveur, destruction totale, réinstallation, restauration depuis la
+> seule copie distante). Reste à refaire une fois sur le vrai serveur, avant l'ouverture des adhésions.
+> Hébergement : OVHcloud VPS-1 (`docs/HEBERGEMENT.md`) ; copie hors serveur : Backblaze B2 (région UE).
 
-## Ce qu'il faut sauvegarder
+## Ce qui est sauvegardé
 
-| Quoi                                                                                    | Où                                | Comment                                                                                      |
-| --------------------------------------------------------------------------------------- | --------------------------------- | -------------------------------------------------------------------------------------------- |
-| La base PostgreSQL (membres, adhésions, encaissements, inscriptions, contenus, journal) | conteneur `postgres`              | `scripts/backup.sh`                                                                          |
-| Les images téléversées (couvertures, photos du comité)                                  | dossier `UPLOAD_DIR` (`uploads/`) | même script, archive `uploads-….tar.gz`                                                      |
-| Le fichier `.env` de production (secret des sessions, accès SMTP)                       | hors dépôt                        | copie manuelle, en lieu sûr. **Sans `BETTER_AUTH_SECRET`, toutes les sessions sont perdues** |
+| Quoi                                                                                    | Où, en production                        | Comment                                                      |
+| --------------------------------------------------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------ |
+| La base PostgreSQL (membres, adhésions, encaissements, inscriptions, contenus, journal) | volume Docker `agora-prod_postgres-data` | `pg_dump` chaque nuit (`scripts/backup-prod.sh`)             |
+| Les fichiers téléversés (couvertures, photos du comité, photos de profil)               | volume Docker `agora-prod_uploads`       | archive `tar.gz` chaque nuit, même script                    |
+| `.env.production` (secret des sessions, mots de passe)                                  | sur le serveur seulement                 | copie **chiffrée** à la main, à chaque changement (plus bas) |
+| La clé privée `age` qui déchiffre les copies distantes                                  | **jamais sur le serveur**                | gardée par deux membres du bureau (plus bas)                 |
 
-Le code et les migrations sont dans Git : ils ne se sauvegardent pas ici.
+Le code et les migrations sont dans Git. Les certificats HTTPS se régénèrent seuls.
 
-## Sauvegarder
+## Le principe
 
+Chaque nuit à 02:30 UTC (heure de Dakar), une minuterie systemd lance `scripts/backup-prod.sh` :
+
+1. signale le début à la surveillance (healthchecks.io) ;
+2. `pg_dump` de la base → `agora-AAAAMMJJ-HHMMSS.dump`, vérifié lisible (`pg_restore --list`) ;
+3. archive du volume des fichiers téléversés, lu en lecture seule → `uploads-AAAAMMJJ-HHMMSS.tar.gz` ;
+4. empreintes SHA-256 des deux fichiers → `SHA256SUMS-AAAAMMJJ-HHMMSS` ;
+5. **chiffrement** des trois fichiers avec `age`, pour la ou les clés **publiques** du club, puis
+   copie vers B2 dans un dossier du jour (`rclone copy --immutable` : jamais `sync`, rien n'est
+   supprimé ni écrasé à distance), puis contrôle que la copie distante est complète ;
+6. ménage sur place : seuls les **14 derniers jours** restent dans `/var/backups/agora` ;
+7. signale la réussite ; en cas d'erreur, signale l'échec. **Un e-mail part si la sauvegarde
+   échoue, et aussi si elle ne s'est pas présentée** (serveur éteint, minuterie cassée).
+
+Chaque dimanche à 03:30 UTC, une seconde minuterie restaure la dernière sauvegarde dans une base
+temporaire (`scripts/restore-check.sh`, `COMPARE=0`) pour prouver qu'elle se relit.
+
+Avant chaque mise en ligne d'une version, `scripts/deploy.sh` fait en plus une sauvegarde locale
+`…-avant-deploiement`.
+
+### Pourquoi ces choix (avis de l'architecte, retenu)
+
+- **Chiffrement côté serveur, clé privée hors du serveur** : la base contient des données
+  personnelles, dont celles de mineurs. Le serveur n'a que la clé publique : une fuite de la clé B2,
+  ou un accès chez le fournisseur, n'expose rien ; un intrus sur le serveur ne peut pas relire les
+  copies distantes.
+- **Clé B2 sans droit de suppression + verrouillage des fichiers (Object Lock)** : un intrus sur le
+  serveur ne peut ni effacer ni écraser les sauvegardes distantes. La durée de conservation à
+  distance est fixée chez B2 (verrou 30 jours, suppression automatique après 35 jours), pas par le
+  serveur.
+- **rclone + age plutôt que restic** : restic doit pouvoir supprimer pour élaguer, ce qui contredit
+  une clé sans suppression ; nos fichiers sont petits (≈ 140 Ko de base aujourd'hui).
+- **healthchecks.io** plutôt qu'un e-mail de cron : il prévient aussi quand rien n'arrive.
+
+## Mise en place sur le serveur (une fois)
+
+À faire après l'installation du serveur (`docs/DEPLOIEMENT.md`), connecté en `agora`.
+
+### 1. La paire de clés de chiffrement (sur un poste du club, pas sur le serveur)
+
+```bash
+age-keygen -o agora-sauvegardes-cle-privee.txt
 ```
-bash scripts/backup.sh            # écrit dans ./backups
+
+La commande affiche la clé **publique** (`age1…`). La clé **privée** (le fichier) :
+
+- est rangée par **deux** membres du bureau : dans un gestionnaire de mots de passe, et sur papier
+  (imprimée, sous enveloppe, dans un lieu sûr) ;
+- ne va **jamais** sur le serveur, ni par e-mail, ni dans le dépôt.
+
+Sans elle, les copies distantes sont illisibles, y compris pour le club.
+
+### 2. Le compte Backblaze B2 (au nom du club)
+
+1. Créer un compte B2, région **EU Central (Amsterdam)**, double authentification activée.
+2. Créer un bucket privé `agora-sauvegardes` (nom à adapter s'il est pris), avec **Object Lock**
+   activé, rétention par défaut **30 jours**, mode **compliance**.
+3. Règle de cycle de vie : supprimer les fichiers 35 jours après leur envoi.
+4. Créer une **clé d'application** limitée à ce bucket, capacités `listBuckets`, `listFiles`,
+   `readFiles`, `writeFiles` — **sans `deleteFiles`**. Noter son `keyID` et sa clé (montrée une fois).
+
+### 3. La surveillance
+
+Créer un contrôle sur healthchecks.io (offre gratuite, compte du club) : période 1 jour, délai de
+grâce 2 heures, alertes par e-mail vers deux personnes. Noter son adresse de ping.
+
+### 4. Les fichiers de réglage sur le serveur
+
+```bash
+sudo apt install -y age rclone
+sudo install -d -m 750 -o root -g agora /etc/agora
+sudo install -d -m 700 -o agora -g agora /var/backups/agora
 ```
 
-Produit `backups/agora-AAAAMMJJ-HHMMSS.dump` (format « custom » de `pg_dump`, compressé) et, s'il
-y a des images, `backups/uploads-AAAAMMJJ-HHMMSS.tar.gz`. Le script échoue si le fichier est vide
-ou illisible, et supprime les sauvegardes de plus de 14 jours (`KEEP_DAYS`).
+- `/etc/agora/age-recipients.txt` : la clé publique `age1…` (une ligne par personne si plusieurs
+  paires de clés).
+- `/etc/agora/rclone.conf` : d'après `deploy/rclone.conf.example`, avec le `keyID` et la clé B2.
+- `/etc/agora/backup.env` : d'après `deploy/backup.env.example`, avec l'adresse de ping.
 
-Variables : `PG_CONTAINER`, `POSTGRES_USER`, `POSTGRES_DB`, `UPLOAD_DIR`, `KEEP_DAYS` (voir l'en-tête du script).
-
-## Vérifier qu'une sauvegarde se restaure
-
-```
-bash scripts/restore-check.sh backups/agora-AAAAMMJJ-HHMMSS.dump
+```bash
+sudo chown root:agora /etc/agora/* && sudo chmod 640 /etc/agora/*
 ```
 
-La sauvegarde est restaurée dans une base temporaire (`agora_restore_check`), sans toucher à la
-base en service ; le nombre de lignes de chaque table est comparé à celui de la base en service ;
-la base temporaire est supprimée. Le code de sortie vaut 0 seulement si tout correspond.
+### 5. Les minuteries
 
-À faire juste après une sauvegarde, et au moins une fois par mois : **une sauvegarde qu'on n'a
-jamais restaurée n'est pas une sauvegarde.**
+```bash
+sudo cp /srv/agora/deploy/systemd/agora-*.service /srv/agora/deploy/systemd/agora-*.timer /etc/systemd/system/
+```
+
+```bash
+sudo systemctl daemon-reload && sudo systemctl enable --now agora-backup.timer agora-restore-check.timer
+```
+
+Premier essai tout de suite, puis lecture du journal :
+
+```bash
+sudo systemctl start agora-backup.service && journalctl -u agora-backup -n 20
+```
+
+Vérifier dans B2 que le dossier du jour contient trois fichiers `.age`, et sur healthchecks.io que
+le contrôle est passé au vert. Prochains passages : `systemctl list-timers 'agora-*'`.
+
+### 6. La copie chiffrée de `.env.production`
+
+À faire à l'installation, puis à chaque modification de `.env.production` :
+
+```bash
+age -R /etc/agora/age-recipients.txt -o env-production-$(date +%Y%m%d).age /srv/agora/.env.production
+```
+
+Récupérer ce fichier (`scp`) sur le poste d'un membre du bureau et le ranger avec la clé privée,
+puis l'effacer du serveur (`shred -u env-production-*.age`).
+
+## Sauvegarder à la main
+
+```bash
+bash scripts/backup-prod.sh --label avant-operation
+```
+
+`--local-only` : sans copie distante ni signal de surveillance.
+
+## Vérifier qu'une sauvegarde se restaure (sans rien toucher)
+
+```bash
+PG_CONTAINER=agora-prod-postgres-1 bash scripts/restore-check.sh /var/backups/agora/agora-AAAAMMJJ-HHMMSS.dump
+```
+
+Restaure dans une base temporaire, compare le nombre de lignes de chaque table à la base en
+service, puis supprime la base temporaire. À lancer sur une base au repos (sinon les écarts sont
+normaux). `COMPARE=0` : sans comparaison, pour une sauvegarde ancienne.
+
+**Chaque mois** : télécharger depuis B2 la dernière copie, la déchiffrer sur le poste qui détient la
+clé privée, et faire ce contrôle. **Chaque trimestre** : la restauration complète ci-dessous sur
+un poste (Docker suffit), fichiers téléversés compris. Une sauvegarde qu'on n'a jamais restaurée
+n'est pas une sauvegarde.
 
 ## Restaurer pour de bon
 
-À n'utiliser qu'en cas de perte : la base en service est **remplacée**.
+À n'utiliser qu'en cas de perte : la base et les fichiers en service sont **remplacés**.
 
-```
-# 1. Arrêter l'application (plus aucune écriture)
-# 2. Garder une copie de l'état actuel, même abîmé
-bash scripts/backup.sh backups/avant-restauration
+### Cas 1 — la base est abîmée, le serveur va bien
 
-# 3. Recréer la base et y restaurer la sauvegarde
-docker cp backups/agora-AAAAMMJJ-HHMMSS.dump agora-excellence-postgres-1:/tmp/restore.dump
-docker exec agora-excellence-postgres-1 psql -U agora -d postgres -c 'drop database agora;'
-docker exec agora-excellence-postgres-1 psql -U agora -d postgres -c 'create database agora;'
-docker exec agora-excellence-postgres-1 pg_restore -U agora -d agora --no-owner --no-privileges --exit-on-error /tmp/restore.dump
-
-# 4. Remettre les images
-tar -xzf backups/uploads-AAAAMMJJ-HHMMSS.tar.gz
-
-# 5. Appliquer les migrations plus récentes que la sauvegarde, puis redémarrer l'application
-pnpm db:deploy
+```bash
+bash scripts/restore-prod.sh /var/backups/agora/agora-AAAAMMJJ-HHMMSS.dump /var/backups/agora/uploads-AAAAMMJJ-HHMMSS.tar.gz
 ```
 
-Sous Git Bash (Windows), préfixer les commandes `docker` qui citent un chemin du conteneur par `MSYS_NO_PATHCONV=1`.
+Le script contrôle les empreintes (`SHA256SUMS-…` à côté), demande de **taper le domaine** pour
+confirmer, arrête le site, garde une copie de l'état actuel (`…-avant-restauration`), recrée la
+base, y restaure la sauvegarde, remplace les fichiers téléversés, applique les migrations plus
+récentes que la sauvegarde et redémarre le site. Ensuite :
+
+```bash
+bash scripts/deploy.sh --no-pull
+```
+
+(reconstruit les pages pré-rendues avec les données restaurées, ≈ 2 minutes).
+
+### Cas 2 — le serveur est perdu
+
+1. Nouveau serveur : suivre `docs/DEPLOIEMENT.md` (sécurisation, clone du dépôt), remettre
+   `.env.production` depuis sa copie chiffrée (**même `BETTER_AUTH_SECRET`**), puis
+   `bash scripts/deploy.sh --no-pull` (installe un site vide).
+2. Récupérer la dernière copie distante :
+   ```bash
+   rclone --config /etc/agora/rclone.conf copy b2:agora-sauvegardes/AAAAMMJJ/ ~/restauration/
+   ```
+3. Apporter la clé privée le temps de la restauration (fichier `cle.txt`, `chmod 600`) :
+   ```bash
+   AGE_IDENTITY=~/cle.txt bash scripts/restore-prod.sh ~/restauration/agora-AAAAMMJJ-HHMMSS.dump.age ~/restauration/uploads-AAAAMMJJ-HHMMSS.tar.gz.age
+   ```
+4. `bash scripts/deploy.sh --no-pull`, puis **effacer la clé** : `shred -u ~/cle.txt`.
+5. Remettre en place les minuteries de sauvegarde (section « Mise en place », étapes 4 et 5).
 
 ## Ce qui a été testé, et ce qui ne l'a pas été
 
-**Testé le 20/11/2026, en local** (phase 6) :
+**Testé le 22/11/2026, en local**, sur la pile de production (`docker-compose.prod.yml`, faux domaine
+`agora.test`), avec une destination « distante » rclone locale à la place de B2 et un faux service
+de surveillance :
 
-- `scripts/backup.sh` : sauvegarde de 218 Ko, 44 tables.
-- `scripts/restore-check.sh` : restauration dans une base temporaire, 44 tables, 2 451 lignes, 3 migrations (toutes celles du dépôt) ; chaque table a le même nombre de lignes que la base en service.
-- Archive des images (`uploads-….tar.gz`) : extraite dans un dossier temporaire, identique au dossier `uploads/` fichier par fichier (`diff -r`).
-- Un premier essai lancé pendant les tests Playwright a bien signalé des écarts (sessions, journal, limites de débit écrits entre la sauvegarde et la vérification) : le contrôle les voit, il faut le lancer sur une base au repos.
+1. Sauvegarde complète : base (44 tables), 3 fichiers téléversés (deux photos de profil, une photo
+   du comité), chiffrés avec `age`, copiés et contrôlés à distance ; surveillance : `/start` puis
+   succès. Les fichiers distants sont bien chiffrés (en-tête `age-encryption.org/v1`).
+2. Échec provoqué (clé publique absente) : rien ne part en clair, code de sortie 1, signal `/fail`.
+3. **Catastrophe** : `docker compose down -v` (base, fichiers téléversés et certificats détruits)
+   et suppression de toutes les sauvegardes locales.
+4. Réinstallation à neuf (`deploy.sh` : site vide, migrations et seed), récupération de la seule
+   copie distante, restauration avec la clé privée (`restore-prod.sh`) : empreintes vérifiées,
+   restauration en ≈ 10 secondes, puis reconstruction (`deploy.sh`).
+5. Contrôles après restauration :
+   - **base identique table par table** à l'état d'avant la catastrophe : 44 tables, 195 lignes ;
+   - **fichiers téléversés identiques** au bit près (SHA-256), propriétaire correct (`node`) ;
+   - un super-administrateur créé **avant** la catastrophe se reconnecte avec son mot de passe ;
+   - les trois parcours de `pnpm test:prod` passent sur le site restauré (adhésion, activation,
+     connexion, photos, administration).
+6. Essai hebdomadaire (`restore-check.sh`, `COMPARE=0`) sur la dernière sauvegarde : OK.
 
-**Testé le 14/11/2026, en local** :
+Corrigé pendant ces essais : faux échec du contrôle d'une sauvegarde (`grep -q` et `pipefail`),
+résumé final de la restauration, moteur de migration de Prisma choisi sans openssl (image de
+construction complète désormais).
 
-- `scripts/backup.sh` : sauvegarde de 145 Ko, 38 tables.
-- `scripts/restore-check.sh` : restauration dans une base temporaire, 38 tables, 806 lignes, 2 migrations ; chaque table a le même nombre de lignes que la base en service.
-- Le contrôle détecte un écart : une ligne ajoutée à la base en service après la sauvegarde fait échouer la vérification, en nommant la table.
+**Non testé** (à faire sur le serveur, avant le 16 janvier) :
 
-**Non testé** :
+- la copie vers le vrai B2 (clé sans suppression, Object Lock) et les alertes réelles de
+  healthchecks.io ;
+- le lancement par les minuteries systemd (fichiers écrits, pas exécutés hors d'un vrai systemd) ;
+- une restauration complète sur le serveur lui-même.
 
-- La restauration « pour de bon » (étapes 1 à 5 ci-dessus) : seule la restauration dans une base temporaire a été exécutée. Les commandes sont les mêmes, à une base près.
-- Tout ce qui relève de la production : lancement automatique chaque nuit, copie hors du serveur, alerte en cas d'échec, restauration sur un serveur neuf.
+## Ancienne procédure (développement)
 
-## À mettre en place avec l'hébergement
-
-1. Lancer `scripts/backup.sh` chaque nuit (tâche planifiée du serveur), ou activer les sauvegardes de l'hébergeur si la base est gérée.
-2. Copier chaque sauvegarde **hors du serveur** (stockage objet ou autre machine) : sur le même disque, elle disparaît avec lui.
-3. Être prévenu quand une sauvegarde échoue.
-4. Refaire en ligne le test de restauration, sur un serveur neuf, avant l'ouverture des adhésions.
+`scripts/backup.sh` et `scripts/restore-check.sh` (sans variable) restent utilisables sur la base
+de développement (`docker-compose.yml`) : `bash scripts/backup.sh` écrit dans `./backups`.

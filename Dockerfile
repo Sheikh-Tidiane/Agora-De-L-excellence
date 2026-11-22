@@ -17,10 +17,13 @@
 #   tools           : dépendances complètes + sources, pour les migrations Prisma, le seed,
 #                     `create-admin` et l'export des contenus. Lancé à la demande, jamais exposé.
 
+# Construction et outils : image complète (openssl, requis par le moteur de migration de Prisma).
+# Exécution : image « slim », plus petite.
+ARG NODE_BUILD_IMAGE=node:22-bookworm
 ARG NODE_IMAGE=node:22-bookworm-slim
 
 # --- Dépendances ---------------------------------------------------------------
-FROM ${NODE_IMAGE} AS deps
+FROM ${NODE_BUILD_IMAGE} AS deps
 WORKDIR /app
 ENV PNPM_HOME=/pnpm \
     COREPACK_HOME=/opt/corepack \

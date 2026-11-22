@@ -1,6 +1,6 @@
 import React from "react";
 import { interpolate, useCurrentFrame } from "remotion";
-import { Tuile, courbes, couleurs, durees, type VarianteTuile } from "../src/kit";
+import { Reglette, Tuile, courbes, couleurs, durees, type VarianteTuile } from "../src/kit";
 
 /**
  * Un motif par activité, tout en tuiles du kit. `debut` absent : le motif est posé
@@ -66,24 +66,10 @@ export const MotifScrabble: React.FC<MotifProps> = ({ debut, cx, cy, echelle = 1
   const taille = 104 * echelle;
   const pas = taille * 1.08;
   const lettres = [..."TOURNOI"];
-  const largeur = lettres.length * pas + 56 * echelle;
-  const barre = useApparition(debut);
   return (
     <>
-      {/* La réglette : une barre terracotta, en léger relief, sous les tuiles. */}
-      <div
-        style={{
-          position: "absolute",
-          left: cx - largeur / 2,
-          top: cy + taille * 0.42,
-          width: largeur,
-          height: 34 * echelle,
-          borderRadius: 8 * echelle,
-          backgroundColor: couleurs.terracotta,
-          boxShadow: `inset 0 ${3 * echelle}px 0 rgba(255,255,255,0.18), 0 ${10 * echelle}px ${18 * echelle}px -8px rgba(10,14,32,0.5)`,
-          opacity: barre,
-        }}
-      />
+      {/* La réglette du kit (chevalet), sous les tuiles. */}
+      <Reglette cx={cx} cy={cy} taille={taille} places={lettres.length} echelle={echelle} debut={debut} />
       <Poses
         debut={debut === undefined ? undefined : debut + 8}
         taille={taille}

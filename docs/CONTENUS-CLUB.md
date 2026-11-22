@@ -86,6 +86,13 @@ Date, heure et lieu confirmés par le comité (communiqués par le porteur du pr
 
 Pendant les adhésions, un QR code affiché sur place ouvre le formulaire d’adhésion du site : les participants s’inscrivent depuis leur téléphone.
 
+**Texte lu pendant la première animation** (choix du porteur de projet, à confirmer par le comité, communiqué le 22/11/2026) :
+
+- « Les Mamelles », conte de Birago Diop, dans le recueil « Les Contes d’Amadou Koumba » (Fasquelle, 1947). Le conte raconte l’origine des deux collines de Dakar.
+- Si le comité le préfère : le poème « Souffles », de Birago Diop, dans le recueil « Leurres et Lueurs » (Présence Africaine, 1960).
+
+Birago Diop (1906-1989) : ses textes sont encore protégés par le droit d’auteur. La communication annonce le titre, l’auteur et le recueil, sans citer le texte.
+
 ## 8 bis. Charte du club (règlement intérieur)
 
 Principes retenus, en attente du texte définitif rédigé et validé par le comité :

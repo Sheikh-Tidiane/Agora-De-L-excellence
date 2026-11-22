@@ -56,7 +56,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="fr" className={`${youngSerif.variable} ${workSans.variable}`}>
-      <body className="flex min-h-dvh flex-col">
+      {/* Certaines extensions du navigateur ajoutent des attributs au <body> avant le chargement
+          de React : on ignore ces seuls écarts d’attributs (pas ceux du contenu de la page). */}
+      <body className="flex min-h-dvh flex-col" suppressHydrationWarning>
         {children}
         <ServiceWorker />
       </body>

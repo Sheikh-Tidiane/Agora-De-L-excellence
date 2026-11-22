@@ -10,7 +10,8 @@
     "still": "remotion still",
     "images-cles": "node scripts/images-cles.mjs",
     "export": "node scripts/export.mjs",
-    "controle": "node scripts/controle.mjs"
+    "controle": "node scripts/controle.mjs",
+    "sonoriser": "node scripts/sonoriser.mjs"
   },
   "dependencies": {
     "@fontsource/work-sans": "5.3.0",

@@ -59,3 +59,28 @@ next-env.d.ts
 # Communication (Remotion) : dépendances et rendus
 /communication/node_modules
 /communication/out/
+
+# Médias lourds : jamais dans Git (rendus, vidéos, sons, plans de tournage)
+*.mp4
+*.mov
+*.webm
+*.mkv
+*.mp3
+*.wav
+*.m4a
+*.aac
+*.ogg
+*.flac
+/communication/assets/sons/
+/communication/assets/plans/*
+!/communication/assets/plans/.gitkeep
+/communication/*.mp4
+
+# Médias personnels déposés à la racine (photos et vidéos WhatsApp)
+/Deos/
+
+# Sauvegardes et exports de base : données personnelles, jamais dans Git
+*.dump
+*.sql.gz
+*.age
+/export-contenus/

@@ -10,6 +10,11 @@ import { Presentation } from "../semaine-2/Presentation";
 import { SaveTheDate } from "../semaine-2/SaveTheDate";
 import { Activite, VisuelActivite, minutageActivite } from "../semaine-3/Activite";
 import { serie } from "../semaine-3/contenus";
+import { DefiScrabble, ReponseScrabble, minutageDefi, minutageReponse } from "../semaine-5/Defi";
+import { DiapoQuiz, NOMBRE_DIAPOS_QUIZ } from "../semaine-5/Quiz";
+import { MotDeLaSemaine } from "../semaine-5/MotDeLaSemaine";
+import { AnnonceTexteLancement, VisuelTexteLancement, minutageTexteLancement } from "../semaine-5/TexteLancement";
+import { defis, motsDeLaSemaine } from "../semaine-5/contenus";
 import { FPS, chargerPolices, formats } from "./kit";
 
 chargerPolices();
@@ -104,6 +109,25 @@ export const Root: React.FC = () => (
           <Still id={`S3${a.slug}-Portrait`} component={VisuelActivite} defaultProps={{ numero: a.numero }} width={portrait.largeur} height={portrait.hauteur} />
         </React.Fragment>
       ))}
+    </Folder>
+    <Folder name="Semaine-5">
+      {defis.map((d) => (
+        <React.Fragment key={d.numero}>
+          <Composition id={`S5Defi${d.numero}-Vertical`} component={DefiScrabble} defaultProps={{ numero: d.numero }} durationInFrames={minutageDefi.fin} fps={FPS} width={vertical.largeur} height={vertical.hauteur} />
+          <Composition id={`S5Reponse${d.numero}-Vertical`} component={ReponseScrabble} defaultProps={{ numero: d.numero }} durationInFrames={minutageReponse.fin} fps={FPS} width={vertical.largeur} height={vertical.hauteur} />
+        </React.Fragment>
+      ))}
+      {Array.from({ length: NOMBRE_DIAPOS_QUIZ }, (_, i) => (
+        <Still key={i} id={`S5Quiz${i + 1}-Portrait`} component={DiapoQuiz} defaultProps={{ diapo: i + 1 }} width={portrait.largeur} height={portrait.hauteur} />
+      ))}
+      {motsDeLaSemaine.map((m) => (
+        <React.Fragment key={m.numero}>
+          <Still id={`S5Mot${m.numero}-Portrait`} component={MotDeLaSemaine} defaultProps={{ numero: m.numero, format: "portrait" as const }} width={portrait.largeur} height={portrait.hauteur} />
+          <Still id={`S5Mot${m.numero}-Vertical`} component={MotDeLaSemaine} defaultProps={{ numero: m.numero, format: "vertical" as const }} width={vertical.largeur} height={vertical.hauteur} />
+        </React.Fragment>
+      ))}
+      <Composition id="S5TexteLancement-Vertical" component={AnnonceTexteLancement} durationInFrames={minutageTexteLancement.fin} fps={FPS} width={vertical.largeur} height={vertical.hauteur} />
+      <Still id="S5TexteLancement-Portrait" component={VisuelTexteLancement} width={portrait.largeur} height={portrait.hauteur} />
     </Folder>
   </>
 );

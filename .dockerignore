@@ -39,8 +39,7 @@ e2e-prod
 src/test
 **/*.test.ts
 **/*.test.tsx
-playwright.config.ts
-playwright.prod.config.ts
+playwright*.config.ts
 vitest.config.mts
 test-results
 playwright-report

@@ -219,6 +219,7 @@ test("administration : photo du comité et pages principales", async ({ page }) 
     "/admin/team",
     "/admin/settings",
     "/admin/audit",
+    "/admin/messages",
     "/admin/qr",
     "/admin/scan",
   ];

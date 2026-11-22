@@ -355,7 +355,7 @@ pnpm test:prod
    l'adresse publique `/uploads`) ;
 6. recréation du conteneur du site : la photo (volume `uploads`) et la session sont toujours là ;
 7. photo d'un membre du comité, visible sur la page « Le club », puis retirée ;
-8. les 21 pages de l'administration et les 12 pages publiques principales s'affichent sans erreur ;
+8. les 22 pages de l’administration et les 12 pages publiques principales s'affichent sans erreur ;
    `sitemap.xml` et `robots.txt` donnent les adresses du domaine.
 
 ### Résultat du 22 novembre 2026

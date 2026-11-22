@@ -80,3 +80,12 @@ export function activeMemberTab(pathname: string): MemberTabKey | null {
   if (best?.key === "home" && pathname.startsWith("/member/quiz")) return "scrabble";
   return best?.key ?? null;
 }
+
+/**
+ * Un toucher sur l'onglet du bas déjà actif remonte en haut de la page seulement quand on est sur
+ * la page principale de l'onglet. Depuis une sous-page (fiche d'une lecture, carte de membre, quiz),
+ * il ramène à la page principale, comme dans les applis.
+ */
+export function tabTapScrollsToTop(pathname: string, tabHref: string): boolean {
+  return pathname.replace(/\/+$/, "") === tabHref;
+}

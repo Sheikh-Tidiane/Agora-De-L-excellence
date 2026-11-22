@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { GET as publicUpload } from "@/app/uploads/[...path]/route";
-import { activeMemberTab, memberTabs } from "@/config/navigation";
+import { activeMemberTab, memberTabs, tabTapScrollsToTop } from "@/config/navigation";
 import { ownProfileSchema } from "@/features/members/profile-schemas";
 import { avatarUrl, isPrivateImage, isStoredImage, uploadUrl } from "@/lib/storage-names";
 
@@ -34,6 +34,19 @@ describe("onglets de l'espace membre", () => {
     expect(activeMemberTab("/member/notifications")).toBe("home");
     expect(activeMemberTab("/membership")).toBeNull();
     expect(activeMemberTab("/events")).toBeNull();
+  });
+
+  it("onglet actif touché : remonte sur sa page principale, ramène à elle depuis une sous-page", () => {
+    // Sur la page de l'onglet : remonter en haut.
+    expect(tabTapScrollsToTop("/member/readings", "/member/readings")).toBe(true);
+    expect(tabTapScrollsToTop("/member/readings/", "/member/readings")).toBe(true);
+    expect(tabTapScrollsToTop("/member", "/member")).toBe(true);
+    // Sous-pages (l'onglet y est actif) : le toucher doit naviguer, pas seulement remonter.
+    expect(activeMemberTab("/member/readings/ckxyz")).toBe("readings");
+    expect(tabTapScrollsToTop("/member/readings/ckxyz", "/member/readings")).toBe(false);
+    expect(tabTapScrollsToTop("/member/card", "/member/profile")).toBe(false);
+    expect(tabTapScrollsToTop("/member/quiz/echauffement", "/member/scrabble")).toBe(false);
+    expect(tabTapScrollsToTop("/member/notifications", "/member")).toBe(false);
   });
 });
 

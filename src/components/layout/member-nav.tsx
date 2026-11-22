@@ -3,7 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BookOpen, CalendarDays, Home, Trophy, UserRound, type LucideIcon } from "lucide-react";
-import { activeMemberTab, memberTabs, type MemberTabKey } from "@/config/navigation";
+import {
+  activeMemberTab,
+  memberTabs,
+  tabTapScrollsToTop,
+  type MemberTabKey,
+} from "@/config/navigation";
 import { cn } from "@/lib/utils";
 
 export const memberTabIcons: Record<MemberTabKey, LucideIcon> = {
@@ -17,11 +22,12 @@ export const memberTabIcons: Record<MemberTabKey, LucideIcon> = {
 const readyTabs = memberTabs.filter((tab) => tab.ready);
 
 /**
- * Un toucher sur l'onglet déjà actif remonte en haut de la page (comme dans les applis),
- * en douceur, ou instantanément si l'on préfère réduire les animations.
+ * Un toucher sur l'onglet de la page où l'on est remonte en haut (comme dans les applis), en
+ * douceur, ou instantanément si l'on préfère réduire les animations. Depuis une sous-page de
+ * l'onglet (fiche d'une lecture, carte, quiz), le lien navigue normalement vers la page principale.
  */
-function remonterSiActif(event: React.MouseEvent<HTMLAnchorElement>, current: boolean) {
-  if (!current || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+function remonterSiActif(event: React.MouseEvent<HTMLAnchorElement>, surPlace: boolean) {
+  if (!surPlace || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
   event.preventDefault();
   const reduit = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   window.scrollTo({ top: 0, behavior: reduit ? "auto" : "smooth" });
@@ -32,7 +38,8 @@ function remonterSiActif(event: React.MouseEvent<HTMLAnchorElement>, current: bo
  * cibles de 64 px de haut, onglet courant marqué par un trait terracotta.
  */
 export function MemberBottomBar() {
-  const active = activeMemberTab(usePathname());
+  const pathname = usePathname();
+  const active = activeMemberTab(pathname);
   return (
     <nav
       aria-label="Espace membre"
@@ -50,7 +57,9 @@ export function MemberBottomBar() {
               <Link
                 href={tab.href}
                 aria-current={current ? "page" : undefined}
-                onClick={(event) => remonterSiActif(event, current)}
+                onClick={(event) =>
+                  remonterSiActif(event, current && tabTapScrollsToTop(pathname, tab.href))
+                }
                 className={cn(
                   "relative flex h-16 flex-col items-center justify-center gap-1 text-[0.6875rem] font-semibold transition-colors duration-200 active:bg-ivoire",
                   current ? "text-indigo" : "text-gris",

@@ -1,0 +1,1194 @@
+// Schéma de données de « L’Agora de l’Excellence ».
+// Documentation et choix : docs/DECISIONS.md. Règles métier : docs/REGLES-METIER.md.
+// Les contraintes CHECK (non exprimables ici) sont dans la migration initiale.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================================
+// Authentification (tables de Better Auth) et contrôle d'accès
+// ============================================================================
+
+enum UserStatus {
+  PENDING_ACTIVATION // compte créé par un responsable, mot de passe pas encore défini
+  ACTIVE
+  SUSPENDED
+  ARCHIVED // anonymisé ou archivé : ne peut plus se connecter
+}
+
+model User {
+  id                 String     @id @default(cuid())
+  /// Nom affiché (prénom + nom). Requis par Better Auth.
+  name               String
+  firstName          String
+  lastName           String
+  email              String     @unique
+  emailVerified      Boolean    @default(false)
+  /// Photo de profil facultative (chemin d'upload, nom régénéré).
+  image              String?
+  /// Format E.164, +221 par défaut. Jamais utilisé comme identifiant.
+  phone              String?
+  status             UserStatus @default(PENDING_ACTIVATION)
+  /// Numéro de membre, généré à la validation de l'adhésion.
+  memberNumber       String?    @unique
+  /// Le membre a demandé à ne pas apparaître dans les classements de points.
+  hiddenFromRankings Boolean    @default(false)
+  /// Carte de membre : numéro de série aléatoire porté (signé) par le QR code, sans lien avec
+  /// l'identifiant ni le numéro de membre. Créé à la première émission. Voir features/members/card-token.ts.
+  cardSerial         String?    @unique
+  /// Version du jeton de carte. L'augmenter révoque toutes les cartes émises avant.
+  cardVersion        Int        @default(1)
+  /// Date d'émission de la version en cours.
+  cardIssuedAt       DateTime?
+  isDemo             Boolean    @default(false)
+  archivedAt         DateTime?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  sessions Session[]
+  accounts Account[]
+  roles    UserRole[] @relation("UserRoles")
+
+  rolesAssigned          UserRole[]              @relation("UserRoleAssigner")
+  membershipRequest      MembershipRequest?      @relation("MembershipRequestAccount")
+  requestsReviewed       MembershipRequest[]     @relation("MembershipRequestReviewer")
+  contactMessagesHandled ContactMessage[]        @relation("ContactMessageHandler")
+  memberships            Membership[]
+  readings               Reading[]               @relation("ReadingOwner")
+  readingsValidated      Reading[]               @relation("ReadingValidator")
+  reviews                Review[]                @relation("ReviewAuthor")
+  reviewsModerated       Review[]                @relation("ReviewModerator")
+  eventsCreated          Event[]                 @relation("EventCreator")
+  eventReports           Event[]                 @relation("EventReportAuthor")
+  payments               Payment[]               @relation("PaymentPayer")
+  paymentsReceived       Payment[]               @relation("PaymentReceiver")
+  paymentsCancelled      Payment[]               @relation("PaymentCanceller")
+  scrabbleRecords        ScrabbleRecord[]
+  registrations          EventRegistration[]     @relation("RegistrationMember")
+  checkIns               EventRegistration[]     @relation("RegistrationCheckIn")
+  tournamentEntries      TournamentParticipant[]
+  tournamentsValidated   Tournament[]
+  scoresEntered          Score[]
+  pointTransactions      PointTransaction[]      @relation("PointOwner")
+  pointsGranted          PointTransaction[]      @relation("PointGrantor")
+  badges                 UserBadge[]             @relation("BadgeOwner")
+  badgesAwarded          UserBadge[]             @relation("BadgeAwarder")
+  articles               Article[]
+  notifications          Notification[]
+  quizzesCreated         Quiz[]
+  quizAttempts           QuizAttempt[]
+  settingsUpdated        Setting[]
+  auditLogs              AuditLog[]
+
+  @@index([status])
+  @@index([lastName, firstName])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+/// Moyen de connexion d'un utilisateur. En V1 : uniquement `providerId = "credential"`
+/// (e-mail + mot de passe haché dans `password`).
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  /// Hachage scrypt produit par Better Auth. Jamais renvoyé au client.
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+}
+
+/// Jetons à usage unique : réinitialisation de mot de passe (Better Auth)
+/// et activation de compte (`identifier = "activation:<sha256 du jeton>"`).
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@index([expiresAt])
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  /// Identifiant stable utilisé dans le code : member, communication, library, scrabble, admin, super_admin.
+  code        String   @unique
+  name        String
+  description String?
+  /// Rôle semé par le système : ne peut pas être supprimé depuis l'admin.
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  permissions RolePermission[]
+  users       UserRole[]
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  /// Forme `domaine.action`, par exemple `events.manage`.
+  code        String   @unique
+  description String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  roles RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+}
+
+model UserRole {
+  userId       String
+  roleId       String
+  user         User     @relation("UserRoles", fields: [userId], references: [id], onDelete: Cascade)
+  role         Role     @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  assignedById String?
+  assignedBy   User?    @relation("UserRoleAssigner", fields: [assignedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now())
+
+  @@id([userId, roleId])
+  @@index([roleId])
+}
+
+// ============================================================================
+// Adhésion
+// ============================================================================
+
+enum MembershipRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum MembershipStatus {
+  ACTIVE
+  EXPIRED
+  SUSPENDED
+  ENDED
+}
+
+enum AgeRange {
+  UNDER_15
+  FROM_15_TO_17
+  FROM_18_TO_25
+  FROM_26_TO_35
+  OVER_35
+}
+
+enum Occupation {
+  PUPIL
+  STUDENT
+  WORKER
+  OTHER
+}
+
+enum Interest {
+  READING
+  SCRABBLE
+  DEBATES
+  GENIES_DU_SOIR
+  AGORA_CINE
+}
+
+/// Demande d'adhésion envoyée par un visiteur, sans compte.
+model MembershipRequest {
+  id                String                  @id @default(cuid())
+  firstName         String
+  lastName          String
+  email             String
+  phone             String?
+  ageRange          AgeRange
+  occupation        Occupation
+  interests         Interest[]
+  motivation        String?
+  /// Obligatoires si le demandeur a moins de 18 ans.
+  guardianName      String?
+  guardianPhone     String?
+  /// Date du consentement au traitement des données (case obligatoire).
+  consentAt         DateTime
+  /// Version de la charte du club acceptée avec la demande (réglage `charter.version`).
+  charterVersion    Int?
+  charterAcceptedAt DateTime?
+  status            MembershipRequestStatus @default(PENDING)
+  reviewedById      String?
+  reviewedBy        User?                   @relation("MembershipRequestReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt        DateTime?
+  rejectionReason   String?
+  /// Compte créé à la validation.
+  userId            String?                 @unique
+  user              User?                   @relation("MembershipRequestAccount", fields: [userId], references: [id], onDelete: SetNull)
+  isDemo            Boolean                 @default(false)
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  membership Membership?
+
+  @@index([status, createdAt])
+  @@index([email])
+}
+
+/// Une période d'adhésion. Un renouvellement crée une nouvelle ligne.
+model Membership {
+  id        String             @id @default(cuid())
+  userId    String
+  user      User               @relation(fields: [userId], references: [id], onDelete: Restrict)
+  requestId String?            @unique
+  request   MembershipRequest? @relation(fields: [requestId], references: [id], onDelete: SetNull)
+  status    MembershipStatus   @default(ACTIVE)
+  startsAt  DateTime
+  endsAt    DateTime
+  note      String?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@index([userId, endsAt])
+  @@index([status, endsAt])
+}
+
+// ============================================================================
+// Bibliothèque
+// ============================================================================
+
+enum ReadingStatus {
+  TO_READ
+  READING
+  FINISHED
+}
+
+enum ValidationStatus {
+  NONE // rien à valider
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String   @unique
+  description String?
+  position    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  books Book[]
+}
+
+model Author {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  /// Courte notice rédigée pour le club.
+  bio       String?
+  isDemo    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  books Book[]
+
+  @@index([name])
+}
+
+model Book {
+  id             String    @id @default(cuid())
+  slug           String    @unique
+  title          String
+  subtitle       String?
+  /// Résumé rédigé pour le club, jamais copié.
+  summary        String
+  categoryId     String
+  category       Category  @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  authors        Author[]
+  language       String    @default("fr")
+  publisher      String?
+  publishedYear  Int?
+  pageCount      Int?
+  isbn           String?
+  /// Couverture uploadée par l'admin. Sans elle : composant GeneratedCover.
+  coverImage     String?
+  /// « Coup de cœur du club » et mot du club affiché sur la fiche.
+  isClubFavorite Boolean   @default(false)
+  clubNote       String?
+  isPublished    Boolean   @default(true)
+  isDemo         Boolean   @default(false)
+  archivedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  readings          Reading[]
+  reviews           Review[]
+  monthlySelections MonthlySelection[]
+
+  @@index([categoryId])
+  @@index([isPublished, archivedAt])
+  @@index([title])
+}
+
+/// Un livre dans la liste d'un membre.
+model Reading {
+  id               String           @id @default(cuid())
+  userId           String
+  user             User             @relation("ReadingOwner", fields: [userId], references: [id], onDelete: Cascade)
+  bookId           String
+  book             Book             @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  status           ReadingStatus    @default(TO_READ)
+  /// Progression en pourcentage (0 à 100).
+  progress         Int              @default(0)
+  personalNote     String?
+  isFavorite       Boolean          @default(false)
+  startedAt        DateTime?
+  finishedAt       DateTime?
+  /// Validation du « livre terminé » par un responsable : condition des points.
+  completionStatus ValidationStatus @default(NONE)
+  /// Date d'envoi en validation : ordre de la file des responsables.
+  submittedAt      DateTime?
+  validatedById    String?
+  validatedBy      User?            @relation("ReadingValidator", fields: [validatedById], references: [id], onDelete: SetNull)
+  validatedAt      DateTime?
+  /// Mot du responsable en cas de refus, montré au membre.
+  validationNote   String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@unique([userId, bookId])
+  @@index([bookId])
+  @@index([userId, status])
+  @@index([completionStatus, submittedAt])
+}
+
+/// Critique d'un livre par un membre, soumise à modération.
+model Review {
+  id                   String       @id @default(cuid())
+  userId               String
+  user                 User         @relation("ReviewAuthor", fields: [userId], references: [id], onDelete: Cascade)
+  bookId               String
+  book                 Book         @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  /// Note de 1 à 5.
+  rating               Int
+  content              String
+  status               ReviewStatus @default(PENDING)
+  /// Le membre accepte la publication sous son prénom sur le site public.
+  publishWithFirstName Boolean      @default(false)
+  moderatedById        String?
+  moderatedBy          User?        @relation("ReviewModerator", fields: [moderatedById], references: [id], onDelete: SetNull)
+  moderatedAt          DateTime?
+  moderationNote       String?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  @@unique([userId, bookId])
+  @@index([bookId, status])
+  @@index([status, createdAt])
+}
+
+/// Livre du mois : une sélection par mois, éventuellement liée à une rencontre.
+model MonthlySelection {
+  id        String   @id @default(cuid())
+  /// Premier jour du mois concerné.
+  month     DateTime @unique @db.Date
+  bookId    String
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  eventId   String?  @unique
+  event     Event?   @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  note      String?
+  isDemo    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([bookId])
+}
+
+// ============================================================================
+// Événements
+// ============================================================================
+
+/// Les cinq activités du club (docs/CONTENUS-CLUB.md, section 5). Libellés : src/config/activities.ts.
+enum EventType {
+  RENDEZ_VOUS_LECTURE
+  INITIATION_SCRABBLE
+  TOURNOI_SCRABBLE
+  DEBAT_IDEES
+  GENIES_DU_SOIR
+  AGORA_CINE
+  LANCEMENT_AUTRE
+}
+
+/// Présence de « l’Invité de l’Agora ».
+enum GuestSpeakerMode {
+  ON_SITE
+  REMOTE
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+  CANCELLED
+}
+
+enum RegistrationStatus {
+  PENDING // invité qui n'a pas encore confirmé par e-mail
+  CONFIRMED
+  CANCELLED
+}
+
+/// Comment la présence a été enregistrée.
+enum CheckInMethod {
+  QR_SCAN // carte de membre scannée
+  MANUAL // case cochée par un responsable (saisie de secours)
+}
+
+model Event {
+  id                        String            @id @default(cuid())
+  slug                      String            @unique
+  title                     String
+  type                      EventType
+  status                    EventStatus       @default(DRAFT)
+  summary                   String?
+  description               String
+  /// `null` : lieu à confirmer.
+  location                  String?
+  startsAt                  DateTime
+  endsAt                    DateTime?
+  /// Date annoncée à titre provisoire.
+  isTentative               Boolean           @default(false)
+  /// Déroulé : une ligne par étape, « horaire | intitulé ».
+  program                   String?
+  /// L'Invité de l'Agora (facultatif).
+  speakerName               String?
+  speakerTitle              String?
+  speakerMode               GuestSpeakerMode?
+  /// Lien pour suivre à distance : visible des seuls membres inscrits.
+  videoLink                 String?
+  /// Compte rendu (Markdown), rédigé par un responsable après la rencontre.
+  reportContent             String?
+  reportPublishedAt         DateTime?
+  reportAuthorId            String?
+  reportAuthor              User?             @relation("EventReportAuthor", fields: [reportAuthorId], references: [id], onDelete: SetNull)
+  /// Nombre de places. `null` = sans limite.
+  capacity                  Int?
+  /// Ouvert aux visiteurs (inscription invité avec nom + e-mail).
+  isPublic                  Boolean           @default(false)
+  /// Délai d'annulation propre à l'événement, en heures. `null` = réglage global (24 h).
+  cancellationDeadlineHours Int?
+  coverImage                String?
+  publishedAt               DateTime?
+  createdById               String?
+  createdBy                 User?             @relation("EventCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  isDemo                    Boolean           @default(false)
+  archivedAt                DateTime?
+  createdAt                 DateTime          @default(now())
+  updatedAt                 DateTime          @updatedAt
+
+  registrations    EventRegistration[]
+  tournament       Tournament?
+  monthlySelection MonthlySelection?
+  payments         Payment[]
+  quizzes          Quiz[]
+
+  @@index([status, startsAt])
+  @@index([type])
+}
+
+/// Inscription d'un membre (userId) OU d'un invité (guestName + guestEmail).
+/// Contrainte CHECK en base : exactement l'un des deux.
+model EventRegistration {
+  id            String             @id @default(cuid())
+  eventId       String
+  event         Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId        String?
+  user          User?              @relation("RegistrationMember", fields: [userId], references: [id], onDelete: Cascade)
+  guestName     String?
+  guestEmail    String?
+  status        RegistrationStatus @default(CONFIRMED)
+  /// SHA-256 du jeton de confirmation ou d'annulation envoyé à l'invité.
+  tokenHash     String?            @unique
+  confirmedAt   DateTime?
+  cancelledAt   DateTime?
+  /// Présence enregistrée (scan QR ou saisie manuelle).
+  attendedAt    DateTime?
+  /// Renseigné avec `attendedAt` (contrainte CHECK en base).
+  checkInMethod CheckInMethod?
+  checkedInById String?
+  checkedInBy   User?              @relation("RegistrationCheckIn", fields: [checkedInById], references: [id], onDelete: SetNull)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  payments Payment[]
+
+  @@unique([eventId, userId])
+  @@unique([eventId, guestEmail])
+  @@index([eventId, status])
+  @@index([userId])
+}
+
+// ============================================================================
+// Cotisations (espèces, sur place : pas de paiement en ligne en V1)
+// ============================================================================
+
+enum PaymentKind {
+  MEMBERSHIP_CARD // carte de membre, versée une fois à l'adhésion
+  SESSION_FEE // participation à une séance
+}
+
+/// Un encaissement enregistré par un responsable. Jamais supprimé : une erreur s'annule (`cancelledAt`).
+/// Index uniques partiels en base (migration) : une seule carte active par membre,
+/// une seule participation active par inscription.
+model Payment {
+  id             String             @id @default(cuid())
+  kind           PaymentKind
+  /// Montant en F CFA, copié du réglage en vigueur au moment de l'encaissement.
+  amount         Int
+  /// Membre concerné. `null` pour la participation d'un invité.
+  userId         String?
+  user           User?              @relation("PaymentPayer", fields: [userId], references: [id], onDelete: Restrict)
+  registrationId String?
+  registration   EventRegistration? @relation(fields: [registrationId], references: [id], onDelete: Restrict)
+  eventId        String?
+  event          Event?             @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  paidAt         DateTime
+  receivedById   String?
+  receivedBy     User?              @relation("PaymentReceiver", fields: [receivedById], references: [id], onDelete: SetNull)
+  note           String?
+  cancelledAt    DateTime?
+  cancelledById  String?
+  cancelledBy    User?              @relation("PaymentCanceller", fields: [cancelledById], references: [id], onDelete: SetNull)
+  cancelReason   String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@index([kind, paidAt])
+  @@index([userId])
+  @@index([eventId])
+  @@index([registrationId])
+}
+
+// ============================================================================
+// Comité de pilotage
+// ============================================================================
+
+/// Membre du comité affiché sur la page « Le club ». Rôle, photo et biographie facultatifs.
+model CommitteeMember {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  role      String?
+  /// Chemin d'upload (nom régénéré).
+  photo     String?
+  bio       String?
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([position])
+}
+
+// ============================================================================
+// Scrabble (compétitions physiques)
+// ============================================================================
+
+enum TournamentFormat {
+  INDIVIDUAL
+  TEAMS
+}
+
+enum GameMode {
+  DUPLICATE
+  CLASSIC
+}
+
+enum RankingRule {
+  WINS_SCORE_SPREAD // victoires, puis cumul des scores, puis différentiel (défaut, classique)
+  CUMULATIVE_SCORE // cumul des scores (duplicate)
+}
+
+enum TournamentStatus {
+  DRAFT
+  REGISTRATION_OPEN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum RoundStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum MatchStatus {
+  SCHEDULED
+  PLAYED
+  FORFEIT
+}
+
+model Tournament {
+  id                   String           @id @default(cuid())
+  slug                 String           @unique
+  name                 String
+  description          String?
+  /// Règlement adopté pour ce tournoi (texte libre affiché aux participants).
+  rules                String?
+  format               TournamentFormat @default(INDIVIDUAL)
+  gameMode             GameMode         @default(DUPLICATE)
+  rankingRule          RankingRule      @default(WINS_SCORE_SPREAD)
+  status               TournamentStatus @default(DRAFT)
+  isInterclub          Boolean          @default(false)
+  location             String?
+  /// Récompense des gagnants (texte libre). Non affichée tant qu'elle est vide.
+  reward               String?
+  /// Compté dans le classement mensuel (un tournoi interclub ou amical peut en être exclu).
+  countsForMonthly     Boolean          @default(true)
+  startsAt             DateTime
+  endsAt               DateTime?
+  /// Événement lié (facultatif) : l'inscription au tournoi vaut inscription à l'événement.
+  eventId              String?          @unique
+  event                Event?           @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  /// Les résultats ne sont publics qu'après validation par le responsable Scrabble.
+  resultsValidatedAt   DateTime?
+  resultsValidatedById String?
+  resultsValidatedBy   User?            @relation(fields: [resultsValidatedById], references: [id], onDelete: SetNull)
+  resultsPublishedAt   DateTime?
+  isDemo               Boolean          @default(false)
+  archivedAt           DateTime?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  participants TournamentParticipant[]
+  teams        Team[]
+  rounds       Round[]
+  records      ScrabbleRecord[]
+
+  @@index([status, startsAt])
+}
+
+/// Record du club à battre (meilleur score sur une partie, meilleur mot, plus longue série de victoires…).
+/// Les catégories sont libres : le comité ne les a pas encore arrêtées.
+model ScrabbleRecord {
+  id           String      @id @default(cuid())
+  /// Intitulé du record, par exemple « Meilleur score sur une partie ».
+  category     String
+  /// Valeur affichée : « 512 points »…
+  value        String
+  userId       String?
+  user         User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  /// Détenteur sans compte (participant extérieur).
+  holderName   String?
+  tournamentId String?
+  tournament   Tournament? @relation(fields: [tournamentId], references: [id], onDelete: SetNull)
+  achievedAt   DateTime?
+  /// Un record battu reste en base, avec `supersededAt`.
+  supersededAt DateTime?
+  position     Int         @default(0)
+  isDemo       Boolean     @default(false)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([category, supersededAt])
+}
+
+model Team {
+  id           String     @id @default(cuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  name         String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  members TournamentParticipant[]
+
+  @@unique([tournamentId, name])
+}
+
+/// Un joueur inscrit : membre (userId) OU participant extérieur (externalName + club).
+/// Contrainte CHECK en base : exactement l'un des deux. En format « équipes », `teamId` le rattache à son équipe.
+model TournamentParticipant {
+  id           String     @id @default(cuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  userId       String?
+  user         User?      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  externalName String?
+  externalClub String?
+  teamId       String?
+  team         Team?      @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  /// Position finale, figée à la validation des résultats.
+  finalRank    Int?
+  withdrawnAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  scores     Score[]
+  matchesAsA Match[] @relation("MatchPlayerA")
+  matchesAsB Match[] @relation("MatchPlayerB")
+
+  @@unique([tournamentId, userId])
+  @@index([teamId])
+}
+
+model Round {
+  id           String      @id @default(cuid())
+  tournamentId String
+  tournament   Tournament  @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  number       Int
+  status       RoundStatus @default(PLANNED)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  matches Match[]
+  scores  Score[]
+
+  @@unique([tournamentId, number])
+}
+
+/// Partie à deux (mode classique). En duplicate, il n'y a pas de Match : seulement des Score par manche.
+model Match {
+  id             String                @id @default(cuid())
+  roundId        String
+  round          Round                 @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  tableNumber    Int?
+  participantAId String
+  participantA   TournamentParticipant @relation("MatchPlayerA", fields: [participantAId], references: [id], onDelete: Restrict)
+  participantBId String
+  participantB   TournamentParticipant @relation("MatchPlayerB", fields: [participantBId], references: [id], onDelete: Restrict)
+  status         MatchStatus           @default(SCHEDULED)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  scores Score[]
+
+  @@unique([roundId, participantAId])
+  @@unique([roundId, participantBId])
+}
+
+/// Score d'un joueur pour une manche. Un seul par joueur et par manche.
+model Score {
+  id            String                @id @default(cuid())
+  roundId       String
+  round         Round                 @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  participantId String
+  participant   TournamentParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  matchId       String?
+  match         Match?                @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  points        Int
+  /// Forfait : défaite, score 0 (contrainte CHECK en base).
+  isForfeit     Boolean               @default(false)
+  enteredById   String?
+  enteredBy     User?                 @relation(fields: [enteredById], references: [id], onDelete: SetNull)
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  @@unique([roundId, participantId])
+  @@index([participantId])
+  @@index([matchId])
+}
+
+// ============================================================================
+// Gamification
+// ============================================================================
+
+enum PointSourceType {
+  EVENT_ATTENDANCE
+  READING
+  REVIEW
+  TOURNAMENT
+  MANUAL
+  CORRECTION
+  QUIZ // sourceId = identifiant du quiz (une seule tentative par membre)
+}
+
+enum BadgeCriterion {
+  MANUAL
+  BOOKS_FINISHED
+  REVIEWS_APPROVED
+  EVENTS_ATTENDED
+  DEBATES_ATTENDED
+  TOURNAMENTS_PLAYED
+  TOURNAMENTS_WON
+  TOTAL_POINTS
+  QUIZZES_COMPLETED
+}
+
+/// Niveau d'un membre, déduit de son total de points (somme du grand livre) :
+/// le niveau atteint est celui dont le seuil est le plus haut sans dépasser ce total.
+/// Seuils et noms modifiables par un administrateur ; le seed ne les réécrit jamais.
+model Level {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String   @unique
+  description String?
+  /// Seuil en points (XP). Le premier niveau commence à 0.
+  minPoints   Int      @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+/// Barème : combien de points rapporte une action.
+model PointRule {
+  id          String     @id @default(cuid())
+  code        String     @unique
+  label       String
+  description String?
+  points      Int
+  /// Type d'événement dont la présence déclenche cette règle. Un type sans règle ne rapporte rien.
+  eventType   EventType? @unique
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  transactions PointTransaction[]
+}
+
+/// Grand livre des points : une ligne par attribution, jamais modifiée.
+/// Une correction est une nouvelle ligne de signe inverse, motivée (`reversesId`).
+model PointTransaction {
+  id          String            @id @default(cuid())
+  userId      String
+  user        User              @relation("PointOwner", fields: [userId], references: [id], onDelete: Restrict)
+  ruleId      String?
+  rule        PointRule?        @relation(fields: [ruleId], references: [id], onDelete: Restrict)
+  /// Positif ou négatif (correction).
+  points      Int
+  sourceType  PointSourceType
+  /// Identifiant de l'objet source (inscription, lecture, critique, tournoi…).
+  sourceId    String
+  reason      String?
+  createdById String?
+  createdBy   User?             @relation("PointGrantor", fields: [createdById], references: [id], onDelete: SetNull)
+  reversesId  String?           @unique
+  reverses    PointTransaction? @relation("PointReversal", fields: [reversesId], references: [id], onDelete: Restrict)
+  reversedBy  PointTransaction? @relation("PointReversal")
+  createdAt   DateTime          @default(now())
+
+  /// Anti-doublon : une même règle ne paie qu'une fois pour une même source et un même membre.
+  @@unique([userId, ruleId, sourceType, sourceId])
+  @@index([userId, createdAt])
+  @@index([sourceType, sourceId])
+}
+
+model Badge {
+  id          String         @id @default(cuid())
+  code        String         @unique
+  name        String         @unique
+  description String
+  criterion   BadgeCriterion
+  /// Seuil du critère (nombre de livres, de débats…). `null` pour un badge manuel.
+  threshold   Int?
+  isActive    Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  holders UserBadge[]
+}
+
+model UserBadge {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation("BadgeOwner", fields: [userId], references: [id], onDelete: Cascade)
+  badgeId     String
+  badge       Badge    @relation(fields: [badgeId], references: [id], onDelete: Restrict)
+  /// Renseigné pour un badge manuel : qui l'a attribué et pourquoi.
+  awardedById String?
+  awardedBy   User?    @relation("BadgeAwarder", fields: [awardedById], references: [id], onDelete: SetNull)
+  reason      String?
+  awardedAt   DateTime @default(now())
+
+  @@unique([userId, badgeId])
+  @@index([badgeId])
+}
+
+// ============================================================================
+// Quiz en ligne (« Les Génies du soir »)
+// ============================================================================
+
+enum QuizStatus {
+  DRAFT // en préparation : invisible des membres, modifiable
+  PUBLISHED // jouable entre `opensAt` et `closesAt`
+  CLOSED // clos par un responsable (ou fenêtre passée) : résultats seulement
+}
+
+/// Questionnaire à choix multiples, une seule bonne réponse par question.
+/// Contraintes CHECK en base : durée de 1 à 180 minutes, fermeture après l'ouverture.
+model Quiz {
+  id              String     @id @default(cuid())
+  slug            String     @unique
+  title           String
+  /// Consigne affichée avant de commencer.
+  instructions    String?
+  /// Temps accordé à une tentative, compté par le serveur à partir du début.
+  durationMinutes Int
+  opensAt         DateTime
+  closesAt        DateTime
+  status          QuizStatus @default(DRAFT)
+  /// Rencontre « Génies du soir » liée (facultatif).
+  eventId         String?
+  event           Event?     @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  publishedAt     DateTime?
+  closedAt        DateTime?
+  createdById     String?
+  createdBy       User?      @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  isDemo          Boolean    @default(false)
+  archivedAt      DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  questions QuizQuestion[]
+  attempts  QuizAttempt[]
+
+  @@index([status, opensAt])
+  @@index([eventId])
+}
+
+model QuizQuestion {
+  id        String   @id @default(cuid())
+  quizId    String
+  quiz      Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  /// Énoncé.
+  prompt    String
+  /// Ordre d'affichage (croissant).
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  choices QuizChoice[]
+  answers QuizAnswer[]
+
+  @@index([quizId, position])
+}
+
+/// Proposition de réponse. Index unique partiel en base : une seule bonne réponse par question.
+model QuizChoice {
+  id         String       @id @default(cuid())
+  questionId String
+  question   QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  label      String
+  isCorrect  Boolean      @default(false)
+  position   Int          @default(0)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  answers QuizAnswer[]
+
+  /// Cible de la clé étrangère composée de QuizAnswer : la réponse choisie appartient à la question.
+  @@unique([id, questionId])
+  @@index([questionId, position])
+}
+
+/// Une tentative par membre et par quiz. Le chrono est tenu par le serveur :
+/// `expiresAt` est fixé au début (début + durée, sans dépasser la fermeture du quiz).
+model QuizAttempt {
+  id         String    @id @default(cuid())
+  quizId     String
+  quiz       Quiz      @relation(fields: [quizId], references: [id], onDelete: Restrict)
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  startedAt  DateTime  @default(now())
+  expiresAt  DateTime
+  /// Fin de la tentative (envoi par le membre ou temps écoulé). `null` : en cours.
+  finishedAt DateTime?
+  /// Nombre de bonnes réponses, calculé par le serveur à la fin.
+  score      Int?
+  /// Nombre de questions au moment de la tentative.
+  maxScore   Int
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  answers QuizAnswer[]
+
+  @@unique([userId, quizId])
+  @@index([quizId, score])
+}
+
+/// Réponse à une question, une seule par tentative. `choiceId` nul : question passée.
+/// `isCorrect` est figé au moment de la réponse.
+model QuizAnswer {
+  id         String       @id @default(cuid())
+  attemptId  String
+  attempt    QuizAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  questionId String
+  question   QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  choiceId   String?
+  choice     QuizChoice?  @relation(fields: [choiceId, questionId], references: [id, questionId], onDelete: Restrict)
+  isCorrect  Boolean      @default(false)
+  answeredAt DateTime     @default(now())
+
+  @@unique([attemptId, questionId])
+  @@index([questionId])
+}
+
+// ============================================================================
+// Contenus, notifications, réglages, traçabilité
+// ============================================================================
+
+enum ArticleStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+}
+
+model Article {
+  id          String        @id @default(cuid())
+  slug        String        @unique
+  title       String
+  excerpt     String
+  /// Corps en Markdown.
+  content     String
+  /// Rubrique libre : « Compte rendu », « Mot de la semaine », « Lecture »…
+  category    String
+  status      ArticleStatus @default(DRAFT)
+  /// Publié à cette date : une date future programme la publication.
+  publishedAt DateTime?
+  coverImage  String?
+  authorId    String?
+  author      User?         @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  isDemo      Boolean       @default(false)
+  archivedAt  DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([status, publishedAt])
+  @@index([category])
+}
+
+model Notification {
+  id          String              @id @default(cuid())
+  userId      String
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Nature de la notification, par exemple `membership.approved`.
+  type        String
+  title       String
+  body        String
+  /// Lien interne vers l'objet concerné.
+  href        String?
+  channel     NotificationChannel @default(IN_APP)
+  readAt      DateTime?
+  emailSentAt DateTime?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
+}
+
+/// Réglages du club modifiables depuis l'admin. Défauts dans src/config/.
+/// Statut d'un message reçu par le formulaire de contact.
+enum ContactMessageStatus {
+  NEW
+  READ
+  HANDLED
+}
+
+/// Message envoyé depuis /contact. Un message traité est supprimé après 12 mois (REGLES-METIER).
+model ContactMessage {
+  id          String               @id @default(cuid())
+  name        String
+  email       String
+  subject     String
+  message     String
+  status      ContactMessageStatus @default(NEW)
+  /// L'e-mail de notification au club est-il parti ? Le message est conservé même en cas d'échec.
+  emailSent   Boolean              @default(false)
+  readAt      DateTime?
+  /// Date de passage à « traité » : point de départ du délai de conservation.
+  handledAt   DateTime?
+  handledById String?
+  handledBy   User?                @relation("ContactMessageHandler", fields: [handledById], references: [id], onDelete: SetNull)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  @@index([status, createdAt])
+  @@index([handledAt])
+}
+
+model Setting {
+  key         String   @id
+  value       Json
+  updatedById String?
+  updatedBy   User?    @relation(fields: [updatedById], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+/// Journal des actions sensibles. Lignes jamais modifiées ni supprimées par l'application.
+model AuditLog {
+  id         String   @id @default(cuid())
+  /// Auteur de l'action. `null` : système, script CLI ou visiteur.
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  /// Forme `domaine.action`, par exemple `auth.account_activated`.
+  action     String
+  entityType String
+  entityId   String?
+  /// Détails utiles à l'enquête. Jamais de mot de passe, de jeton ni de donnée personnelle complète.
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
+  @@index([createdAt])
+}
+
+/// Compteur de limitation de débit (fenêtre fixe). La clé est un HMAC : aucune adresse IP ni e-mail en clair.
+model RateLimit {
+  key         String   @id
+  count       Int      @default(1)
+  windowStart DateTime @default(now())
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([expiresAt])
+}

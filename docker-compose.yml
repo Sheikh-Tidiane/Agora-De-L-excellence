@@ -1,0 +1,35 @@
+# Infrastructure locale : PostgreSQL + Mailpit.
+# PostgreSQL écoute sur le port hôte 5433 : un PostgreSQL local occupe souvent le 5432.
+name: agora-excellence
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-agora}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agora}
+      POSTGRES_DB: ${POSTGRES_DB:-agora}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Boîte de réception de développement : SMTP sur 1025, interface web sur http://localhost:8025
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+
+volumes:
+  postgres-data:

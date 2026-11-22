@@ -1,0 +1,9 @@
+# Configuration rclone pour Backblaze B2. Sur le serveur : /etc/agora/rclone.conf (chmod 600).
+# Clé d'application B2 limitée au seul bucket, capacités : listBuckets, listFiles, readFiles,
+# writeFiles — SANS deleteFiles. Bucket avec Object Lock (30 jours) et règle de cycle de vie
+# (suppression après 35 jours). Voir docs/SAUVEGARDE.md.
+[b2]
+type = b2
+account = REMPLACER_PAR_LE_KEY_ID
+key = REMPLACER_PAR_L_APPLICATION_KEY
+hard_delete = false

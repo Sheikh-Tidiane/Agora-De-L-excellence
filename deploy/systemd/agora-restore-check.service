@@ -1,0 +1,16 @@
+# Essai de restauration hebdomadaire de la dernière sauvegarde locale, dans une base temporaire.
+# Échec visible dans : systemctl --failed, journalctl -u agora-restore-check
+[Unit]
+Description=Essai de restauration de la dernière sauvegarde de L'Agora
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+User=agora
+Group=agora
+WorkingDirectory=/srv/agora
+Environment=PG_CONTAINER=agora-prod-postgres-1 COMPARE=0
+EnvironmentFile=-/srv/agora/.env.production
+ExecStart=/usr/bin/bash -c 'exec bash scripts/restore-check.sh "$(ls -1t /var/backups/agora/agora-*.dump | head -1)"'
+Nice=10

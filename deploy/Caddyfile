@@ -1,0 +1,45 @@
+# Caddy : HTTPS automatique (Let's Encrypt) et proxy inverse vers le site.
+# Variables (fichier d'environnement, via docker-compose.prod.yml) :
+#   SITE_DOMAIN   domaine du site, sans https:// (ex. agora-exemple.com)
+#   CADDY_TLS     adresse e-mail pour Let's Encrypt en production ; « internal » pour un essai local
+#   HSTS_MAX_AGE  300 (5 min) au départ ; 31536000 (1 an) après deux semaines sans incident
+#
+# X-Forwarded-For : sans `trusted_proxies`, Caddy ignore la valeur envoyée par le visiteur et la
+# remplace par l'adresse réelle de la connexion. La limitation de débit (src/lib/request.ts) peut
+# donc s'y fier. Si un CDN est un jour placé devant, il faudra déclarer ses plages d'adresses.
+#
+# Pas de directive `log` : les adresses visitées contiennent des jetons (activation, annulation).
+
+{
+	# L'API d'administration de Caddy reste fermée (elle n'est pas utile ici).
+	admin off
+}
+
+{$SITE_DOMAIN} {
+	tls {$CADDY_TLS}
+	encode zstd gzip
+
+	# Téléversements plafonnés à 2 Mo par l'application ; 5 Mo couvrent l'enveloppe multipart.
+	request_body {
+		max_size 5MB
+	}
+
+	# Les en-têtes déjà posés par next.config.ts (X-Frame-Options, nosniff, Referrer-Policy,
+	# frame-ancestors) ne sont pas répétés ici. La caméra sert au pointage des présences (QR).
+	header {
+		Strict-Transport-Security "max-age={$HSTS_MAX_AGE}"
+		Permissions-Policy "camera=(self), microphone=(), geolocation=(), payment=()"
+		Cross-Origin-Opener-Policy "same-origin"
+		-Server
+		-X-Powered-By
+	}
+
+	reverse_proxy app:3000 {
+		header_up -X-Real-IP
+	}
+}
+
+www.{$SITE_DOMAIN} {
+	tls {$CADDY_TLS}
+	redir https://{$SITE_DOMAIN}{uri} permanent
+}

@@ -1,0 +1,17 @@
+# Sauvegarde nocturne de L'Agora de l'Excellence (base + fichiers téléversés, copie chiffrée B2).
+# Installation : docs/SAUVEGARDE.md. Journal : journalctl -u agora-backup
+[Unit]
+Description=Sauvegarde de L'Agora de l'Excellence
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=agora
+Group=agora
+WorkingDirectory=/srv/agora
+ExecStart=/usr/bin/bash /srv/agora/scripts/backup-prod.sh
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=1h

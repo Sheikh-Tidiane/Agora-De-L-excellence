@@ -1,0 +1,119 @@
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+import { levelStanding, type LevelRow } from "@/features/gamification/levels";
+
+/**
+ * Phase 4 (partie A) : schéma, contraintes écrites à la main et données de départ. Les contraintes ont aussi été vérifiées par exécution sur une
+ * base vide (voir docs/DECISIONS.md, section 10) ; ici, on s'assure qu'elles restent dans la migration.
+ */
+const migration = readFileSync(
+  "prisma/migrations/20261114120000_phase4_communaute/migration.sql",
+  "utf8",
+);
+const schema = readFileSync("prisma/schema.prisma", "utf8");
+const seed = readFileSync("prisma/seed.ts", "utf8");
+
+describe("migration phase4_communaute", () => {
+  it.each([
+    ["EventRegistration_check_in_method", "présence ⇔ méthode de pointage"],
+    ["Score_forfeit_zero", "un forfait vaut zéro"],
+    ["Reading_completion_requires_finished", "seule une lecture terminée part en validation"],
+    ["User_card_version_positive", "version de carte ≥ 1"],
+    ["Level_min_points_positive", "seuil de niveau ≥ 0"],
+    ["Quiz_duration_range", "durée de 1 à 180 minutes"],
+    ["Quiz_window", "fermeture après l'ouverture"],
+    ["QuizChoice_one_correct_per_question", "une seule bonne réponse"],
+    ["QuizAttempt_expires_after_start", "chrono après le début"],
+    ["QuizAttempt_score_range", "score entre 0 et le maximum"],
+    ["QuizAttempt_score_when_finished", "score posé à la fin seulement"],
+    ["QuizAnswer_skipped_is_wrong", "question passée jamais juste"],
+  ])("contient la contrainte %s (%s)", (name) => {
+    expect(migration).toContain(`"${name}"`);
+  });
+
+  it("une tentative par membre et par quiz, une réponse par question", () => {
+    expect(migration).toContain('"QuizAttempt_userId_quizId_key"');
+    expect(migration).toContain('"QuizAnswer_attemptId_questionId_key"');
+  });
+
+  it("la réponse choisie appartient à la question (clé étrangère composée)", () => {
+    expect(migration).toMatch(
+      /FOREIGN KEY \("choiceId", "questionId"\) REFERENCES "QuizChoice"\("id", "questionId"\)/,
+    );
+  });
+
+  it("un quiz déjà joué ne se supprime pas ; un membre ayant joué non plus", () => {
+    expect(migration).toMatch(/"QuizAttempt_quizId_fkey".*ON DELETE RESTRICT/);
+    expect(migration).toMatch(/"QuizAttempt_userId_fkey".*ON DELETE RESTRICT/);
+  });
+
+  it("les présences d'avant la migration sont marquées « manuelles »", () => {
+    expect(migration).toMatch(
+      /UPDATE "EventRegistration" SET "checkInMethod" = 'MANUAL' WHERE "attendedAt" IS NOT NULL/,
+    );
+  });
+
+  it("le numéro de série de carte est unique", () => {
+    expect(migration).toContain('"User_cardSerial_key"');
+  });
+});
+
+describe("schéma", () => {
+  it.each(["Level", "Quiz", "QuizQuestion", "QuizChoice", "QuizAttempt", "QuizAnswer"])(
+    "déclare le modèle %s",
+    (model) => {
+      expect(schema).toMatch(new RegExp(`^model ${model} \\{`, "m"));
+    },
+  );
+
+  it("les points de quiz ont leur source, les badges leur critère", () => {
+    expect(schema).toMatch(/enum PointSourceType \{[^}]*\bQUIZ\b/);
+    expect(schema).toMatch(/enum BadgeCriterion \{[^}]*\bQUIZZES_COMPLETED\b/);
+  });
+
+  it("aucune donnée personnelle dans les champs de la carte", () => {
+    const user = /^model User \{([\s\S]*?)^\}/m.exec(schema)![1]!;
+    expect(user).toMatch(/cardSerial\s+String\?\s+@unique/);
+    expect(user).toMatch(/cardVersion\s+Int\s+@default\(1\)/);
+  });
+});
+
+describe("données de départ", () => {
+  it("sème les cinq niveaux aux seuils 0, 100, 300, 700, 1 500", () => {
+    const thresholds = [...seed.matchAll(/minPoints: (\d+) \}/g)].map((m) => Number(m[1]));
+    expect(thresholds).toEqual([0, 100, 300, 700, 1500]);
+  });
+
+  it("sème la règle de points du quiz, notée « à valider par le comité »", () => {
+    expect(seed).toMatch(/code: "quiz_completed"[\s\S]{0,200}à valider par le comité/);
+  });
+});
+
+describe("niveaux", () => {
+  const levels: LevelRow[] = [
+    { code: "c", name: "Voix affirmée", minPoints: 300 },
+    { code: "a", name: "Esprit curieux", minPoints: 0 },
+    { code: "b", name: "Plume en éveil", minPoints: 100 },
+  ];
+
+  it("le niveau atteint est le plus haut seuil sans dépasser le total", () => {
+    expect(levelStanding(levels, 0).current?.code).toBe("a");
+    expect(levelStanding(levels, 99).current?.code).toBe("a");
+    expect(levelStanding(levels, 100).current?.code).toBe("b");
+    expect(levelStanding(levels, 5000).current?.code).toBe("c");
+  });
+
+  it("donne le suivant, ce qui manque et l'avancée", () => {
+    expect(levelStanding(levels, 150)).toMatchObject({
+      next: { code: "c" },
+      remaining: 150,
+      progress: 0.25,
+    });
+    expect(levelStanding(levels, 300)).toMatchObject({ next: null, remaining: 0, progress: 1 });
+  });
+
+  it("un total négatif (après corrections) compte comme zéro ; sans niveau défini : rien", () => {
+    expect(levelStanding(levels, -40)).toMatchObject({ current: { code: "a" }, remaining: 100 });
+    expect(levelStanding([], 50)).toEqual({ current: null, next: null, remaining: 0, progress: 0 });
+  });
+});

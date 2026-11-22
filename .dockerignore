@@ -1,0 +1,65 @@
+# L'image de production n'embarque que ce qui sert au site : code, prisma/, public/, scripts/
+# et la configuration. Rien de local, de secret, de généré, de média ni de test.
+
+# Git, outils et notes de travail
+.git
+.github
+AGENTS.md
+README.md
+docs
+logos
+
+# Dépendances et constructions locales (réinstallées et reconstruites dans l'image)
+node_modules
+.next
+out
+build
+coverage
+src/generated
+*.tsbuildinfo
+next-env.d.ts
+
+# Projet vidéo séparé et médias
+communication
+Deos
+*.mp4
+*.mov
+*.webm
+*.mkv
+*.mp3
+*.wav
+*.m4a
+*.aac
+*.ogg
+*.flac
+
+# Tests et rapports
+e2e
+e2e-prod
+src/test
+**/*.test.ts
+**/*.test.tsx
+playwright*.config.ts
+vitest.config.mts
+test-results
+playwright-report
+.lighthouse
+
+# Données du club : téléversements, sauvegardes, exports
+uploads
+backups
+export-contenus
+*.dump
+*.sql.gz
+*.tar.gz
+*.age
+
+# Secrets et environnement local
+.env*
+!.env.example
+*.pem
+.deploy
+
+# Fichiers de déploiement eux-mêmes
+Dockerfile
+docker-compose*.yml

@@ -1,0 +1,11 @@
+.next
+node_modules
+pnpm-lock.yaml
+public
+docs/cahier-des-charges.pdf
+test-results
+playwright-report
+.lighthouse
+AGENTS.md
+src/generated
+prisma/migrations

@@ -3,6 +3,7 @@ import { interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import { courbes, couleurs, formats, polices, s, type NomFormat } from "./tokens";
 
 const borne = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
+const FONDU_SOUS_TITRE = 8;
 
 export type SousTitre = {
   /** Début et fin, en secondes. */
@@ -37,9 +38,11 @@ export const SousTitres: React.FC<SousTitresProps> = ({ cues, format = "vertical
 
   const a = s(actif.debut);
   const b = s(actif.fin);
+  // Fondu symétrique sur 8 images : un bandeau plein qui apparaît avec une courbe raide
+  // « saute » à la première image (vu au contrôle de la semaine 2).
   const opacite = Math.min(
-    interpolate(frame, [a, a + 5], [0, 1], { ...borne, easing: courbes.entree }),
-    interpolate(frame, [b - 5, b], [1, 0], { ...borne, easing: courbes.sortie }),
+    interpolate(frame, [a, a + FONDU_SOUS_TITRE], [0, 1], { ...borne, easing: courbes.fondu }),
+    interpolate(frame, [b - FONDU_SOUS_TITRE, b], [1, 0], { ...borne, easing: courbes.fondu }),
   );
   const taille = format === "paysage" ? 40 : 44;
 

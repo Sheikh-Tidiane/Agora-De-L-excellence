@@ -49,8 +49,14 @@ test("l’accueil porte le slogan, le lancement, les trois dimensions et les cin
   await expect(
     page.getByRole("heading", { level: 2, name: "Lancement de L’Agora de l’Excellence" }),
   ).toBeVisible();
-  await expect(page.getByText("Date provisoire").first()).toBeVisible();
-  await expect(page.getByText("Lieu à confirmer").first()).toBeVisible();
+  // Date et lieu du lancement confirmés par le comité : ni « Date provisoire » ni « Lieu à confirmer »
+  // dans sa section (les autres rencontres, elles, peuvent encore attendre leur lieu).
+  const lancement = page.locator("section", {
+    has: page.getByRole("heading", { level: 2, name: "Lancement de L’Agora de l’Excellence" }),
+  });
+  await expect(lancement.getByText("Foyer des jeunes de Yeumbeul Nord").first()).toBeVisible();
+  await expect(lancement.getByText("Date provisoire")).toHaveCount(0);
+  await expect(lancement.getByText("Lieu à confirmer")).toHaveCount(0);
   for (const dimension of ["Culturelle", "Intellectuelle", "Sociale"]) {
     await expect(page.getByRole("heading", { name: `Dimension ${dimension}` })).toBeVisible();
   }
@@ -100,7 +106,8 @@ test("le club, les activités, la charte et les archives disent ce que dit le co
   await page.goto("/events/lancement-de-l-agora");
   await expect(page.getByText("16 h 30 – 17 h 00")).toBeVisible();
   await expect(page.getByText("Accueil des participants")).toBeVisible();
-  await expect(page.getByText("samedi 26 décembre 2026 (date provisoire)")).toBeVisible();
+  await expect(page.getByText("samedi 16 janvier 2027", { exact: true })).toBeVisible();
+  await expect(page.getByText("Foyer des jeunes de Yeumbeul Nord").first()).toBeVisible();
 });
 
 test("adhésion avec charte, validation, carte encaissée, encaissements", async ({

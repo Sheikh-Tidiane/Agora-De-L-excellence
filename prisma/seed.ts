@@ -169,6 +169,9 @@ async function seedReference() {
  */
 const committee = ["Yaye Arête Sagna Diop", "Mame Cheikh Diop", "Ndèye Absa Diop", "Mansour Diop"];
 
+/** Dakar est à UTC+0 toute l'année : 16:00Z = 16 h à Dakar. */
+const LAUNCH_LOCATION = "Foyer des jeunes de Yeumbeul Nord";
+
 const launch = {
   slug: "lancement-de-l-agora",
   title: "Lancement de L’Agora de l’Excellence",
@@ -194,7 +197,8 @@ async function seedClub() {
       data: committee.map((name, position) => ({ name, position })),
     });
   }
-  // Samedi 26 décembre 2026, à partir de 16 h : date provisoire, lieu à confirmer.
+  // Samedi 16 janvier 2027, à partir de 16 h, au Foyer des jeunes de Yeumbeul Nord (confirmé).
+  // Une base existante se met à jour avec scripts/lancement-16-janvier.ts.
   await prisma.event.upsert({
     where: { slug: launch.slug },
     update: {},
@@ -202,10 +206,10 @@ async function seedClub() {
       ...launch,
       type: "LANCEMENT_AUTRE",
       status: "PUBLISHED",
-      isTentative: true,
-      location: null,
-      startsAt: new Date("2026-12-26T16:00:00Z"),
-      endsAt: new Date("2026-12-26T19:00:00Z"),
+      isTentative: false,
+      location: LAUNCH_LOCATION,
+      startsAt: new Date("2027-01-16T16:00:00Z"),
+      endsAt: new Date("2027-01-16T19:00:00Z"),
       isPublic: true,
       publishedAt: new Date(),
     },
@@ -230,7 +234,7 @@ async function main() {
     `Seed terminé : ${roles} rôles, ${permissions} permissions, ${rules} règles de points, ${badgeCount} badges, ${levelCount} niveaux, ${categoryCount} catégories, ${settingCount} réglages.`,
   );
   console.log(
-    `Contenus du club : ${await prisma.committeeMember.count()} membres du comité, lancement du 26 décembre 2026 (date provisoire).`,
+    `Contenus du club : ${await prisma.committeeMember.count()} membres du comité, lancement du samedi 16 janvier 2027 au Foyer des jeunes de Yeumbeul Nord.`,
   );
   console.log("Aucun compte n’est créé par le seed. Super-admin : pnpm create-admin");
 }

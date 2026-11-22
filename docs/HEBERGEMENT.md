@@ -1,7 +1,7 @@
 # HEBERGEMENT.md — Options de mise en ligne (à choisir)
 
 > Rédigé le 14 novembre 2026, **avant tout déploiement**. Rien n'est commandé ni configuré.
-> Contrainte : le lancement a lieu le **26 décembre 2026** et l'adhésion doit fonctionner en ligne ce jour-là.
+> Contrainte : le lancement a lieu le **samedi 16 janvier 2027** et l'adhésion doit fonctionner en ligne ce jour-là.
 > Les prix sont relevés sur les sites des hébergeurs ou des comparatifs à cette date, hors TVA ;
 > ils ont bougé plusieurs fois en 2026 : **à revérifier au moment de commander.**
 
@@ -83,7 +83,7 @@ d'activation risquent de finir en indésirables.
 | Semaine 1            | Restauration testée **sur le serveur** (base restaurée, contrôle ligne à ligne)                                                       |
 | Semaine 2            | Recette en ligne : adhésion de bout en bout depuis un vrai téléphone, en 4G                                                           |
 | Avant le 15 décembre | Gel : plus de changement de fonctionnement, seulement des corrections                                                                 |
-| 26 décembre          | Lancement ; QR code de l'affiche pointant vers l'adresse définitive                                                                   |
+| 16 janvier 2027      | Lancement ; QR code de l'affiche pointant vers l'adresse définitive                                                                   |
 
 ## Ce que j'attends de vous
 

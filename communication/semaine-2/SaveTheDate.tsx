@@ -9,7 +9,7 @@ export type FormatSaveTheDate = "vertical" | "carre" | "portrait";
 /**
  * « Save the date » du lancement : la date en très grand, l’heure et le lieu en étiquettes,
  * la signature en bas. Deux tailles de texte : la date (Young Serif) et les étiquettes
- * (Work Sans gras, capitales espacées). Le lieu n’est pas confirmé : « Lieu dévoilé bientôt ».
+ * (Work Sans gras, capitales espacées). Date et lieu confirmés : samedi 16 janvier 2027, Foyer des jeunes de Yeumbeul Nord.
  */
 const mise = {
   vertical: { taille: 176, haut: 470, marge: 96, logo: 360, arcY: 2080, arcR: 520 },
@@ -39,7 +39,7 @@ export const SaveTheDate: React.FC<{ format: FormatSaveTheDate }> = ({ format })
         <div style={{ marginTop: m.taille * 0.28, fontFamily: polices.titre, fontSize: m.taille, lineHeight: 1.02, color: couleurs.ivoire }}>
           <div>{lancement.jour}</div>
           <div>
-            <span style={{ color: couleurs.terracottaClair }}>2</span> janvier
+            <span style={{ color: couleurs.terracottaClair }}>16</span> janvier
           </div>
           <div>2027</div>
         </div>

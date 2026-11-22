@@ -1,4 +1,4 @@
-# Semaine 2 — La révélation : storyboard (version 1.1)
+# Semaine 2 — La révélation : storyboard (version 1.1, rendue)
 
 Objectif : dire enfin ce qu’est le club, ses trois dimensions, ses cinq activités, son rythme, son slogan, et donner la date du lancement.
 
@@ -99,3 +99,30 @@ Ce qui me semble au niveau : un gabarit constant pour chaque famille (dimensions
 Images clés corrigées : `communication/out/semaine-2/images-cles-v2/` (0360, 0490, 0620, 0715, 0790, 0860, 0930, 1000).
 
 **Arrêt ici pour ta validation** : aucun rendu final n’a été fait.
+
+## Rendu final (21/11/2026)
+
+Date et heure confirmées par le comité : samedi 2 janvier 2027, à partir de 16 h (`CONTENUS-CLUB.md` mis à jour). Lieu toujours « dévoilé bientôt ».
+
+| Fichier | Poids | Caractéristiques |
+|---|---|---|
+| `out/Presentation-Vertical/Presentation-Vertical-HQ.mp4` | 5,0 Mo | H.264, 1080 × 1920, 30 i/s, 1 418 images, 47,27 s, BT.709 plage standard, sans son |
+| `out/Presentation-Vertical/Presentation-Vertical-WhatsApp.mp4` | 2,8 Mo | idem, compressée ; sert aussi aux statuts WhatsApp (60 s au plus) |
+| `out/semaine-2/final/SaveTheDate-Vertical-0000.png`, `-Carre-0000.png`, `-Portrait-0000.png` | — | PNG 1080 × 1920, 1080 × 1080, 1080 × 1350 |
+
+Copie de l’ensemble : `out/semaine-2/final/`. `PresentationPlans-Vertical` (aperçu des emplacements) n’est pas exporté ; dès qu’un plan est déposé dans `assets/plans/`, relancer `pnpm export Presentation-Vertical`.
+
+**Défaut trouvé au contrôle et corrigé dans le kit** : le bandeau des sous-titres apparaissait et disparaissait en 5 images avec une courbe raide ; un bandeau plein « sautait » ainsi à sa première et à sa dernière image (pics isolés à 9,4 s, 14,8 s et à chaque fin de séquence). `<SousTitres>` fond maintenant sur 8 images, avec la courbe de fondu symétrique. Vidéo réexportée.
+
+**Contrôle** (`pnpm controle`, sur les deux versions) :
+
+- Fluidité : les 1 418 images comparées chacune à la suivante, aucun saut ni clignotement isolé. Les seuls pics sont les trois passages de fond OKLCH (images 174 – 176, 677 – 679, 1 148 – 1 150), voulus et brefs comme dans la démo validée ; plus un écart négligeable (0,8) à la sortie du slogan.
+- Couleurs : zones comparées au rendu PNG direct (fond indigo du logo, papier, fond des activités, slogan, image finale) : 3/255 d’écart au plus.
+- Logo : l’image 140 (logo complet) est identique au pixel près à l’image de contrôle du fichier officiel `logo-vertical-inverse.svg` (0 pixel différent avant encodage).
+- Zones de sécurité et temps de lecture : conformes (voir les séquences).
+- Non vérifié : la lecture sur un vrai téléphone et la recompression par WhatsApp.
+
+
+## Mise à jour du 21/11/2026 (date et lieu définitifs)
+
+Le comité a confirmé le lancement : **samedi 16 janvier 2027, à partir de 16 h, au Foyer des jeunes de Yeumbeul Nord**. `contenus.ts` est la seule source : la séquence 7 de la présentation et les trois Save the date affichent « 16 janvier 2027 » (« 16 » en accent) et le nom du lieu à la place de « Lieu dévoilé bientôt ». Les mentions du 2 janvier plus haut sont historiques. Rendu final à refaire (vidéo muette, version sonorisée avec le mixage validé, trois Save the date).

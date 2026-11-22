@@ -8,6 +8,8 @@ import { VisuelLogo, VisuelQuestion, VisuelSlogan } from "../semaine-1/Visuels";
 import { DUREE_PRESENTATION } from "../semaine-2/minutage";
 import { Presentation } from "../semaine-2/Presentation";
 import { SaveTheDate } from "../semaine-2/SaveTheDate";
+import { Activite, VisuelActivite, minutageActivite } from "../semaine-3/Activite";
+import { serie } from "../semaine-3/contenus";
 import { FPS, chargerPolices, formats } from "./kit";
 
 chargerPolices();
@@ -86,6 +88,22 @@ export const Root: React.FC = () => (
       <Still id="SaveTheDate-Vertical" component={SaveTheDate} defaultProps={{ format: "vertical" as const }} width={vertical.largeur} height={vertical.hauteur} />
       <Still id="SaveTheDate-Carre" component={SaveTheDate} defaultProps={{ format: "carre" as const }} width={carre.largeur} height={carre.hauteur} />
       <Still id="SaveTheDate-Portrait" component={SaveTheDate} defaultProps={{ format: "portrait" as const }} width={portrait.largeur} height={portrait.hauteur} />
+    </Folder>
+    <Folder name="Semaine-3">
+      {serie.map((a) => (
+        <React.Fragment key={a.slug}>
+          <Composition
+            id={`S3${a.slug}-Vertical`}
+            component={Activite}
+            defaultProps={{ numero: a.numero }}
+            durationInFrames={minutageActivite(a).fin}
+            fps={FPS}
+            width={vertical.largeur}
+            height={vertical.hauteur}
+          />
+          <Still id={`S3${a.slug}-Portrait`} component={VisuelActivite} defaultProps={{ numero: a.numero }} width={portrait.largeur} height={portrait.hauteur} />
+        </React.Fragment>
+      ))}
     </Folder>
   </>
 );

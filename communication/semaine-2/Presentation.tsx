@@ -158,12 +158,16 @@ const Lancement: React.FC = () => {
         {lancement.surtitre}
       </Etiquette>
       <div style={{ position: "absolute", left: 0, right: 0, top: 640 }}>
-        <TexteCinetique lignes={[lancement.jour, lancement.date]} debut={l.debut + 6} mode="ligne" reste taille={124} interligne={1.05} alignement="center" couleur={couleurs.indigo} accent={{ mots: ["2"], couleur: couleurs.terracotta }} />
+        <TexteCinetique lignes={[lancement.jour, lancement.date]} debut={l.debut + 6} mode="ligne" reste taille={112} interligne={1.05} alignement="center" couleur={couleurs.indigo} accent={{ mots: ["16"], couleur: couleurs.terracotta }} />
       </div>
       <Etiquette couleur={couleurs.indigo} style={{ top: 960, opacity: entree(l.debut + 24), lineHeight: 1.7 }}>
         {lancement.heure}
         <br />
-        <span style={{ color: couleurs.gris }}>{lancement.lieu}</span>
+        <span style={{ color: couleurs.gris }}>
+          {lancement.lieuLignes[0]}
+          <br />
+          {lancement.lieuLignes[1]}
+        </span>
       </Etiquette>
       <Img
         src={logoHorizontal}

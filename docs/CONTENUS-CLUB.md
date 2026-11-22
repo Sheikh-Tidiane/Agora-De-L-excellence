@@ -70,7 +70,9 @@ Tous les trois mois, la projection d’un film historique ou qui stimule l’int
 
 ## 8. Lancement
 
-**Samedi 2 janvier 2027, à partir de 16 h** (date communiquée par le porteur du projet le 21/11/2026, à la place du samedi 26 décembre 2026 ; lieu à confirmer).
+**Samedi 16 janvier 2027, à partir de 16 h, au Foyer des jeunes de Yeumbeul Nord.**
+
+Date, heure et lieu confirmés par le comité (communiqués par le porteur du projet le 21/11/2026). Les dates précédentes (samedi 26 décembre 2026, puis samedi 2 janvier 2027) sont abandonnées.
 
 | Horaire | Programme |
 |---|---|
@@ -103,7 +105,7 @@ Principes retenus, en attente du texte définitif rédigé et validé par le com
 ## 9. Conséquences pour la plateforme
 
 ### Textes et pages
-- **Accueil** : le slogan dans le hero ; la section « trois piliers » devient « trois dimensions » ; une section « Activités » présente les cinq activités ; le lancement du 2 janvier 2027 est mis en avant tant qu'il n'est pas passé.
+- **Accueil** : le slogan dans le hero ; la section « trois piliers » devient « trois dimensions » ; une section « Activités » présente les cinq activités ; le lancement du 16 janvier 2027 est mis en avant tant qu'il n'est pas passé.
 - **À propos** : objectifs, trois dimensions, comité de pilotage, rythme des rencontres, conditions d’adhésion.
 - **Activités** : une section ou page par activité (A à E), avec les événements à venir de ce type.
 - **Adhésion** : afficher clairement les 1 000 F CFA et les 100 F CFA par séance avant le formulaire.
@@ -130,13 +132,14 @@ Principes retenus, en attente du texte définitif rédigé et validé par le com
 - **Quiz en ligne** : un responsable crée un quiz (questions à choix multiples, durée, période d’ouverture), les membres y répondent depuis leur téléphone, le score rapporte des points selon une `PointRule` et alimente un classement des quiz. Complète les Génies du soir.
 
 ### Données de démo
-- Le lancement (2 janvier 2027) est un **vrai événement**, pas une donnée de démo : le créer via le seed avec `isDemo = false` et le statut « provisoire », lieu « à confirmer ».
+- Le lancement (samedi 16 janvier 2027, 16 h, Foyer des jeunes de Yeumbeul Nord) est un **vrai événement** : date et lieu confirmés, sans statut « provisoire ».
 
 ---
 
 ## 10. Informations encore manquantes (ne pas inventer)
 
-- Le lieu des rencontres et du lancement.
+- Le lieu des rencontres habituelles (celui du lancement est connu : Foyer des jeunes de Yeumbeul Nord).
+- Un repère pour trouver le foyer (marché, mosquée, arrêt de bus).
 - Les rôles, photos et biographies du comité de pilotage.
 - Les coordonnées officielles (téléphone, e-mail) et les réseaux sociaux.
 - Le jour et l’heure habituels des rencontres de quinzaine.
@@ -144,4 +147,4 @@ Principes retenus, en attente du texte définitif rédigé et validé par le com
 - L'outil utilisé pour suivre les rencontres à distance (Google Meet, Zoom, WhatsApp…).
 - Le texte définitif de la charte (les principes de la section 8 bis servent de version provisoire).
 
-Tant qu'une information manque, la section correspondante ne s'affiche pas, ou affiche « à confirmer » pour la date et le lieu du lancement uniquement.
+Tant qu'une information manque, la section correspondante ne s'affiche pas, sans rien inventer.

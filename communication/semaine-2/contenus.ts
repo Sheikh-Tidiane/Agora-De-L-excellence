@@ -72,13 +72,15 @@ export const slogan = ["Le savoir", "comme flamme,", "l’excellence", "comme am
 export const rythme = ["Une rencontre", "tous les", "quinze jours."];
 
 /**
- * §8 — Lancement : samedi 2 janvier 2027, à partir de 16 h (date communiquée par le porteur
- * du projet le 21/11/2026). Lieu non confirmé : « Lieu dévoilé bientôt ».
+ * §8 — Lancement : samedi 16 janvier 2027, à partir de 16 h, au Foyer des jeunes de Yeumbeul Nord
+ * (date et lieu confirmés par le comité, communiqués par le porteur du projet le 21/11/2026).
  */
 export const lancement = {
   surtitre: "Lancement",
   jour: "Samedi",
-  date: "2 janvier 2027",
+  date: "16 janvier 2027",
   heure: "À partir de 16 h",
-  lieu: "Lieu dévoilé bientôt",
+  lieu: "Foyer des jeunes de Yeumbeul Nord",
+  /** Coupure voulue sur deux lignes quand le lieu est centré (évite « Nord » seul sur une ligne). */
+  lieuLignes: ["Foyer des jeunes", "de Yeumbeul Nord"],
 } as const;

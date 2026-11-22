@@ -33,3 +33,6 @@ export function safeNextPath(next: string | null | undefined): string | null {
   if (/^\/(member|admin)(\/|$|\?)/.test(next)) return next;
   return /^\/events\/[a-z0-9-]{1,120}$/.test(next) ? next : null;
 }
+
+/** Préfixe des jetons de réinitialisation chez Better Auth (`reset-password:<jeton>`). */
+export const RESET_PASSWORD_PREFIX = "reset-password:";

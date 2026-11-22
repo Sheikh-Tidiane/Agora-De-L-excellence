@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { hashPassword } from "better-auth/crypto";
-import { authConfig, authRoutes } from "@/config/auth";
+import { authConfig, authRoutes, RESET_PASSWORD_PREFIX } from "@/config/auth";
 import { audit } from "@/lib/audit";
 import { env } from "@/lib/env";
 import { AppError } from "@/lib/errors";
@@ -187,6 +187,16 @@ export async function activateAccount(token: string, password: string): Promise<
       tx,
     );
   });
+}
+
+/**
+ * Jetons de réinitialisation : Better Auth n'en stocke plus que l'empreinte (lib/auth.ts), mais sa
+ * recherche retombe sur la valeur en clair si l'empreinte est introuvable (prévu pour une
+ * transition). Un jeton en clair — créé avant ce changement, ou par l'ancienne version du site
+ * pendant un déploiement — est donc supprimé avant la vérification : il échoue comme un lien expiré.
+ */
+export async function discardPlainResetToken(token: string): Promise<void> {
+  await prisma.verification.deleteMany({ where: { identifier: RESET_PASSWORD_PREFIX + token } });
 }
 
 /** Supprime les jetons expirés (activation et réinitialisation). */

@@ -13,7 +13,11 @@ import {
   type SetPasswordInput,
   type SignInInput,
 } from "@/features/auth/schemas";
-import { activateAccount, purgeExpiredVerifications } from "@/features/auth/service";
+import {
+  activateAccount,
+  discardPlainResetToken,
+  purgeExpiredVerifications,
+} from "@/features/auth/service";
 import { viewerTag } from "@/features/auth/viewer";
 import { ACCOUNT_NOT_ACTIVE, auth } from "@/lib/auth";
 import { AppError, parseInput, runAction, type ActionResult } from "@/lib/errors";
@@ -114,6 +118,8 @@ export async function resetPasswordAction(input: SetPasswordInput): Promise<Acti
   return runAction("auth.resetPassword", async () => {
     const data = parseInput(setPasswordSchema, input);
     await enforceRateLimit("auth.reset-password.ip", await clientAddress());
+    // Un ancien jeton stocké en clair ne doit plus servir (voir discardPlainResetToken).
+    await discardPlainResetToken(data.token);
     try {
       await auth.api.resetPassword({
         body: { newPassword: data.password, token: data.token },

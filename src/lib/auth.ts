@@ -3,7 +3,7 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { APIError } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
-import { authConfig, authRoutes } from "@/config/auth";
+import { authConfig, authRoutes, RESET_PASSWORD_PREFIX } from "@/config/auth";
 import { site } from "@/config/site";
 import { audit } from "@/lib/audit";
 import { env } from "@/lib/env";
@@ -82,6 +82,15 @@ export const auth = betterAuth({
   session: {
     expiresIn: authConfig.sessionDays * 24 * 60 * 60,
     updateAge: 24 * 60 * 60,
+  },
+
+  // Jeton de réinitialisation du mot de passe : seule son empreinte SHA-256 est stockée
+  // (`Verification.identifier`), comme pour les liens d'activation (features/auth/service.ts).
+  // Un jeton aléatoire de 256 bits n'a pas besoin d'un hachage lent ni d'un sel : le deviner
+  // reste impossible, et une fuite de la base (ou d'une sauvegarde) ne donne aucun lien utilisable.
+  // Les autres identifiants (aucun aujourd'hui) restent tels quels.
+  verification: {
+    storeIdentifier: { default: "plain", overrides: { [RESET_PASSWORD_PREFIX]: "hashed" } },
   },
 
   // La limitation de débit est faite en amont par lib/rate-limit (en base), action par action.

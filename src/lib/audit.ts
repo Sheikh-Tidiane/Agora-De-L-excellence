@@ -28,6 +28,7 @@ export type AuditAction =
   | "points.rule_updated"
   | "badge.awarded"
   | "charter.updated"
+  | "contents.imported"
   | "committee.updated"
   | "event.report_saved"
   | "member.updated"

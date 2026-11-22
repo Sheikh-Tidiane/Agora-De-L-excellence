@@ -9,6 +9,7 @@ e2e
 e2e-prod
 logos
 backups
+export-contenus
 uploads
 test-results
 playwright-report

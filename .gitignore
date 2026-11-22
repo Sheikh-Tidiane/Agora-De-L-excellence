@@ -63,3 +63,6 @@ next-env.d.ts
 
 # Déploiement : état local du serveur (versions en service)
 /.deploy/
+
+# Export des contenus (scripts/contenus-export.ts) : données du club, jamais dans Git
+/export-contenus/

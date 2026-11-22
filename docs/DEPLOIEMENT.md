@@ -94,3 +94,91 @@ Vérifié aussi :
 
 Sans incidence en production : avec le certificat local, le navigateur refuse d'installer le
 service worker (« SSL certificate error ») ; avec un vrai certificat, il s'installe.
+
+## Transférer les contenus
+
+But : mettre en production les vrais contenus saisis sur le poste (livres, auteurs, catégories,
+comité, charte, lancement, articles et rencontres), **sans** les comptes ni les données de test.
+
+### Ce qui part, ce qui ne part pas
+
+| Exporté                                                        | Jamais exporté                                                                    |
+| -------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| catégories, auteurs, livres et leurs couvertures               | comptes, rôles attribués, sessions                                                |
+| comité de pilotage et ses photos                               | demandes d'adhésion (dont les trois « Démonstration »), adhésions, encaissements  |
+| charte (texte, version, mention « provisoire »)                | inscriptions aux rencontres, lectures et critiques, points, badges, notifications |
+| rencontres (lancement compris) et leurs comptes rendus, images | journal d'audit, photos de profil                                                 |
+| articles et leurs images                                       | livres du mois, quiz, tournois et records de Scrabble (**sur demande** seulement) |
+|                                                                | autres réglages : identité du club, tarifs, contacts (à ressaisir dans l'admin)   |
+
+Les liens vers un compte (auteur d'un article, créateur d'une rencontre) sont retirés : ces comptes
+n'existent pas en production.
+
+**Écarté comme donnée de test** : un titre ou un nom qui commence par `E2E` (tests automatiques) ou
+`Essai-` (essai de production), un contenu encore marqué « démonstration », ou un contenu créé par
+un compte `@e2e.agora.test`, `@essai.agora.test` ou `@demo.agora.test`. La catégorie « Essai »
+(le genre littéraire) n'est pas concernée : ce piège a été vu à l'essai et corrigé.
+
+### 1. Aperçu, sur le poste (ne modifie rien)
+
+```bash
+pnpm exec tsx scripts/contenus-export.ts
+```
+
+Affiche, et écrit dans `export-contenus/APERCU.md`, la liste de **tout** ce qui serait exporté,
+titre par titre, puis ce qui est écarté comme donnée de test et ce qui n'est jamais exporté. C'est
+cette liste qui se relit et se valide avant d'aller plus loin. Le dossier `export-contenus/` est
+ignoré par Git et par Docker.
+
+### 2. Export, sur le poste
+
+```bash
+pnpm exec tsx scripts/contenus-export.ts --exporter
+```
+
+Écrit `export-contenus/contenus.json` et les images citées dans `export-contenus/uploads/` (avec
+leur empreinte SHA-256). Puis, depuis le poste :
+
+```bash
+scp -r export-contenus agora@<adresse-du-serveur>:/srv/agora/
+```
+
+### 3. Simulation, puis import, sur le serveur
+
+```bash
+bash scripts/prod-compose.sh run --rm -v "$PWD/export-contenus:/import:ro" tools pnpm exec tsx scripts/contenus-import.ts /import
+```
+
+La simulation liste ce qui sera créé (`+`), mis à jour (`~`), retiré du comité (`-`), les images à
+copier, et ce qui existe en production sans être dans l'export (laissé tel quel). Si c'est bon :
+
+```bash
+bash scripts/backup-prod.sh --label avant-import
+```
+
+```bash
+bash scripts/prod-compose.sh run --rm -v "$PWD/export-contenus:/import:ro" tools pnpm exec tsx scripts/contenus-import.ts /import --appliquer
+```
+
+```bash
+bash scripts/deploy.sh --no-pull
+```
+
+(la reconstruction met les pages pré-rendues à jour tout de suite ; sans elle, elles le sont en une
+minute environ). Enfin, effacer l'export du serveur : `rm -rf export-contenus`.
+
+Règles de l'import : rapprochement par adresse (slug), par nom pour le comité, par clé pour la
+charte ; ce qui existe est mis à jour, ce qui manque est créé, en une seule transaction. Seul le
+comité est remplacé en entier. Rien d'autre n'est supprimé. Les images sont vérifiées (empreinte)
+et jamais écrasées. Relancé, l'import ne change plus rien. Il est noté dans le journal d'audit
+(« Contenus importés »).
+
+### Essai du 22 novembre 2026 (en local)
+
+Sur une base de développement remplie de contenus de démonstration et de données de test
+(`E2E-Debat…`, `E2E-P3 Auteur…`, `E2E-Comite…`, un article écrit par un compte `@e2e.agora.test`),
+importés dans la pile de production : les quatre données de test sont écartées, la catégorie
+« Essai » est gardée (après correction), les deux images arrivent intactes, le lancement et les
+catégories déjà semés en production sont mis à jour sans doublon, et un second passage n'a plus
+rien à créer ni à copier. Le livre, sa couverture et le rôle d'un membre du comité s'affichent sur
+le site.

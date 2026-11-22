@@ -43,6 +43,7 @@ const actionLabels: Record<AuditAction, string> = {
   "scrabble.record_saved": "Record enregistré",
   "scrabble.record_deleted": "Record supprimé",
   "charter.updated": "Charte modifiée",
+  "contents.imported": "Contenus importés",
   "committee.updated": "Comité de pilotage modifié",
   "event.report_saved": "Compte rendu enregistré",
   "member.updated": "Fiche de membre modifiée",

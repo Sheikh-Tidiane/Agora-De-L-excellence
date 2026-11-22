@@ -89,7 +89,8 @@ compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d postgres -v ON_ERROR
 compose exec -T postgres sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --no-owner --no-privileges --exit-on-error' < "$DUMP"
 
 step "Fichiers téléversés"
-docker volume inspect "${PROJECT}_uploads" > /dev/null 2>&1 || docker volume create "${PROJECT}_uploads" > /dev/null
+docker volume inspect "${PROJECT}_uploads" > /dev/null 2>&1 || docker volume create \
+  --label com.docker.compose.project="$PROJECT" --label com.docker.compose.volume=uploads "${PROJECT}_uploads" > /dev/null
 docker run --rm -i --network none -v "${PROJECT}_uploads:/uploads" postgres:17-alpine \
   sh -c 'find /uploads -mindepth 1 -delete && tar -xzf - -C /uploads && chown -R 1000:1000 /uploads' < "$UPLOADS"
 

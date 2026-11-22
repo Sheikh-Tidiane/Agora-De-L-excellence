@@ -84,7 +84,11 @@ services:
       - path: ${ENV_FILE:-.env.production}
     environment:
       NODE_ENV: production
+      UPLOAD_DIR: /app/uploads
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+    # Le volume des fichiers téléversés : pour l'import des contenus (scripts/contenus-import.ts).
+    volumes:
+      - uploads:/app/uploads
     networks: [internal]
     depends_on:
       postgres:

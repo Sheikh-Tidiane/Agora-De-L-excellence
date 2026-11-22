@@ -91,3 +91,7 @@ next-env.d.ts
 
 # Export des contenus (scripts/contenus-export.ts) : données du club, jamais dans Git
 /export-contenus/
+
+# Claude Code : réglages personnels du poste (les réglages partagés .claude/settings.json et
+# .claude/agents/ sont, eux, versionnés)
+/.claude/settings.local.json

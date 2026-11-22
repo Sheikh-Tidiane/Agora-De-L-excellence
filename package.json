@@ -14,6 +14,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:prod": "playwright test -c playwright.prod.config.ts",
     "captures": "node scripts/captures.mjs",
     "postinstall": "prisma generate",
     "db:generate": "prisma generate",

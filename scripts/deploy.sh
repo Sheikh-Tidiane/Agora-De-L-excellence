@@ -60,7 +60,7 @@ if [ "$ROLLBACK" = 1 ]; then
   step "Retour à la version $previous"
   docker tag "agora-app:$previous" agora-app:current
   docker tag "agora-tools:$previous" agora-tools:current
-  APP_TAG=current compose up -d app caddy
+  APP_TAG=current compose up -d --wait --remove-orphans
   cp "$STATE_DIR/current" "$STATE_DIR/previous" 2>/dev/null || true
   echo "$previous" > "$STATE_DIR/current"
   echo "Retour effectué. Le schéma de la base n'a pas été modifié : si la version annulée avait une migration, voir docs/DEPLOIEMENT.md."
@@ -129,7 +129,7 @@ step "Mise en service"
 current="$(cat "$STATE_DIR/current" 2>/dev/null || true)"
 docker tag "agora-app:$TAG" agora-app:current
 docker tag "agora-tools:$TAG" agora-tools:current
-APP_TAG=current compose up -d --wait --wait-timeout 120 app caddy
+APP_TAG=current compose up -d --wait --wait-timeout 120 --remove-orphans
 if [ -n "$current" ] && [ "$current" != "$TAG" ]; then echo "$current" > "$STATE_DIR/previous"; fi
 echo "$TAG" > "$STATE_DIR/current"
 

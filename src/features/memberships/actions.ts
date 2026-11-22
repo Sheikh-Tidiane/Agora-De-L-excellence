@@ -24,7 +24,9 @@ export async function submitMembershipRequestAction(
 ): Promise<ActionResult> {
   return runAction("memberships.submit", async () => {
     const data = parseInput(membershipRequestSchema, input);
-    await enforceRateLimit("public.form.ip", await clientAddress());
+    // Par IP d'abord (large : une salle sur le même Wi-Fi), puis par adresse e-mail (3 par jour).
+    await enforceRateLimit("membership.submit.ip", await clientAddress());
+    await enforceRateLimit("membership.submit.email", data.email);
     await submitMembershipRequest(data);
     return undefined;
   });

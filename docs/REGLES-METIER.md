@@ -21,19 +21,23 @@
 
 Fenêtre fixe, par action. Modifiable dans `src/lib/rate-limit.ts`.
 
-| Action                                         | Limite                                                            |
-| ---------------------------------------------- | ----------------------------------------------------------------- |
-| Connexion, par compte visé                     | 5 tentatives / 15 min (remise à zéro après une connexion réussie) |
-| Connexion, par adresse IP                      | 20 / 15 min                                                       |
-| Mot de passe oublié, par adresse e-mail        | 3 / heure                                                         |
-| Mot de passe oublié, par adresse IP            | 10 / heure                                                        |
-| Réinitialisation, activation, par adresse IP   | 10 / heure chacune                                                |
-| Formulaires publics, par adresse IP            | 5 / heure (adhésion, contact, inscription d'un invité)            |
-| Lien reçu par e-mail (confirmer, annuler)      | 30 / heure, par adresse IP                                        |
-| Remplacement de sa carte de membre             | 3 / heure, par compte                                             |
-| Scan des présences, par responsable            | 240 / 10 min                                                      |
-| Recherche d'un inscrit (scan), par responsable | 120 / 10 min                                                      |
-| Questions à l'assistant IA, par membre         | 5 / minute (en plus du quota quotidien, voir « Assistant IA »)    |
+| Action                                         | Limite                                                                 |
+| ---------------------------------------------- | ---------------------------------------------------------------------- |
+| Connexion, par compte visé                     | 5 tentatives / 15 min (remise à zéro après une connexion réussie)      |
+| Connexion, par adresse IP                      | 20 / 15 min                                                            |
+| Mot de passe oublié, par adresse e-mail        | 3 / heure                                                              |
+| Mot de passe oublié, par adresse IP            | 10 / heure                                                             |
+| Réinitialisation, activation, par adresse IP   | 10 / heure chacune                                                     |
+| Demande d'adhésion, par adresse e-mail         | 3 / jour                                                               |
+| Demande d'adhésion, par adresse IP             | 100 / heure (une salle entière sur le même Wi-Fi le jour du lancement) |
+| Inscription d'un visiteur, par adresse e-mail  | 3 / jour                                                               |
+| Inscription d'un visiteur, par adresse IP      | 100 / heure                                                            |
+| Formulaire de contact, par adresse IP          | 5 / heure                                                              |
+| Lien reçu par e-mail (confirmer, annuler)      | 30 / heure, par adresse IP                                             |
+| Remplacement de sa carte de membre             | 3 / heure, par compte                                                  |
+| Scan des présences, par responsable            | 240 / 10 min                                                           |
+| Recherche d'un inscrit (scan), par responsable | 120 / 10 min                                                           |
+| Questions à l'assistant IA, par membre         | 5 / minute (en plus du quota quotidien, voir « Assistant IA »)         |
 
 ## Rôles et permissions (n° 24)
 

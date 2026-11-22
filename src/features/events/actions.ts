@@ -49,7 +49,8 @@ export async function cancelMemberRegistrationAction(input: {
 export async function registerGuestAction(input: GuestRegistrationInput): Promise<ActionResult> {
   return runAction("events.registerGuest", async () => {
     const data = parseInput(guestRegistrationSchema, input);
-    await enforceRateLimit("public.form.ip", await clientAddress());
+    await enforceRateLimit("events.guest.ip", await clientAddress());
+    await enforceRateLimit("events.guest.email", data.email);
     await registerGuest(data.eventId, { name: data.name, email: data.email });
     return undefined;
   });

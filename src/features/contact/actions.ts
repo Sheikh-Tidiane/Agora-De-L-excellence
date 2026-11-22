@@ -12,7 +12,7 @@ import { clientAddress } from "@/lib/request";
 export async function sendContactMessageAction(input: ContactInput): Promise<ActionResult> {
   return runAction("contact.send", async () => {
     const data = parseInput(contactSchema, input);
-    await enforceRateLimit("public.form.ip", await clientAddress());
+    await enforceRateLimit("contact.ip", await clientAddress());
     // Champ piège rempli : un robot. On répond comme si tout allait bien, sans rien envoyer.
     if (data.website) return undefined;
     const to = contactRecipient(await loadClubSettings());

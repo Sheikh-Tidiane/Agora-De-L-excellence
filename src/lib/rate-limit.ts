@@ -24,8 +24,18 @@ export const rateLimits = {
   "auth.forgot-password.ip": { limit: 10, windowSeconds: 60 * 60 },
   "auth.reset-password.ip": { limit: 10, windowSeconds: 60 * 60 },
   "auth.activate.ip": { limit: 10, windowSeconds: 60 * 60 },
-  /** Formulaires publics (adhésion, contact, inscription invité) : phase 3. */
-  "public.form.ip": { limit: 5, windowSeconds: 60 * 60 },
+  /**
+   * Adhésion : la limite qui compte est par adresse e-mail (3 demandes par jour). Celle par IP est
+   * large exprès : le jour du lancement, une salle entière adhère depuis le même Wi-Fi (une seule
+   * adresse IP), et les opérateurs mobiles partagent aussi une adresse entre leurs abonnés.
+   */
+  "membership.submit.email": { limit: 3, windowSeconds: 24 * 60 * 60 },
+  "membership.submit.ip": { limit: 100, windowSeconds: 60 * 60 },
+  /** Inscription d'un visiteur à une rencontre : même logique que l'adhésion. */
+  "events.guest.email": { limit: 3, windowSeconds: 24 * 60 * 60 },
+  "events.guest.ip": { limit: 100, windowSeconds: 60 * 60 },
+  /** Formulaire de contact : limite stricte par IP (un message arrive dans la boîte du club). */
+  "contact.ip": { limit: 5, windowSeconds: 60 * 60 },
   /** Confirmation ou annulation par le lien reçu par e-mail : le jeton protège déjà, la limite reste large. */
   "public.token.ip": { limit: 30, windowSeconds: 60 * 60 },
   /** Un membre qui régénère sa carte de membre, par compte. */

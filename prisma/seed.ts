@@ -218,6 +218,15 @@ async function seedClub() {
 
 async function main() {
   await seedAccessControl();
+  // `--acces-seulement` (lancé par scripts/deploy.sh à chaque version) : rôles et permissions
+  // seulement. Une permission ajoutée par une nouvelle version arrive ainsi en production, sans
+  // recréer des catégories, un comité ou un lancement retirés depuis l'administration.
+  if (process.argv.includes("--acces-seulement")) {
+    console.log(
+      `Accès à jour : ${await prisma.role.count()} rôles, ${await prisma.permission.count()} permissions.`,
+    );
+    return;
+  }
   await seedReference();
   await seedClub();
   const [roles, permissions, rules, badgeCount, levelCount, categoryCount, settingCount] =

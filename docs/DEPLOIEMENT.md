@@ -251,7 +251,10 @@ Une seule commande, qui enchaîne (≈ 2 à 3 minutes) :
 1. `git pull --ff-only` (refuse si des fichiers ont été modifiés à la main sur le serveur) ;
 2. image d'outils ;
 3. **sauvegarde de la base et des fichiers** (`…-avant-deploiement`) ;
-4. **migrations Prisma** (`prisma migrate deploy`) ; seed à la toute première installation ;
+4. **migrations Prisma** (`prisma migrate deploy`) ; seed complet à la toute première
+   installation, puis, à chaque version, **mise à jour des rôles et permissions** seulement
+   (une permission ajoutée par la version arrive ; les catégories, le comité ou le lancement
+   retirés depuis l'administration ne reviennent pas) ;
 5. image du site (`next build`, contre la base, par le tunnel local) ;
 6. remplacement du site, attente de son contrôle de santé, contrôle de la page d'accueil en HTTPS ;
 7. ménage : les trois dernières versions de chaque image sont gardées.

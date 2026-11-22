@@ -6,8 +6,9 @@
 #   bash scripts/deploy.sh --rollback      revient à l'image précédente (le schéma de la base, lui, reste)
 #
 # Étapes : récupération du code → image « tools » → sauvegarde de la base → migrations Prisma
-# (prisma migrate deploy) → seed à la première installation → image du site (build contre la base,
-# via un tunnel 127.0.0.1 ouvert le temps du build) → redémarrage du site → contrôle de santé.
+# (prisma migrate deploy) → seed complet à la première installation, puis rôles et permissions
+# à chaque version → image du site (build contre la base, via un tunnel 127.0.0.1 ouvert le temps
+# du build) → redémarrage du site → contrôle de santé.
 # Une erreur arrête tout : le site en service continue de tourner sur l'ancienne image.
 #
 # Règle pour les migrations : l'ancienne version tourne quelques minutes sur le nouveau schéma
@@ -106,6 +107,11 @@ roles="$(psql_q 'select count(*) from "Role"')"
 if [ "$roles" = "0" ]; then
   step "Première installation : données de référence (seed)"
   APP_TAG="$TAG" compose run --rm -T tools pnpm db:seed
+else
+  # Chaque version : rôles et permissions seulement (une permission nouvelle arrive en production
+  # sans que le seed recrée des contenus retirés depuis l'administration).
+  step "Rôles et permissions"
+  APP_TAG="$TAG" compose run --rm -T tools pnpm exec tsx prisma/seed.ts --acces-seulement
 fi
 
 # --- Image du site -------------------------------------------------------------------------------

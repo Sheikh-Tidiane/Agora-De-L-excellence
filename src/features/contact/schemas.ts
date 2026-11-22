@@ -24,3 +24,18 @@ export const contactSchema = z.object({
   website: z.string().max(200).optional(),
 });
 export type ContactInput = z.input<typeof contactSchema>;
+
+export const contactStatuses = ["NEW", "READ", "HANDLED"] as const;
+export type ContactStatus = (typeof contactStatuses)[number];
+
+export const contactStatusLabels: Record<ContactStatus, string> = {
+  NEW: "Nouveau",
+  READ: "Lu",
+  HANDLED: "Traité",
+};
+
+export const contactStatusSchema = z.object({
+  id: z.string().min(1).max(40),
+  status: z.enum(contactStatuses),
+});
+export type ContactStatusInput = z.input<typeof contactStatusSchema>;

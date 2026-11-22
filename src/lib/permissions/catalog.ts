@@ -25,6 +25,7 @@ export const PERMISSIONS = {
   "points.rules.manage": "Modifier le barème de points",
   "badges.award": "Attribuer un badge manuel",
   "quizzes.manage": "Créer, publier et clore les quiz, et consulter leurs résultats",
+  "contact.manage": "Lire et traiter les messages reçus par le formulaire de contact",
   "data.export": "Exporter des listes (CSV)",
   "settings.manage": "Modifier les paramètres du club",
   "audit.read": "Consulter le journal des actions sensibles",
@@ -50,8 +51,8 @@ export const ROLES = {
   communication: {
     name: "Responsable communication",
     description:
-      "Crée et gère les publications, annonces et contenus éditoriaux, dont les quiz des Génies du soir.",
-    permissions: ["admin.access", "articles.manage", "quizzes.manage"],
+      "Crée et gère les publications, annonces et contenus éditoriaux, dont les quiz des Génies du soir ; traite les messages de contact.",
+    permissions: ["admin.access", "articles.manage", "quizzes.manage", "contact.manage"],
   },
   library: {
     name: "Responsable bibliothèque",
@@ -83,6 +84,7 @@ export const ROLES = {
       "points.rules.manage",
       "badges.award",
       "quizzes.manage",
+      "contact.manage",
       "data.export",
       "settings.manage",
       "audit.read",

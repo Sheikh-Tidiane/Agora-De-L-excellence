@@ -55,35 +55,36 @@ model User {
   accounts Account[]
   roles    UserRole[] @relation("UserRoles")
 
-  rolesAssigned        UserRole[]              @relation("UserRoleAssigner")
-  membershipRequest    MembershipRequest?      @relation("MembershipRequestAccount")
-  requestsReviewed     MembershipRequest[]     @relation("MembershipRequestReviewer")
-  memberships          Membership[]
-  readings             Reading[]               @relation("ReadingOwner")
-  readingsValidated    Reading[]               @relation("ReadingValidator")
-  reviews              Review[]                @relation("ReviewAuthor")
-  reviewsModerated     Review[]                @relation("ReviewModerator")
-  eventsCreated        Event[]                 @relation("EventCreator")
-  eventReports         Event[]                 @relation("EventReportAuthor")
-  payments             Payment[]               @relation("PaymentPayer")
-  paymentsReceived     Payment[]               @relation("PaymentReceiver")
-  paymentsCancelled    Payment[]               @relation("PaymentCanceller")
-  scrabbleRecords      ScrabbleRecord[]
-  registrations        EventRegistration[]     @relation("RegistrationMember")
-  checkIns             EventRegistration[]     @relation("RegistrationCheckIn")
-  tournamentEntries    TournamentParticipant[]
-  tournamentsValidated Tournament[]
-  scoresEntered        Score[]
-  pointTransactions    PointTransaction[]      @relation("PointOwner")
-  pointsGranted        PointTransaction[]      @relation("PointGrantor")
-  badges               UserBadge[]             @relation("BadgeOwner")
-  badgesAwarded        UserBadge[]             @relation("BadgeAwarder")
-  articles             Article[]
-  notifications        Notification[]
-  quizzesCreated       Quiz[]
-  quizAttempts         QuizAttempt[]
-  settingsUpdated      Setting[]
-  auditLogs            AuditLog[]
+  rolesAssigned          UserRole[]              @relation("UserRoleAssigner")
+  membershipRequest      MembershipRequest?      @relation("MembershipRequestAccount")
+  requestsReviewed       MembershipRequest[]     @relation("MembershipRequestReviewer")
+  contactMessagesHandled ContactMessage[]        @relation("ContactMessageHandler")
+  memberships            Membership[]
+  readings               Reading[]               @relation("ReadingOwner")
+  readingsValidated      Reading[]               @relation("ReadingValidator")
+  reviews                Review[]                @relation("ReviewAuthor")
+  reviewsModerated       Review[]                @relation("ReviewModerator")
+  eventsCreated          Event[]                 @relation("EventCreator")
+  eventReports           Event[]                 @relation("EventReportAuthor")
+  payments               Payment[]               @relation("PaymentPayer")
+  paymentsReceived       Payment[]               @relation("PaymentReceiver")
+  paymentsCancelled      Payment[]               @relation("PaymentCanceller")
+  scrabbleRecords        ScrabbleRecord[]
+  registrations          EventRegistration[]     @relation("RegistrationMember")
+  checkIns               EventRegistration[]     @relation("RegistrationCheckIn")
+  tournamentEntries      TournamentParticipant[]
+  tournamentsValidated   Tournament[]
+  scoresEntered          Score[]
+  pointTransactions      PointTransaction[]      @relation("PointOwner")
+  pointsGranted          PointTransaction[]      @relation("PointGrantor")
+  badges                 UserBadge[]             @relation("BadgeOwner")
+  badgesAwarded          UserBadge[]             @relation("BadgeAwarder")
+  articles               Article[]
+  notifications          Notification[]
+  quizzesCreated         Quiz[]
+  quizAttempts           QuizAttempt[]
+  settingsUpdated        Setting[]
+  auditLogs              AuditLog[]
 
   @@index([status])
   @@index([lastName, firstName])
@@ -1122,6 +1123,35 @@ model Notification {
 }
 
 /// Réglages du club modifiables depuis l'admin. Défauts dans src/config/.
+/// Statut d'un message reçu par le formulaire de contact.
+enum ContactMessageStatus {
+  NEW
+  READ
+  HANDLED
+}
+
+/// Message envoyé depuis /contact. Un message traité est supprimé après 12 mois (REGLES-METIER).
+model ContactMessage {
+  id          String               @id @default(cuid())
+  name        String
+  email       String
+  subject     String
+  message     String
+  status      ContactMessageStatus @default(NEW)
+  /// L'e-mail de notification au club est-il parti ? Le message est conservé même en cas d'échec.
+  emailSent   Boolean              @default(false)
+  readAt      DateTime?
+  /// Date de passage à « traité » : point de départ du délai de conservation.
+  handledAt   DateTime?
+  handledById String?
+  handledBy   User?                @relation("ContactMessageHandler", fields: [handledById], references: [id], onDelete: SetNull)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  @@index([status, createdAt])
+  @@index([handledAt])
+}
+
 model Setting {
   key         String   @id
   value       Json

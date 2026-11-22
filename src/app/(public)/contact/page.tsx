@@ -4,7 +4,7 @@ import { PageIntro } from "@/components/layout/page-intro";
 import { membershipHref } from "@/config/navigation";
 import { site } from "@/config/site";
 import { ContactForm } from "@/features/contact/components/contact-form";
-import { contactRecipient, getClubSettings, socialLinks } from "@/features/settings/club";
+import { getClubSettings, socialLinks } from "@/features/settings/club";
 import { formatPhone } from "@/lib/phone";
 import { ForVisitors } from "@/components/layout/by-viewer";
 
@@ -18,7 +18,6 @@ export const metadata: Metadata = {
 export default async function ContactPage() {
   const club = await getClubSettings();
   const socials = socialLinks(club);
-  const canWrite = contactRecipient(club) !== null;
   // Seules les coordonnées réellement saisies par le club s'affichent : aucune adresse inventée.
   const coordinates = [
     club.email ? { label: "E-mail", value: club.email, href: `mailto:${club.email}` } : null,
@@ -43,13 +42,8 @@ export default async function ContactPage() {
         <div className="lg:col-span-6">
           <h2 className="titre-3">Votre message</h2>
           <div className="mt-6">
-            {canWrite ? (
-              <ContactForm />
-            ) : (
-              <p className="rounded-champ bg-sable px-5 py-4">
-                Le formulaire de contact sera ouvert dès que le club aura enregistré son adresse.
-              </p>
-            )}
+            {/* Toujours ouvert : chaque message est enregistré et attend dans l'administration. */}
+            <ContactForm />
           </div>
         </div>
 

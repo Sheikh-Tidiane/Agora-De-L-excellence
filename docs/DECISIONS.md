@@ -411,3 +411,10 @@ Décision du porteur du projet : la base ne contient plus de données de démons
 - **Seed** : référence (rôles, permissions, barème, badges, niveaux, catégories, réglages) et contenus officiels (lancement, comité) seulement. `prisma/demo-data.ts`, `prisma/seed-scrabble.ts`, `src/lib/demo-data.ts`, `scripts/clear-demo.ts` et la commande `pnpm db:clear-demo` sont retirés : plus rien à nettoyer. Les exemples de la page interne `/design-system` (absente en production) et du test des couvertures générées vivent dans `src/app/design-system/exemples.ts`, jamais écrits en base.
 - **Champ `isDemo`** : gardé dans le schéma (le retirer demanderait une migration sans bénéfice immédiat) ; l’application ne le lit plus. Les comptes de test des parcours Playwright le portent encore ; ils sont nettoyés par leur adresse `@e2e.agora.test` ou leur préfixe `E2E-`.
 - **Tests** : les tests de `db:clear-demo` et du quiz de démonstration sont retirés avec ce qu’ils vérifiaient. Le parcours public `phase3-pages` crée désormais son propre livre et son propre article (`test-user.ts create-content`) au lieu de compter sur les contenus semés. `accueil.spec.ts` vérifie que le bandeau a disparu.
+
+## Messagerie de contact (22/11/2026)
+
+- **Formulaire toujours ouvert** : avant, `/contact` masquait le formulaire tant que le club n’avait pas d’adresse e-mail. Les messages étant désormais conservés en base, le formulaire s’affiche toujours ; sans adresse, le message attend dans l’admin (`emailSent = false`, signalé dans le panneau).
+- **Ouvrir = lu** : ouvrir un nouveau message dans l’admin le passe à « lu » (statut modifiable ensuite dans les deux sens). Option la plus simple, réversible.
+- **Délai de conservation** compté depuis le passage à « traité » (`handledAt`) ; rouvrir un message efface cette date. Les messages jamais traités ne sont pas supprimés automatiquement.
+- **Permission dédiée** `contact.manage`, accordée à l’administrateur et au responsable communication.

@@ -54,6 +54,7 @@ export type AuditAction =
   | "scrabble.results_published"
   | "scrabble.record_saved"
   | "scrabble.record_deleted"
+  | "contact.status_changed"
   | "demo.cleared";
 
 export type AuditEntry = {

@@ -7,7 +7,7 @@ export type AdminNavItem = {
   /** Deuxième touche du raccourci « g puis … ». */
   key?: string;
   /** Affiche le nombre de demandes en attente. */
-  badge?: "pendingRequests" | "pendingReadings";
+  badge?: "pendingRequests" | "pendingReadings" | "newMessages";
 };
 
 export type AdminNavGroup = { title: string | null; items: AdminNavItem[] };
@@ -27,6 +27,13 @@ export const adminNav: AdminNavGroup[] = [
         permission: "memberships.review",
         key: "d",
         badge: "pendingRequests",
+      },
+      {
+        label: "Messages",
+        href: "/admin/messages",
+        permission: "contact.manage",
+        key: "i",
+        badge: "newMessages",
       },
       { label: "Membres", href: "/admin/members", permission: "members.read", key: "m" },
       { label: "Encaissements", href: "/admin/payments", permission: "payments.read", key: "c" },
@@ -99,6 +106,7 @@ export const adminNav: AdminNavGroup[] = [
 export const adminBreadcrumbLabels: Record<string, string> = {
   admin: "Administration",
   memberships: "Demandes d’adhésion",
+  messages: "Messages",
   members: "Membres",
   books: "Livres",
   categories: "Catégories et auteurs",

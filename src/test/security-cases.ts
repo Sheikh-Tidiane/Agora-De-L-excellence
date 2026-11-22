@@ -2,6 +2,7 @@ import * as admin from "@/features/admin/actions";
 import * as articles from "@/features/articles/actions";
 import * as roles from "@/features/auth/roles-actions";
 import * as committee from "@/features/committee/actions";
+import * as contact from "@/features/contact/actions";
 import * as events from "@/features/events/actions";
 import * as eventsAdmin from "@/features/events/admin-actions";
 import * as gamification from "@/features/gamification/actions";
@@ -128,6 +129,7 @@ const f = {
   articles: "src/features/articles/actions.ts",
   roles: "src/features/auth/roles-actions.ts",
   committee: "src/features/committee/actions.ts",
+  contact: "src/features/contact/actions.ts",
   events: "src/features/events/actions.ts",
   eventsAdmin: "src/features/events/admin-actions.ts",
   gamification: "src/features/gamification/actions.ts",
@@ -587,6 +589,19 @@ export const protectedCases: ProtectedCase[] = [
     ["memberships.review"],
     { id: ID, reason: "" },
     { ...badIds("id", { reason: "" }), "motif géant": { id: ID, reason: "x".repeat(501) } },
+  ),
+
+  protectedCase(
+    `${f.contact}#setContactMessageStatusAction`,
+    contact.setContactMessageStatusAction,
+    ["contact.manage"],
+    { id: ID, status: "HANDLED" },
+    {
+      ...badIds("id", { status: "HANDLED" }),
+      "statut inconnu": { id: ID, status: "ARCHIVED" },
+      "statut en minuscules": { id: ID, status: "handled" },
+      "statut manquant": { id: ID },
+    },
   ),
 
   protectedCase(

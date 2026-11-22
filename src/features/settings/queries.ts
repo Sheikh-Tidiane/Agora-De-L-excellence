@@ -53,6 +53,7 @@ const actionLabels: Record<AuditAction, string> = {
   "event.registration_removed": "Inscription retirée",
   "data.exported": "Liste exportée (CSV)",
   "settings.updated": "Paramètres modifiés",
+  "contact.status_changed": "Statut d’un message de contact modifié",
   // Action d’une ancienne commande de nettoyage, encore présente dans les journaux.
   "demo.cleared": "Données d’exemple supprimées (ancienne commande)",
 };

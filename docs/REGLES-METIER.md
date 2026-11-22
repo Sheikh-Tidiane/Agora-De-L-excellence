@@ -42,10 +42,10 @@ Rôles cumulables, moindre privilège. Source : `src/lib/permissions/catalog.ts`
 | Rôle                      | Permissions                                                                                                                                                               |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Membre                    | Espace membre                                                                                                                                                             |
-| Responsable communication | Administration ; articles ; quiz (phase 4)                                                                                                                                |
+| Responsable communication | Administration ; articles ; quiz (phase 4) ; messages de contact                                                                                                          |
 | Responsable bibliothèque  | Administration ; livres, auteurs, catégories, livre du mois ; validation des livres terminés ; modération des critiques                                                   |
 | Responsable Scrabble      | Administration ; tournois ; saisie des scores ; validation et publication des résultats                                                                                   |
-| Administrateur            | Administration ; articles ; bibliothèque ; adhésions ; membres ; événements ; présences ; points et barème ; badge manuel ; quiz ; exports ; paramètres ; journal d'audit |
+| Administrateur            | Administration ; articles ; bibliothèque ; adhésions ; membres ; événements ; présences ; points et barème ; badge manuel ; quiz ; messages de contact ; exports ; paramètres ; journal d'audit |
 | Super administrateur      | Tout, dont les comptes administratifs et les rôles                                                                                                                        |
 
 À noter : l'administrateur ne saisit pas les scores (rôle Scrabble à lui ajouter si besoin) ; un responsable sans le rôle « Membre » n'a pas d'espace membre.
@@ -63,6 +63,16 @@ Rôles cumulables, moindre privilège. Source : `src/lib/permissions/catalog.ts`
 | Durée                       | 12 mois ; renouvellement validé par un responsable                                                                          | `src/config/rules.ts` | Appliquée                                                           |
 | Numéro de membre            | Généré à la validation                                                                                                      | `User.memberNumber`   | Appliquée                                                           |
 | Demande refusée (n° 28)     | Supprimée après 12 mois                                                                                                     | `src/config/rules.ts` | Codée (purge lancée à chaque validation), jamais exécutée ni testée |
+
+## Messages de contact
+
+| Règle | Valeur | Où | État |
+|---|---|---|---|
+| Conservation | Chaque message de `/contact` est enregistré (nom, e-mail, objet, message, date), même si l'e-mail au club échoue ou si le club n'a pas d'adresse : le visiteur reçoit sa confirmation, le message attend dans l'admin | `ContactMessage` | Appliquée |
+| Statuts | Nouveau, lu, traité. Ouvrir un nouveau message le marque comme lu ; chaque changement est tracé (`contact.status_changed`) | `ContactMessage.status`, `AuditLog` | Appliquée |
+| Accès | Permission `contact.manage` : administrateur, responsable communication, super-administrateur | `src/lib/permissions/catalog.ts` | Appliquée |
+| Suppression | Un message traité est supprimé 12 mois après son traitement (`handledAt`) ; le rouvrir remet le délai à zéro. Purge lancée à chaque changement de statut, comme celle des demandes refusées | `src/config/rules.ts` (`contact.handledRetentionMonths`) | Appliquée (testée en base) |
+| Robots | Champ piège rempli : rien n'est enregistré ni envoyé ; limite de débit `public.form.ip` avant tout accès à la base | `src/features/contact/actions.ts` | Appliquée |
 
 ## Cotisations
 

@@ -9,7 +9,9 @@ points et badges, Scrabble, quiz, assistant « Le Compagnon des Lettres ») et a
   [`docs/DECISIONS.md`](docs/DECISIONS.md). Bilan : [`docs/RAPPORT-LIVRAISON.md`](docs/RAPPORT-LIVRAISON.md).
 - Guide des responsables : [`docs/GUIDE-ADMINISTRATEUR.md`](docs/GUIDE-ADMINISTRATEUR.md).
   Sauvegarde : [`docs/SAUVEGARDE.md`](docs/SAUVEGARDE.md). Hébergement :
-  [`docs/HEBERGEMENT.md`](docs/HEBERGEMENT.md).
+  [`docs/HEBERGEMENT.md`](docs/HEBERGEMENT.md). Mise en ligne :
+  [`docs/DEPLOIEMENT.md`](docs/DEPLOIEMENT.md) et ce qui bloque encore :
+  [`docs/REVUE-MISE-EN-LIGNE.md`](docs/REVUE-MISE-EN-LIGNE.md).
 
 ## Pile technique
 

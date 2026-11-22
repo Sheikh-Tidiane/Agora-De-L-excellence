@@ -10,7 +10,9 @@ const lanAddresses = Object.values(networkInterfaces())
   .map((address) => address!.address);
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Production (Docker) : `.next/standalone` contient un serveur `server.js` et le strict
+  // nécessaire de node_modules. Voir Dockerfile et docs/DEPLOIEMENT.md. Sans effet en dev.
+  output: "standalone",
   cacheComponents: true,
   allowedDevOrigins: lanAddresses,
   // Next journalise par défaut les arguments des Server Actions en développement :

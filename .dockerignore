@@ -1,0 +1,24 @@
+# Rien de local, de secret ou de généré n'entre dans l'image.
+.git
+.github
+.next
+node_modules
+communication
+docs
+e2e
+logos
+backups
+uploads
+test-results
+playwright-report
+.lighthouse
+coverage
+src/generated
+.env*
+!.env.example
+*.pem
+*.dump
+*.tar.gz
+*.age
+Dockerfile
+docker-compose*.yml

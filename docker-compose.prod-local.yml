@@ -1,0 +1,17 @@
+# Essai LOCAL de la configuration de production (jamais sur le serveur).
+# Ajoute Mailpit pour recevoir les e-mails ; le site est servi sur un faux domaine (ex. agora.test)
+# avec un certificat de l'autorité interne de Caddy (CADDY_TLS="internal").
+#
+#   ENV_FILE=.env.production.local COMPOSE_EXTRA=docker-compose.prod-local.yml CURL_INSECURE=1 \
+#     bash scripts/deploy.sh --no-pull
+# Boîte de réception : http://127.0.0.1:8025. Voir docs/DEPLOIEMENT.md, « Essai en local ».
+services:
+  mailpit:
+    image: axllent/mailpit:v1.29
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8025:8025"
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    networks: [web]

@@ -1,0 +1,116 @@
+# Production : site + PostgreSQL + Caddy (HTTPS automatique).
+#
+# Ne pas lancer `docker compose` directement : passer par scripts/prod-compose.sh, qui donne le bon
+# fichier d'environnement (.env.production, hors dépôt) et ce fichier-ci. Exemples :
+#   bash scripts/prod-compose.sh ps
+#   bash scripts/prod-compose.sh logs -f app
+# Mise en ligne d'une version : bash scripts/deploy.sh (docs/DEPLOIEMENT.md).
+#
+# Règles de sécurité de ce fichier (docs/DEPLOIEMENT.md, « Pare-feu ») :
+# - seul `caddy` publie des ports (80, 443). Un port publié par Docker contourne le pare-feu ufw :
+#   ne JAMAIS ajouter de `ports:` à `postgres` ni à `app` ;
+# - `postgres` n'est que sur le réseau `internal`, sans accès à internet ni depuis internet.
+name: agora-prod
+
+x-logging: &logging
+  driver: local
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER manquant dans le fichier d'environnement}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD manquant}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB manquant}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks: [internal]
+    shm_size: 128mb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    logging: *logging
+
+  app:
+    image: agora-app:${APP_TAG:-current}
+    restart: unless-stopped
+    env_file:
+      - path: ${ENV_FILE:-.env.production}
+    environment:
+      NODE_ENV: production
+      UPLOAD_DIR: /app/uploads
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+    volumes:
+      - uploads:/app/uploads
+    # Réseau `internal` pour la base, `web` pour Caddy et l'accès sortant (SMTP, assistant).
+    networks: [internal, web]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    stop_grace_period: 30s
+    logging: *logging
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN:?SITE_DOMAIN manquant}
+      CADDY_TLS: ${CADDY_TLS:?CADDY_TLS manquant (adresse e-mail pour Let's Encrypt)}
+      HSTS_MAX_AGE: ${HSTS_MAX_AGE:-300}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [web]
+    depends_on: [app]
+    logging: *logging
+
+  # Outils à la demande (migrations, seed, create-admin, export) : jamais démarré par `up`.
+  #   bash scripts/prod-compose.sh run --rm tools pnpm db:deploy
+  tools:
+    image: agora-tools:${APP_TAG:-current}
+    profiles: [tools]
+    env_file:
+      - path: ${ENV_FILE:-.env.production}
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+    networks: [internal]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Tunnel vers la base pour `next build` (voir Dockerfile), sur 127.0.0.1 seulement, démarré et
+  # arrêté par scripts/deploy.sh le temps du build.
+  build-db-tunnel:
+    image: alpine/socat:1.8.0.3
+    profiles: [build]
+    command: TCP-LISTEN:5432,fork,reuseaddr TCP:postgres:5432
+    ports:
+      - "127.0.0.1:${BUILD_DB_PORT:-55432}:5432"
+    networks: [internal, web]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+networks:
+  # Sans passerelle vers l'extérieur : la base ne parle qu'au site et aux outils.
+  internal:
+    internal: true
+  web: {}
+
+volumes:
+  postgres-data:
+  uploads:
+  caddy-data:
+  caddy-config:

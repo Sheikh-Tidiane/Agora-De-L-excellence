@@ -1,3 +1,4 @@
+import type { EventTypeCode } from "@/config/activities";
 import type { UserStatus } from "@/generated/prisma/client";
 import {
   cardRejectionMessages,
@@ -23,7 +24,9 @@ const DAY = 24 * 60 * 60 * 1000;
 export type CheckInEvent = {
   id: string;
   title: string;
-  type: string;
+  /** Activité principale, puis toutes les activités de la rencontre. */
+  type: EventTypeCode;
+  activities: EventTypeCode[];
   startsAt: Date;
   confirmed: number;
   present: number;
@@ -39,7 +42,7 @@ export async function listCheckInEvents(now: Date, db: Db = prisma): Promise<Che
       startsAt: { gte: from, lt: new Date(from.getTime() + DAY) },
     },
     orderBy: { startsAt: "asc" },
-    select: { id: true, title: true, type: true, startsAt: true },
+    select: { id: true, title: true, type: true, activities: true, startsAt: true },
   });
   const counts = await db.eventRegistration.groupBy({
     by: ["eventId"],

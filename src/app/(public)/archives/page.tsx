@@ -3,17 +3,17 @@ import { BackToTop } from "@/components/layout/back-to-top";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageIntro } from "@/components/layout/page-intro";
-import { Tag } from "@/components/shared/event-row";
+import { ActivityTags, Tag } from "@/components/shared/event-row";
+import { FilterChip } from "@/components/shared/filter-chip";
 import { EmptyState } from "@/components/shared/states";
 import { buttonVariants } from "@/components/ui/button";
-import { activities, activityBySlug, eventTypeLabels } from "@/config/activities";
+import { activities, activityBySlug, activityLabels, eventHasActivity } from "@/config/activities";
 import { getArchive, type ArchiveEntry } from "@/features/events/queries";
 import { ArchivedReviews } from "@/features/library/components/archived-reviews";
 import { getArchivedReviews } from "@/features/library/queries";
 import { ArchivedPalmares } from "@/features/scrabble/components/archived-palmares";
 import { getPalmares } from "@/features/scrabble/queries";
 import { eventDateParts } from "@/lib/dates";
-import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Archives de l’Agora",
@@ -32,31 +32,6 @@ const href = (activity: string | undefined, year: string | undefined) => {
   return text ? `/archives?${text}` : "/archives";
 };
 
-function Chip({
-  active,
-  to,
-  children,
-}: {
-  active: boolean;
-  to: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <Link
-      href={to}
-      aria-current={active ? "true" : undefined}
-      className={cn(
-        "inline-flex h-11 items-center rounded-pastille border px-4 text-[0.9375rem] font-semibold whitespace-nowrap transition-colors duration-200",
-        active
-          ? "border-indigo bg-indigo text-ivoire"
-          : "border-indigo/25 hover:border-indigo hover:bg-indigo/5",
-      )}
-    >
-      {children}
-    </Link>
-  );
-}
-
 function Entry({ entry }: { entry: ArchiveEntry }) {
   const date = eventDateParts(entry.startsAt);
   return (
@@ -69,7 +44,7 @@ function Entry({ entry }: { entry: ArchiveEntry }) {
       </time>
       <div>
         <div className="flex flex-wrap items-center gap-2">
-          <Tag tone="accent">{eventTypeLabels[entry.type]}</Tag>
+          <ActivityTags labels={activityLabels(entry)} />
           {entry.reportPublishedAt ? <Tag tone="succes">Compte rendu</Tag> : null}
         </div>
         <h3 className="titre-3 mt-3 lg:text-[1.75rem]">
@@ -111,7 +86,7 @@ async function Archive({ searchParams }: Pick<Props, "searchParams">) {
 
   const entries = all.filter(
     (entry) =>
-      (!activity || activity.types.includes(entry.type)) &&
+      (!activity || eventHasActivity(entry, activity)) &&
       (!year || String(entry.startsAt.getUTCFullYear()) === year),
   );
   // Les fiches de lecture relèvent des Rendez-vous lecture.
@@ -151,30 +126,30 @@ async function Archive({ searchParams }: Pick<Props, "searchParams">) {
       <nav aria-label="Filtrer les archives" className="flex flex-col gap-4">
         <ul className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 md:mx-0 md:flex-wrap md:px-0">
           <li>
-            <Chip active={!activity} to={href(undefined, year)}>
+            <FilterChip active={!activity} to={href(undefined, year)}>
               Toutes les activités
-            </Chip>
+            </FilterChip>
           </li>
           {activities.map((item) => (
             <li key={item.slug}>
-              <Chip active={activity?.slug === item.slug} to={href(item.slug, year)}>
+              <FilterChip active={activity?.slug === item.slug} to={href(item.slug, year)}>
                 {item.shortName}
-              </Chip>
+              </FilterChip>
             </li>
           ))}
         </ul>
         {years.length > 1 ? (
           <ul className="flex flex-wrap gap-2">
             <li>
-              <Chip active={!year} to={href(activity?.slug, undefined)}>
+              <FilterChip active={!year} to={href(activity?.slug, undefined)}>
                 Toutes les années
-              </Chip>
+              </FilterChip>
             </li>
             {years.map((item) => (
               <li key={item}>
-                <Chip active={year === item} to={href(activity?.slug, item)}>
+                <FilterChip active={year === item} to={href(activity?.slug, item)}>
                   {item}
-                </Chip>
+                </FilterChip>
               </li>
             ))}
           </ul>

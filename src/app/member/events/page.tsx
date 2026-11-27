@@ -8,7 +8,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { authRoutes } from "@/config/auth";
 import { MyRegistrationsList } from "@/features/events/components/my-registrations";
 import { getMyAttendance, getMyUpcomingRegistrations } from "@/features/events/queries";
-import { eventTypeLabels } from "@/features/events/rules";
+import { activityLabels } from "@/config/activities";
 import { loadClubSettings } from "@/features/settings/club";
 import { formatDate } from "@/lib/dates";
 import { requirePageAccess } from "@/lib/permissions";
@@ -85,7 +85,7 @@ async function MyEvents() {
             {attendance.map(({ id, event, payments }) => (
               <li key={id} className="border-t border-indigo/20 py-4">
                 <p className="petit font-semibold text-gris">
-                  {eventTypeLabels[event.type]} · {formatDate(event.startsAt)}
+                  {activityLabels(event).join(", ")} · {formatDate(event.startsAt)}
                 </p>
                 <Link
                   href={`/events/${event.slug}`}

@@ -10,6 +10,7 @@ import { uniqueSlug } from "@/lib/slug";
 const values = (data: EventData) => ({
   title: data.title,
   type: data.type,
+  activities: data.activities,
   summary: data.summary || null,
   description: data.description,
   location: data.location || null,
@@ -54,8 +55,31 @@ export async function updateEvent(id: string, data: EventData): Promise<void> {
       });
     }
   }
+  // Un quiz se rattache à une rencontre des Génies du soir, un tournoi à une rencontre de
+  // Scrabble : l'activité qui justifie ce lien ne peut pas être retirée tant qu'il existe.
+  const [quizzes, tournament] = await Promise.all([
+    prisma.quiz.count({ where: { eventId: id, archivedAt: null } }),
+    prisma.tournament.findUnique({ where: { eventId: id }, select: { id: true } }),
+  ]);
+  if (quizzes > 0 && !data.activities.includes("GENIES_DU_SOIR")) {
+    throw new AppError("VALIDATION", undefined, {
+      fieldErrors: {
+        activities:
+          "Un quiz est lié à cette rencontre : gardez les Génies du soir parmi ses activités.",
+      },
+    });
+  }
+  if (tournament && !data.activities.some((code) => SCRABBLE_TYPES.includes(code))) {
+    throw new AppError("VALIDATION", undefined, {
+      fieldErrors: {
+        activities: "Un tournoi est lié à cette rencontre : gardez une activité Scrabble.",
+      },
+    });
+  }
   await prisma.event.update({ where: { id }, data: values(data) });
 }
+
+const SCRABBLE_TYPES: readonly string[] = ["INITIATION_SCRABBLE", "TOURNOI_SCRABBLE"];
 
 /** Transitions permises. Un événement annulé peut être republié ; un brouillon ne se clôture pas. */
 const transitions: Record<EventStatusCode, EventStatusCode[]> = {

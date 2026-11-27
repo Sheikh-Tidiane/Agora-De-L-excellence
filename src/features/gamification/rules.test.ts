@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
+  attendanceRuleTypes,
   badgeProgress,
   badgesDue,
   canReverse,
+  combineOutcomes,
   decideAward,
+  DEFAULT_ATTENDANCE_POINT_MODE,
   lastNameInitial,
   monthBounds,
+  parseAttendancePointMode,
   rankStandings,
   transactionLabel,
   type CriterionCounts,
@@ -24,24 +28,113 @@ const zero: CriterionCounts = {
   QUIZZES_COMPLETED: 0,
 };
 
-describe("decideAward (anti-doublon et nouvelle attribution)", () => {
-  it("première attribution : ligne d'origine", () => {
-    expect(decideAward([], "r1")).toEqual({ kind: "create_original" });
+describe("decideAward (anti-doublon par règle et nouvelle attribution)", () => {
+  const line = (id: string, ruleId: string, grantSeq: number, reversed: boolean) => ({
+    id,
+    points: 20,
+    ruleId,
+    grantSeq,
+    reversed,
+  });
+  it("première attribution : rang 0", () => {
+    expect(decideAward([], "r1")).toEqual({ kind: "create", grantSeq: 0 });
   });
   it("une ligne active : déjà attribué, quel que soit le nombre d'appels", () => {
-    const lines = [{ id: "t1", points: 20, ruleId: "r1", reversed: false }];
-    expect(decideAward(lines, "r1")).toEqual({ kind: "already_awarded", transactionId: "t1" });
+    expect(decideAward([line("t1", "r1", 0, false)], "r1")).toEqual({
+      kind: "already_awarded",
+      transactionId: "t1",
+    });
   });
-  it("ligne d'origine corrigée : nouvelle attribution (présence recochée)", () => {
-    const lines = [{ id: "t1", points: 20, ruleId: "r1", reversed: true }];
-    expect(decideAward(lines, "r1")).toEqual({ kind: "create_regrant" });
+  it("ligne d'origine corrigée : nouvelle attribution au rang suivant (présence recochée)", () => {
+    expect(decideAward([line("t1", "r1", 0, true)], "r1")).toEqual({ kind: "create", grantSeq: 1 });
   });
   it("nouvelle attribution encore active : déjà attribué", () => {
-    const lines = [
-      { id: "t1", points: 20, ruleId: "r1", reversed: true },
-      { id: "t2", points: 20, ruleId: null, reversed: false },
-    ];
+    const lines = [line("t1", "r1", 0, true), line("t2", "r1", 1, false)];
     expect(decideAward(lines, "r1")).toEqual({ kind: "already_awarded", transactionId: "t2" });
+  });
+  it("deux corrections : rang 2", () => {
+    const lines = [line("t1", "r1", 0, true), line("t2", "r1", 1, true)];
+    expect(decideAward(lines, "r1")).toEqual({ kind: "create", grantSeq: 2 });
+  });
+  it("rencontre à plusieurs activités : une autre règle de la même source ne bloque pas", () => {
+    // La lecture est payée ; la règle du débat, pour la même présence, ne l'est pas encore.
+    const lines = [line("t1", "lecture", 0, false)];
+    expect(decideAward(lines, "debat")).toEqual({ kind: "create", grantSeq: 0 });
+    expect(decideAward(lines, "lecture")).toEqual({ kind: "already_awarded", transactionId: "t1" });
+  });
+  it("une correction (sans règle) ne compte pour aucune règle", () => {
+    const lines = [
+      line("t1", "lecture", 0, true),
+      { id: "c1", points: -20, ruleId: null, grantSeq: 0, reversed: false },
+    ];
+    expect(decideAward(lines, "lecture")).toEqual({ kind: "create", grantSeq: 1 });
+  });
+});
+
+describe("points de présence : activités payées selon le réglage", () => {
+  const event = {
+    type: "RENDEZ_VOUS_LECTURE",
+    activities: ["RENDEZ_VOUS_LECTURE", "GENIES_DU_SOIR"],
+  };
+  it("par défaut, chaque activité de la rencontre, la principale d'abord", () => {
+    expect(attendanceRuleTypes(event, "ALL_ACTIVITIES")).toEqual([
+      "RENDEZ_VOUS_LECTURE",
+      "GENIES_DU_SOIR",
+    ]);
+    expect(
+      attendanceRuleTypes(
+        { type: "GENIES_DU_SOIR", activities: event.activities },
+        "ALL_ACTIVITIES",
+      ),
+    ).toEqual(["GENIES_DU_SOIR", "RENDEZ_VOUS_LECTURE"]);
+  });
+  it("« principale seulement » : la seule activité principale", () => {
+    expect(attendanceRuleTypes(event, "PRIMARY_ONLY")).toEqual(["RENDEZ_VOUS_LECTURE"]);
+  });
+  it("jamais deux fois la même activité, même si la liste en contient deux", () => {
+    expect(
+      attendanceRuleTypes(
+        { type: "DEBAT_IDEES", activities: ["DEBAT_IDEES", "DEBAT_IDEES"] },
+        "ALL_ACTIVITIES",
+      ),
+    ).toEqual(["DEBAT_IDEES"]);
+  });
+  it("réglage illisible ou absent : le défaut (chaque activité)", () => {
+    expect(DEFAULT_ATTENDANCE_POINT_MODE).toBe("ALL_ACTIVITIES");
+    expect(parseAttendancePointMode(null)).toBe("ALL_ACTIVITIES");
+    expect(parseAttendancePointMode({ mode: "TOUT" })).toBe("ALL_ACTIVITIES");
+    expect(parseAttendancePointMode("PRIMARY_ONLY")).toBe("ALL_ACTIVITIES");
+    expect(parseAttendancePointMode({ mode: "PRIMARY_ONLY" })).toBe("PRIMARY_ONLY");
+  });
+});
+
+describe("combineOutcomes (une présence, plusieurs règles)", () => {
+  const ok = (points: number, id: string) =>
+    ({ status: "awarded", reason: null, transactionId: id, points }) as const;
+  const skip = (reason: "no_rule" | "inactive_rule") =>
+    ({ status: "skipped", reason, transactionId: null, points: 0 }) as const;
+  it("additionne les règles qui paient ; une activité sans règle n'empêche rien", () => {
+    expect(combineOutcomes([ok(20, "t1"), skip("no_rule"), ok(15, "t2")])).toEqual({
+      status: "awarded",
+      reason: null,
+      transactionId: "t1",
+      points: 35,
+    });
+  });
+  it("tout déjà payé : déjà attribué, 0 point de plus", () => {
+    expect(
+      combineOutcomes([
+        { status: "already_awarded", reason: null, transactionId: "t1", points: 0 },
+        skip("no_rule"),
+      ]),
+    ).toMatchObject({ status: "already_awarded", points: 0 });
+  });
+  it("rien ne paie : la première raison", () => {
+    expect(combineOutcomes([skip("inactive_rule"), skip("no_rule")])).toMatchObject({
+      status: "skipped",
+      reason: "inactive_rule",
+    });
+    expect(combineOutcomes([])).toMatchObject({ status: "skipped", reason: "no_rule" });
   });
 });
 

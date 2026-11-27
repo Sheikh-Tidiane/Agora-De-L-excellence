@@ -43,14 +43,14 @@ Fenêtre fixe, par action. Modifiable dans `src/lib/rate-limit.ts`.
 
 Rôles cumulables, moindre privilège. Source : `src/lib/permissions/catalog.ts`, puis la base.
 
-| Rôle                      | Permissions                                                                                                                                                               |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Membre                    | Espace membre                                                                                                                                                             |
-| Responsable communication | Administration ; articles ; quiz (phase 4) ; messages de contact                                                                                                          |
-| Responsable bibliothèque  | Administration ; livres, auteurs, catégories, livre du mois ; validation des livres terminés ; modération des critiques                                                   |
-| Responsable Scrabble      | Administration ; tournois ; saisie des scores ; validation et publication des résultats                                                                                   |
+| Rôle                      | Permissions                                                                                                                                                                                     |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Membre                    | Espace membre                                                                                                                                                                                   |
+| Responsable communication | Administration ; articles ; quiz (phase 4) ; messages de contact                                                                                                                                |
+| Responsable bibliothèque  | Administration ; livres, auteurs, catégories, livre du mois ; validation des livres terminés ; modération des critiques                                                                         |
+| Responsable Scrabble      | Administration ; tournois ; saisie des scores ; validation et publication des résultats                                                                                                         |
 | Administrateur            | Administration ; articles ; bibliothèque ; adhésions ; membres ; événements ; présences ; points et barème ; badge manuel ; quiz ; messages de contact ; exports ; paramètres ; journal d'audit |
-| Super administrateur      | Tout, dont les comptes administratifs et les rôles                                                                                                                        |
+| Super administrateur      | Tout, dont les comptes administratifs et les rôles                                                                                                                                              |
 
 À noter : l'administrateur ne saisit pas les scores (rôle Scrabble à lui ajouter si besoin) ; un responsable sans le rôle « Membre » n'a pas d'espace membre.
 
@@ -70,13 +70,13 @@ Rôles cumulables, moindre privilège. Source : `src/lib/permissions/catalog.ts`
 
 ## Messages de contact
 
-| Règle | Valeur | Où | État |
-|---|---|---|---|
-| Conservation | Chaque message de `/contact` est enregistré (nom, e-mail, objet, message, date), même si l'e-mail au club échoue ou si le club n'a pas d'adresse : le visiteur reçoit sa confirmation, le message attend dans l'admin | `ContactMessage` | Appliquée |
-| Statuts | Nouveau, lu, traité. Ouvrir un nouveau message le marque comme lu ; chaque changement est tracé (`contact.status_changed`) | `ContactMessage.status`, `AuditLog` | Appliquée |
-| Accès | Permission `contact.manage` : administrateur, responsable communication, super-administrateur | `src/lib/permissions/catalog.ts` | Appliquée |
-| Suppression | Un message traité est supprimé 12 mois après son traitement (`handledAt`) ; le rouvrir remet le délai à zéro. Purge lancée à chaque changement de statut, comme celle des demandes refusées | `src/config/rules.ts` (`contact.handledRetentionMonths`) | Appliquée (testée en base) |
-| Robots | Champ piège rempli : rien n'est enregistré ni envoyé ; limite de débit `contact.ip` avant tout accès à la base | `src/features/contact/actions.ts` | Appliquée |
+| Règle        | Valeur                                                                                                                                                                                                                | Où                                                       | État                       |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | -------------------------- |
+| Conservation | Chaque message de `/contact` est enregistré (nom, e-mail, objet, message, date), même si l'e-mail au club échoue ou si le club n'a pas d'adresse : le visiteur reçoit sa confirmation, le message attend dans l'admin | `ContactMessage`                                         | Appliquée                  |
+| Statuts      | Nouveau, lu, traité. Ouvrir un nouveau message le marque comme lu ; chaque changement est tracé (`contact.status_changed`)                                                                                            | `ContactMessage.status`, `AuditLog`                      | Appliquée                  |
+| Accès        | Permission `contact.manage` : administrateur, responsable communication, super-administrateur                                                                                                                         | `src/lib/permissions/catalog.ts`                         | Appliquée                  |
+| Suppression  | Un message traité est supprimé 12 mois après son traitement (`handledAt`) ; le rouvrir remet le délai à zéro. Purge lancée à chaque changement de statut, comme celle des demandes refusées                           | `src/config/rules.ts` (`contact.handledRetentionMonths`) | Appliquée (testée en base) |
+| Robots       | Champ piège rempli : rien n'est enregistré ni envoyé ; limite de débit `contact.ip` avant tout accès à la base                                                                                                        | `src/features/contact/actions.ts`                        | Appliquée                  |
 
 ## Cotisations
 
@@ -127,6 +127,19 @@ Les cinq activités de `CONTENUS-CLUB.md` remplacent la liste du cahier des char
 
 Le libellé affiché vient d'une configuration, pas du code des pages.
 
+### Rencontres à plusieurs activités
+
+- Une rencontre réunit **au moins une** activité (par exemple lecture + quiz, ou débat + Agora
+  Ciné), et en désigne une **principale** : affichée en premier, utilisée pour le tri, et seule
+  comptée si les points ne vont qu'à l'activité principale (plus bas). Sans doublon ; la base le
+  garantit (`Event.activities`, contrainte `Event_activities_check`).
+- Sur le site, la rencontre paraît **sous chacune de ses activités** : page Activités, filtre
+  d'activité de l'agenda (`/events`) et des Archives. Sa fiche les affiche toutes.
+- Le lancement du 16 janvier 2027 : présentation du club (« Vie du club », principale), Rendez-vous
+  lecture et Génies du soir.
+- Un quiz se rattache à une rencontre qui compte les Génies du soir parmi ses activités ; un tournoi,
+  à une rencontre qui compte une activité Scrabble.
+
 ## Événements
 
 | Règle              | Valeur                                                                                                      | État      |
@@ -149,9 +162,11 @@ Barème de départ du cahier des charges (§4.1), en table `PointRule`, modifiab
 | Publier une critique validée             | 30     | Après validation par un modérateur                                            |
 | Terminer un quiz en ligne (phase 4)      | 10     | Tentative finie, quel que soit le score. **Proposé, à valider par le comité** |
 
-- Un type d'événement sans règle ne rapporte rien (n° 12).
+- Un type d'événement sans règle ne rapporte rien (n° 12) : c'est le cas de « Vie du club ».
 - Un membre ne s'attribue jamais de points. Une transaction = une ligne ; jamais de modification ; une correction = ligne inverse motivée.
-- Anti-doublon en base : même membre + même règle + même source = une seule ligne.
+- Anti-doublon en base : même membre + même règle + même source = une seule ligne active (rang
+  `grantSeq` : 0, puis +1 pour une nouvelle attribution après correction). Plusieurs règles peuvent
+  payer une même présence : une ligne par règle.
 - Participant extérieur à un tournoi (n° 16) : ni points ni compte.
 
 | Badge                         | Critère                                                                    |
@@ -165,7 +180,22 @@ Barème de départ du cahier des charges (§4.1), en table `PointRule`, modifiab
 
 Précisions de mise en œuvre (détail : `docs/DECISIONS.md`, section 11) :
 
-- Présence pointée (scan ou case cochée) : règle du type d'événement, au membre inscrit ; présence décochée : ligne inverse « Présence décochée » ; recochée : nouvelle attribution. Jamais deux lignes actives pour une même source.
+- Présence pointée (scan ou case cochée), au membre inscrit :
+  - **par défaut, la règle de chaque activité de la rencontre** : une rencontre lecture + quiz
+    rapporte « Participer à une séance de lecture » et la règle des Génies du soir si elle existe,
+    une ligne par règle. Une activité sans règle, ou dont la règle est inactive ou à 0 point, ne
+    rapporte rien ; les autres paient quand même.
+  - réglage **« activité principale seulement »** (Administration › Points, `points.rules.manage`,
+    clé `points.attendance`) : seule la règle de l'activité principale paie. Le lancement, dont
+    l'activité principale « Vie du club » n'a pas de règle, ne rapporte alors rien.
+  - le réglage vaut **au moment du pointage** : changer le réglage, ou les activités d'une rencontre,
+    n'annule ni ne complète les points déjà payés. Un nouveau pointage de la même présence paie les
+    règles attendues qui manquent, sans jamais payer deux fois la même.
+  - présence décochée : chaque ligne active reçoit sa ligne inverse « Présence décochée » ; recochée :
+    nouvelle attribution de chaque règle attendue, selon le réglage du moment. Jamais deux lignes
+    actives pour une même règle et une même présence.
+  - le badge « Esprit débatteur » compte les présences aux rencontres dont le débat est l'une des
+    activités, principale ou non.
 - Rien n'est attribué pour une règle inactive ou à 0 point, à un invité, à un compte sans numéro de membre, ni au responsable qui serait lui-même le bénéficiaire.
 - Correction manuelle : motif obligatoire, une seule par ligne, jamais d'une correction, jamais sur ses propres points (`points.grant`).
 - Ajustement manuel : de −1 000 à +1 000 points, non nul, motivé (`points.grant`).

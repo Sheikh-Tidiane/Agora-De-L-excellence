@@ -12,7 +12,8 @@ type EventRowProps = {
   weekday: string;
   time: string;
   iso: string;
-  type: string;
+  /** Activité, ou activités de la rencontre (principale d'abord). */
+  type: string | readonly string[];
   place: string;
   /** Événement ouvert au public (sinon réservé aux membres). */
   open: boolean;
@@ -27,10 +28,12 @@ export function Tag({
   tone = "neutre",
 }: {
   children: React.ReactNode;
-  tone?: "neutre" | "accent" | "succes" | "alerte" | "erreur";
+  tone?: "neutre" | "accent" | "contour" | "succes" | "alerte" | "erreur";
 }) {
   const tones = {
     neutre: "bg-sable text-indigo",
+    // Activité secondaire d'une rencontre : distincte de « Ouvert au public » (neutre).
+    contour: "text-indigo ring-1 ring-inset ring-indigo/50",
     accent: "bg-indigo text-ivoire",
     succes: "bg-succes-fond text-succes",
     alerte: "bg-alerte-fond text-alerte",
@@ -81,7 +84,7 @@ export function EventRow({
 
       <div>
         <div className="flex flex-wrap items-center gap-2">
-          <Tag tone="accent">{type}</Tag>
+          <ActivityTags labels={typeof type === "string" ? [type] : type} />
           <Tag>{open ? "Ouvert au public" : "Réservé aux membres"}</Tag>
           {tentative ? <Tag tone="alerte">Date provisoire</Tag> : null}
         </div>
@@ -103,5 +106,18 @@ export function EventRow({
         <ArrowUpRight className="size-5" />
       </span>
     </article>
+  );
+}
+
+/** Activités d'une rencontre : la principale en étiquette pleine, les autres en contour. */
+export function ActivityTags({ labels }: { labels: readonly string[] }) {
+  return (
+    <>
+      {labels.map((label, index) => (
+        <Tag key={label} tone={index === 0 ? "accent" : "contour"}>
+          {label}
+        </Tag>
+      ))}
+    </>
   );
 }

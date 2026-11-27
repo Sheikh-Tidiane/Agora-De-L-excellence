@@ -385,6 +385,7 @@ describe.skipIf(!reachable)("Scrabble (base réelle, transaction annulée)", () 
           slug: `vs-${uniq()}`,
           title: "Tournoi",
           type: "TOURNOI_SCRABBLE",
+          activities: ["TOURNOI_SCRABBLE"],
           description: "Test",
           startsAt: new Date(),
           status: "PUBLISHED",

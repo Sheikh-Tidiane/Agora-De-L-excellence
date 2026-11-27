@@ -15,8 +15,10 @@ const {
   grantManualPoints,
   reversePointTransaction,
   revokeAttendancePoints,
+  setAttendancePointMode,
   updatePointRule,
 } = await import("@/features/gamification/service");
+const { measureCriteria } = await import("@/features/gamification/badges-service");
 const { listMemberTransactions, memberPointsTotal } =
   await import("@/features/gamification/rewards-service");
 
@@ -65,13 +67,19 @@ async function staff(tx: Tx) {
   });
 }
 
-async function attended(tx: Tx, userId: string | null, type: EventType = "DEBAT_IDEES") {
+async function attended(
+  tx: Tx,
+  userId: string | null,
+  type: EventType = "DEBAT_IDEES",
+  others: EventType[] = [],
+) {
   const u = uniq();
   const event = await tx.event.create({
     data: {
       slug: `vt-${u}`,
       title: `Rencontre ${u}`,
       type,
+      activities: [type, ...others],
       description: "Test",
       startsAt: new Date(),
       status: "PUBLISHED",
@@ -204,6 +212,134 @@ describe.skipIf(!reachable)("moteur de points (base réelle, transaction annulé
         status: "already_awarded",
       });
       expect(await total(tx, m.id)).toBe(20);
+    });
+  });
+
+  describe("rencontre à plusieurs activités", () => {
+    const lines = (tx: Tx, sourceId: string) =>
+      tx.pointTransaction.findMany({
+        where: { sourceType: "EVENT_ATTENDANCE", sourceId },
+        orderBy: { createdAt: "asc" },
+        select: { points: true, grantSeq: true, rule: { select: { code: true } } },
+      });
+
+    it("par défaut, la présence paie la règle de chaque activité, une ligne par règle, sans doublon", async () => {
+      await inRollback(async (tx) => {
+        const m = await member(tx);
+        // Lecture (20) + débat (15), principale : lecture.
+        const reg = await attended(tx, m.id, "RENDEZ_VOUS_LECTURE", ["DEBAT_IDEES"]);
+        const first = await awardAttendancePoints(reg.id, null, tx);
+        expect(first).toMatchObject({ status: "awarded", points: 35 });
+        expect(first.rules.map((r) => [r.code, r.status, r.points])).toEqual([
+          ["reading_session", "awarded", 20],
+          ["debate", "awarded", 15],
+        ]);
+        // Un second pointage ne paie rien de plus.
+        expect(await awardAttendancePoints(reg.id, null, tx)).toMatchObject({
+          status: "already_awarded",
+          points: 0,
+        });
+        expect((await lines(tx, reg.id)).map((l) => [l.rule?.code, l.points, l.grantSeq])).toEqual([
+          ["reading_session", 20, 0],
+          ["debate", 15, 0],
+        ]);
+        expect(await total(tx, m.id)).toBe(35);
+      });
+    });
+
+    it("une activité sans règle (Génies du soir) ou à la règle désactivée ne rapporte rien ; les autres paient", async () => {
+      await inRollback(async (tx) => {
+        const m = await member(tx);
+        const lectureQuiz = await attended(tx, m.id, "RENDEZ_VOUS_LECTURE", ["GENIES_DU_SOIR"]);
+        const award = await awardAttendancePoints(lectureQuiz.id, null, tx);
+        expect(award).toMatchObject({ status: "awarded", points: 20 });
+        expect(award.rules.find((r) => r.eventType === "GENIES_DU_SOIR")).toMatchObject({
+          status: "skipped",
+          reason: "no_rule",
+        });
+        await tx.pointRule.update({
+          where: { code: "reading_session" },
+          data: { isActive: false },
+        });
+        const debat = await attended(tx, m.id, "RENDEZ_VOUS_LECTURE", ["DEBAT_IDEES"]);
+        expect(await awardAttendancePoints(debat.id, null, tx)).toMatchObject({
+          status: "awarded",
+          points: 15,
+        });
+        expect(await total(tx, m.id)).toBe(35);
+      });
+    });
+
+    it("réglage « principale seulement » : la règle de l'activité principale, sans rétro-correction", async () => {
+      await inRollback(async (tx) => {
+        const [m, actor] = [await member(tx), await staff(tx)];
+        expect(await setAttendancePointMode("PRIMARY_ONLY", actor.id, tx)).toEqual({
+          changed: true,
+        });
+        expect(await setAttendancePointMode("PRIMARY_ONLY", actor.id, tx)).toEqual({
+          changed: false,
+        });
+        expect(
+          await tx.auditLog.count({
+            where: { action: "points.attendance_mode_updated", actorId: actor.id },
+          }),
+        ).toBe(1);
+        // Débat (15) principal + lecture (20) : seul le débat paie.
+        const reg = await attended(tx, m.id, "DEBAT_IDEES", ["RENDEZ_VOUS_LECTURE"]);
+        expect(await awardAttendancePoints(reg.id, null, tx)).toMatchObject({ points: 15 });
+        // Le lancement (« Vie du club », sans règle) ne rapporte alors rien.
+        const lancement = await attended(tx, m.id, "LANCEMENT_AUTRE", [
+          "RENDEZ_VOUS_LECTURE",
+          "GENIES_DU_SOIR",
+        ]);
+        expect(await awardAttendancePoints(lancement.id, null, tx)).toMatchObject({
+          status: "skipped",
+          reason: "no_rule",
+        });
+        // Retour au défaut : rien n'est annulé ; un nouveau pointage complète ce qui manque.
+        await setAttendancePointMode("ALL_ACTIVITIES", actor.id, tx);
+        expect(await total(tx, m.id)).toBe(15);
+        expect(await awardAttendancePoints(reg.id, null, tx)).toMatchObject({
+          status: "awarded",
+          points: 20,
+        });
+        expect(await awardAttendancePoints(lancement.id, null, tx)).toMatchObject({ points: 20 });
+        expect(await total(tx, m.id)).toBe(55);
+      });
+    });
+
+    it("présence décochée puis recochée : chaque règle est corrigée puis payée au rang suivant, avec sa règle", async () => {
+      await inRollback(async (tx) => {
+        const m = await member(tx);
+        const reg = await attended(tx, m.id, "RENDEZ_VOUS_LECTURE", ["DEBAT_IDEES"]);
+        await awardAttendancePoints(reg.id, null, tx);
+        expect(await revokeAttendancePoints(reg.id, null, "Présence décochée", tx)).toEqual({
+          reversed: 2,
+        });
+        expect(await total(tx, m.id)).toBe(0);
+        expect(await awardAttendancePoints(reg.id, null, tx)).toMatchObject({ points: 35 });
+        expect(await awardAttendancePoints(reg.id, null, tx)).toMatchObject({
+          status: "already_awarded",
+        });
+        expect((await lines(tx, reg.id)).map((l) => [l.rule?.code, l.points, l.grantSeq])).toEqual([
+          ["reading_session", 20, 0],
+          ["debate", 15, 0],
+          ["reading_session", 20, 1],
+          ["debate", 15, 1],
+        ]);
+        expect(await total(tx, m.id)).toBe(35);
+      });
+    });
+
+    it("badge « Esprit débatteur » : le débat compte aussi en activité secondaire", async () => {
+      await inRollback(async (tx) => {
+        const m = await member(tx);
+        await attended(tx, m.id, "RENDEZ_VOUS_LECTURE", ["DEBAT_IDEES"]);
+        await attended(tx, m.id, "AGORA_CINE");
+        const counts = await measureCriteria(m.id, ["DEBATES_ATTENDED", "EVENTS_ATTENDED"], tx);
+        expect(counts.DEBATES_ATTENDED).toBe(1);
+        expect(counts.EVENTS_ATTENDED).toBe(2);
+      });
     });
   });
 

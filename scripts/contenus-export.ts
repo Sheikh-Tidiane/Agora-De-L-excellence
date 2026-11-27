@@ -152,6 +152,7 @@ async function main() {
       slug: e.slug,
       title: e.title,
       type: e.type,
+      activities: e.activities,
       status: e.status,
       summary: e.summary,
       description: e.description,

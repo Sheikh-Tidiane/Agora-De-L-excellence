@@ -4,7 +4,7 @@ import Link from "next/link";
 import { AdminListSkeleton, AdminPageHeader } from "@/components/admin/page-header";
 import { buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/states";
-import { eventTypeLabels } from "@/config/activities";
+import { activityLabels } from "@/config/activities";
 import { ScanStation } from "@/features/attendance/components/scan-station";
 import { listCheckInEvents } from "@/features/attendance/service";
 import { loadClubSettings } from "@/features/settings/club";
@@ -48,7 +48,7 @@ async function Scan() {
           events={events.map((event) => ({
             id: event.id,
             title: event.title,
-            typeLabel: eventTypeLabels[event.type as keyof typeof eventTypeLabels] ?? "Rencontre",
+            typeLabel: activityLabels(event).join(", "),
             startsAt: event.startsAt.toISOString(),
             confirmed: event.confirmed,
             present: event.present,

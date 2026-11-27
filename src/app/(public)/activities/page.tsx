@@ -5,7 +5,7 @@ import { PageIntro } from "@/components/layout/page-intro";
 import { Hemicycle, gradins } from "@/components/shared/hemicycle";
 import { LetterTile } from "@/components/shared/letter-tile";
 import { buttonVariants } from "@/components/ui/button";
-import { activities, type Activity } from "@/config/activities";
+import { activities, type Activity, eventHasActivity } from "@/config/activities";
 import { membershipHref } from "@/config/navigation";
 import { getUpcomingEvents, type PublicEvent } from "@/features/events/queries";
 import { eventDateParts } from "@/lib/dates";
@@ -212,7 +212,7 @@ export default async function ActivitiesPage() {
           key={activity.slug}
           activity={activity}
           index={index}
-          events={upcoming.filter((event) => activity.types.includes(event.type))}
+          events={upcoming.filter((event) => eventHasActivity(event, activity))}
         />
       ))}
 

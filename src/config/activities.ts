@@ -117,3 +117,40 @@ export function activityBySlug(slug: string | undefined): Activity | undefined {
 export function activityOfType(type: EventTypeCode): Activity | undefined {
   return activities.find((activity) => activity.types.includes(type));
 }
+
+/**
+ * Activités d'une rencontre, prêtes à enregistrer : la principale en tête, puis les autres dans
+ * l'ordre du catalogue, sans doublon. La principale est ajoutée si elle manque (la base l'exige :
+ * contrainte « Event_activities_check »).
+ */
+export function normalizeActivities(
+  primary: EventTypeCode,
+  list: readonly EventTypeCode[],
+): EventTypeCode[] {
+  const others = eventTypeCodes.filter((code) => code !== primary && list.includes(code));
+  return [primary, ...others];
+}
+
+/** Activités d'une rencontre, principale d'abord ; une liste vide (ancienne donnée) donne la principale. */
+export function eventActivities(event: {
+  type: EventTypeCode;
+  activities?: readonly EventTypeCode[] | null;
+}): EventTypeCode[] {
+  return normalizeActivities(event.type, event.activities ?? []);
+}
+
+/** La rencontre relève-t-elle de cette activité du site (au moins un de ses types) ? */
+export function eventHasActivity(
+  event: { type: EventTypeCode; activities?: readonly EventTypeCode[] | null },
+  activity: Activity,
+): boolean {
+  return eventActivities(event).some((code) => activity.types.includes(code));
+}
+
+/** Libellés des activités d'une rencontre, principale d'abord : « Rendez-vous lecture, Génies du soir ». */
+export function activityLabels(event: {
+  type: EventTypeCode;
+  activities?: readonly EventTypeCode[] | null;
+}): string[] {
+  return eventActivities(event).map((code) => eventTypeLabels[code]);
+}

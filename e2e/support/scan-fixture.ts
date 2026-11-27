@@ -26,6 +26,7 @@ async function setup(stamp: string, title: string) {
       slug: `e2e-scan-${stamp}`,
       title,
       type: "RENDEZ_VOUS_LECTURE",
+      activities: ["RENDEZ_VOUS_LECTURE"],
       description: "Rencontre de test du scan des présences.",
       startsAt: new Date(),
       status: "PUBLISHED",

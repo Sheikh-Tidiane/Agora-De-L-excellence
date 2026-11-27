@@ -1,3 +1,4 @@
+import { eventActivities } from "@/config/activities";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -80,6 +81,7 @@ async function EventAdmin({ params }: Pick<PageProps<"/admin/events/[id]">, "par
             initial={{
               title: event.title,
               type: event.type,
+              activities: eventActivities(event),
               summary: event.summary ?? "",
               description: event.description,
               location: event.location ?? "",

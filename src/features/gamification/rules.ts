@@ -31,26 +31,90 @@ export type LedgerLine = {
   id: string;
   points: number;
   ruleId: string | null;
+  /** Rang de l'attribution pour (membre, règle, source) : 0, puis +1 après chaque correction. */
+  grantSeq: number;
   /** Vrai si une ligne inverse la corrige déjà. */
   reversed: boolean;
 };
 
 export type AwardDecision =
-  | { kind: "create_original" }
   | { kind: "already_awarded"; transactionId: string }
-  /** L'attribution d'origine a été corrigée : on attribue à nouveau (présence recochée…). */
-  | { kind: "create_regrant" };
+  /** `grantSeq` 0 : première attribution ; au-delà, nouvelle attribution après une correction. */
+  | { kind: "create"; grantSeq: number };
 
 /**
- * Décide d'une attribution pour une source, à partir des lignes déjà écrites pour cette source
- * (hors lignes de correction). Une source est « payée » tant qu'une de ses lignes positives
- * n'est pas corrigée : une seule ligne active à la fois, quel que soit le nombre d'appels.
+ * Décide d'une attribution pour UNE règle et une source, à partir des lignes déjà écrites pour
+ * cette source. Plusieurs règles peuvent payer une même source (rencontre à plusieurs
+ * activités) : seules comptent les lignes de cette règle. Elle est « payée » tant qu'une de ses
+ * lignes positives n'est pas corrigée ; sinon, la nouvelle ligne prend le rang suivant.
  */
 export function decideAward(lines: readonly LedgerLine[], ruleId: string): AwardDecision {
-  const active = lines.find((line) => !line.reversed && line.points > 0);
+  const own = lines.filter((line) => line.ruleId === ruleId);
+  const active = own.find((line) => !line.reversed && line.points > 0);
   if (active) return { kind: "already_awarded", transactionId: active.id };
-  const original = lines.find((line) => line.ruleId === ruleId);
-  return original ? { kind: "create_regrant" } : { kind: "create_original" };
+  const next = own.reduce((max, line) => Math.max(max, line.grantSeq + 1), 0);
+  return { kind: "create", grantSeq: next };
+}
+
+/**
+ * Points de présence : « ALL_ACTIVITIES » (défaut) paie la règle de chaque activité de la
+ * rencontre ; « PRIMARY_ONLY », celle de l'activité principale seulement. Réglage
+ * `points.attendance` (Administration > Points). Voir docs/REGLES-METIER.md.
+ */
+export const ATTENDANCE_POINT_MODES = ["ALL_ACTIVITIES", "PRIMARY_ONLY"] as const;
+export type AttendancePointMode = (typeof ATTENDANCE_POINT_MODES)[number];
+export const DEFAULT_ATTENDANCE_POINT_MODE: AttendancePointMode = "ALL_ACTIVITIES";
+
+/** Lit le réglage enregistré ; toute valeur inconnue ou absente vaut le défaut. */
+export function parseAttendancePointMode(value: unknown): AttendancePointMode {
+  const mode = (value as { mode?: unknown } | null)?.mode;
+  return (ATTENDANCE_POINT_MODES as readonly unknown[]).includes(mode)
+    ? (mode as AttendancePointMode)
+    : DEFAULT_ATTENDANCE_POINT_MODE;
+}
+
+/** Activités dont la règle paie la présence, principale d'abord, sans doublon. */
+export function attendanceRuleTypes<T extends string>(
+  event: { type: T; activities: readonly T[] },
+  mode: AttendancePointMode,
+): T[] {
+  if (mode === "PRIMARY_ONLY") return [event.type];
+  return [event.type, ...event.activities.filter((code) => code !== event.type)].filter(
+    (code, index, all) => all.indexOf(code) === index,
+  );
+}
+
+/** Résultat d'une règle, pour l'agrégat d'une présence. */
+export type RuleOutcome = {
+  status: "awarded" | "already_awarded" | "skipped";
+  reason: SkipReason | null;
+  transactionId: string | null;
+  points: number;
+};
+
+/**
+ * Agrège les résultats de plusieurs règles pour une même présence : « awarded » si au moins une a
+ * payé (points additionnés), sinon « already_awarded » si au moins une l'était déjà, sinon la
+ * première raison de refus.
+ */
+export function combineOutcomes(outcomes: readonly RuleOutcome[]): RuleOutcome {
+  const awarded = outcomes.filter((o) => o.status === "awarded");
+  if (awarded.length > 0) {
+    return {
+      status: "awarded",
+      reason: null,
+      transactionId: awarded[0]!.transactionId,
+      points: awarded.reduce((sum, o) => sum + o.points, 0),
+    };
+  }
+  const already = outcomes.find((o) => o.status === "already_awarded");
+  if (already) return { ...already, points: 0 };
+  return {
+    status: "skipped",
+    reason: outcomes[0]?.reason ?? "no_rule",
+    transactionId: null,
+    points: 0,
+  };
 }
 
 /** Ligne qui peut être corrigée : jamais une correction, jamais deux fois. */

@@ -10,7 +10,10 @@ export type PublicEvent = {
   id: string;
   slug: string;
   title: string;
+  /** Activité principale. */
   type: EventTypeCode;
+  /** Toutes les activités, principale comprise. */
+  activities: EventTypeCode[];
   status: EventStatusCode;
   summary: string | null;
   description: string;
@@ -36,6 +39,7 @@ const eventSelect = {
   slug: true,
   title: true,
   type: true,
+  activities: true,
   status: true,
   summary: true,
   description: true,
@@ -102,7 +106,7 @@ export async function getFeaturedLaunch(): Promise<PublicEvent | null> {
 
 export type ArchiveEntry = Pick<
   PublicEvent,
-  "slug" | "title" | "type" | "startsAt" | "summary" | "reportPublishedAt"
+  "slug" | "title" | "type" | "activities" | "startsAt" | "summary" | "reportPublishedAt"
 > & { reportExcerpt: string | null };
 
 /**
@@ -121,6 +125,7 @@ export async function getArchive(): Promise<ArchiveEntry[]> {
       slug: true,
       title: true,
       type: true,
+      activities: true,
       startsAt: true,
       summary: true,
       reportPublishedAt: true,
@@ -204,7 +209,7 @@ export async function getMyAttendance(userId: string) {
     select: {
       id: true,
       attendedAt: true,
-      event: { select: { slug: true, title: true, type: true, startsAt: true } },
+      event: { select: { slug: true, title: true, type: true, activities: true, startsAt: true } },
       payments: {
         where: { kind: "SESSION_FEE", cancelledAt: null },
         select: { id: true },
@@ -225,6 +230,7 @@ export async function getMyUpcomingRegistrations(userId: string, now: Date) {
           slug: true,
           title: true,
           type: true,
+          activities: true,
           status: true,
           location: true,
           startsAt: true,

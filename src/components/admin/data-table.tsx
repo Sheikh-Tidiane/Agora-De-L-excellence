@@ -20,7 +20,8 @@ export type TableFilter<T> = {
   key: string;
   label: string;
   options: { value: string; label: string }[];
-  get: (row: T) => string;
+  /** Une liste : la ligne passe si elle contient la valeur choisie (activités d'une rencontre). */
+  get: (row: T) => string | readonly string[];
   /** Valeur sélectionnée à l'ouverture. */
   initial?: string;
 };
@@ -92,7 +93,10 @@ export function DataTable<T>({
     let result = rows.filter((row) => {
       for (const filter of filters) {
         const wanted = values[filter.key];
-        if (wanted && filter.get(row) !== wanted) return false;
+        const got = filter.get(row);
+        if (wanted && (typeof got === "string" ? got !== wanted : !got.includes(wanted))) {
+          return false;
+        }
       }
       if (words.length === 0 || !searchText) return true;
       const text = normalize(searchText(row));

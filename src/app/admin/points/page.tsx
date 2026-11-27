@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { AdminListSkeleton, AdminPageHeader, StatusPill } from "@/components/admin/page-header";
 import {
+  AttendanceModeEditor,
   GrantPointsForm,
   ManualBadgeForm,
   MemberPicker,
@@ -13,6 +14,7 @@ import {
   listPointRules,
   memberPointsTotal,
 } from "@/features/gamification/queries";
+import { getAttendancePointMode } from "@/features/gamification/service";
 import { formatDate } from "@/lib/dates";
 import { can, requirePageAccess } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -28,7 +30,7 @@ async function Points({
   const actor = await requirePageAccess("points.grant", "/admin/points");
   const { membre } = await searchParams;
   const memberId = typeof membre === "string" ? membre : null;
-  const [rules, members, manualBadges] = await Promise.all([
+  const [rules, members, manualBadges, attendanceMode] = await Promise.all([
     listPointRules(),
     prisma.user.findMany({
       where: { memberNumber: { not: null }, archivedAt: null },
@@ -40,6 +42,7 @@ async function Points({
       where: { criterion: "MANUAL", isActive: true },
       select: { code: true, name: true },
     }),
+    getAttendancePointMode(),
   ]);
   const member = memberId ? members.find((m) => m.id === memberId) : undefined;
   const history = member ? await listMemberTransactions(member.id) : [];
@@ -152,6 +155,20 @@ async function Points({
             Un changement vaut pour les points attribués ensuite ; le passé n’est pas recalculé. Une
             règle désactivée ne rapporte plus rien.
           </p>
+          <div className="mt-5 border-b border-indigo/15 pb-5">
+            {can(actor, "points.rules.manage") ? (
+              <AttendanceModeEditor mode={attendanceMode} />
+            ) : (
+              <p>
+                <span className="font-semibold">
+                  Présence à une rencontre à plusieurs activités :{" "}
+                </span>
+                {attendanceMode === "PRIMARY_ONLY"
+                  ? "points de l’activité principale seulement."
+                  : "points de chaque activité."}
+              </p>
+            )}
+          </div>
           <ul className="mt-4">
             {rules.map((rule) => (
               <li key={rule.id} className="border-b border-indigo/15 py-4">

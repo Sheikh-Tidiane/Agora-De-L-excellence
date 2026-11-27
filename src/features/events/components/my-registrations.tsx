@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { MemberCancelButton } from "@/features/events/components/registration-forms";
 import type { getMyUpcomingRegistrations } from "@/features/events/queries";
-import { canCancel, eventTypeLabels, placeLabel } from "@/features/events/rules";
+import { activityLabels } from "@/config/activities";
+import { canCancel, placeLabel } from "@/features/events/rules";
 import { eventDateParts } from "@/lib/dates";
 
 type Registration = Awaited<ReturnType<typeof getMyUpcomingRegistrations>>[number];
@@ -31,7 +32,7 @@ export function MyRegistrationsList({
             </time>
             <div>
               <p className="petit font-semibold text-gris">
-                {eventTypeLabels[event.type]} · {date.weekday}, {date.time}
+                {activityLabels(event).join(", ")} · {date.weekday}, {date.time}
               </p>
               <h3 className="mt-1 font-serif text-xl leading-snug">
                 <Link

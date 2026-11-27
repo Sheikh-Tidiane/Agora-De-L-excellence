@@ -25,6 +25,7 @@ const actionLabels: Record<AuditAction, string> = {
   "points.granted": "Points ajustés",
   "points.reversed": "Points corrigés",
   "points.rule_updated": "Barème des points modifié",
+  "points.attendance_mode_updated": "Règle des points de présence modifiée",
   "badge.awarded": "Badge décerné",
   "member.card_revoked": "Carte de membre remplacée",
   "reading.validated": "Lecture validée",

@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useWatch } from "react-hook-form";
 import { useAdminAction } from "@/components/admin/use-admin-action";
 import {
   CheckboxField,
@@ -12,12 +14,13 @@ import { useActionForm } from "@/components/shared/use-action-form";
 import { Button } from "@/components/ui/button";
 import { FormError } from "@/features/auth/components/form-parts";
 import { saveEventAction } from "@/features/events/admin-actions";
-import { eventTypeLabels } from "@/features/events/rules";
+import { eventTypeCodes, eventTypeLabels, type EventTypeCode } from "@/features/events/rules";
 import { eventSchema, type EventInput } from "@/features/events/schemas";
 
 export const blankEvent: EventInput = {
   title: "",
   type: "RENDEZ_VOUS_LECTURE",
+  activities: ["RENDEZ_VOUS_LECTURE"],
   summary: "",
   description: "",
   location: "",
@@ -61,17 +64,53 @@ export function EventForm({
     },
   });
 
+  // L'activité principale est toujours l'une des activités cochées : décocher la principale
+  // reporte ce rôle sur la première activité restante.
+  const watched = useWatch({ control: form.control, name: "activities" }) as
+    EventTypeCode[] | undefined;
+  const checked = useMemo(() => watched ?? [], [watched]);
+  const primary = useWatch({ control: form.control, name: "type" }) as EventTypeCode;
+  useEffect(() => {
+    if (checked.length > 0 && !checked.includes(primary)) {
+      form.setValue("type", checked[0]!, { shouldDirty: true });
+    }
+  }, [checked, primary, form]);
+  const activitiesError = form.formState.errors.activities?.message as string | undefined;
+  const primaryOptions = eventTypeCodes
+    .filter((code) => checked.includes(code))
+    .map((value) => ({ value, label: eventTypeLabels[value] }));
+
   return (
     <form onSubmit={submit} noValidate className="flex flex-col gap-5">
       <FormError message={formError} />
       <TextField form={form} name="title" idPrefix="evt" label="Titre" autoComplete="off" />
+      <fieldset aria-describedby={activitiesError ? "evt-activites-erreur" : "evt-activites-aide"}>
+        <legend className="text-[0.9375rem] font-semibold">Activités de la rencontre</legend>
+        <p id="evt-activites-aide" className="petit text-gris">
+          Une rencontre peut en réunir plusieurs (lecture et quiz, débat et Agora Ciné…). Elle
+          paraît sous chacune d’elles sur le site.
+        </p>
+        <div className="mt-1 grid sm:grid-cols-2 lg:grid-cols-3">
+          {eventTypeCodes.map((value) => (
+            <CheckboxField key={value} form={form} name="activities" value={value}>
+              {eventTypeLabels[value]}
+            </CheckboxField>
+          ))}
+        </div>
+        {activitiesError ? (
+          <p id="evt-activites-erreur" role="alert" className="petit font-semibold text-erreur">
+            {activitiesError}
+          </p>
+        ) : null}
+      </fieldset>
       <div className="grid gap-5 md:grid-cols-2">
         <SelectField
           form={form}
           name="type"
           idPrefix="evt"
-          label="Type"
-          options={Object.entries(eventTypeLabels).map(([value, label]) => ({ value, label }))}
+          label="Activité principale"
+          hint="Affichée en premier, et seule comptée si les points ne vont qu’à l’activité principale."
+          options={primaryOptions}
         />
         <TextField
           form={form}

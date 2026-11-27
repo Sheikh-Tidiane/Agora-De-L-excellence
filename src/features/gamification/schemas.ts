@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { MAX_MANUAL_POINTS, MAX_RULE_POINTS } from "@/features/gamification/rules";
+import {
+  ATTENDANCE_POINT_MODES,
+  MAX_MANUAL_POINTS,
+  MAX_RULE_POINTS,
+} from "@/features/gamification/rules";
 
 /**
  * Schémas Zod des actions d'administration des points. Sans dépendance serveur : partagés avec
@@ -39,4 +43,9 @@ export const pointRuleSchema = z.object({
     .min(0, "Pas de valeur négative.")
     .max(MAX_RULE_POINTS, `Pas plus de ${MAX_RULE_POINTS}.`),
   isActive: z.boolean(),
+});
+
+/** Réglage des points de présence (rencontres à plusieurs activités). */
+export const attendancePointModeSchema = z.object({
+  mode: z.enum(ATTENDANCE_POINT_MODES, { error: "Choisissez une règle." }),
 });

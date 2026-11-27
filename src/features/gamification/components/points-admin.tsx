@@ -8,6 +8,7 @@ import {
   awardManualBadgeAction,
   grantManualPointsAction,
   reversePointTransactionAction,
+  setAttendancePointModeAction,
   updatePointRuleAction,
 } from "@/features/gamification/actions";
 import type { ActionResult } from "@/lib/errors";
@@ -87,6 +88,68 @@ export function RuleEditor({
       </Button>
       {feedback}
     </div>
+  );
+}
+
+const attendanceModes = [
+  {
+    value: "ALL_ACTIVITIES",
+    label: "Chaque activité de la rencontre",
+    hint: "Une rencontre lecture et quiz rapporte les points des deux.",
+  },
+  {
+    value: "PRIMARY_ONLY",
+    label: "L’activité principale seulement",
+    hint: "La même rencontre ne rapporte que les points de son activité principale.",
+  },
+] as const;
+
+/** Règle des points de présence pour une rencontre qui réunit plusieurs activités. */
+export function AttendanceModeEditor({ mode }: { mode: "ALL_ACTIVITIES" | "PRIMARY_ONLY" }) {
+  const [value, setValue] = useState<string>(mode);
+  const { pending, run, feedback } = useAdminSubmit();
+  return (
+    <fieldset>
+      <legend className="font-semibold">Présence à une rencontre à plusieurs activités</legend>
+      <div className="mt-2 flex flex-col">
+        {attendanceModes.map((option) => (
+          <label
+            key={option.value}
+            className="flex min-h-11 cursor-pointer items-start gap-3 py-1.5 text-[0.9375rem]"
+          >
+            <input
+              type="radio"
+              name="points-presence"
+              value={option.value}
+              checked={value === option.value}
+              onChange={() => setValue(option.value)}
+              className="mt-1 size-5 accent-indigo"
+            />
+            <span>
+              {option.label}
+              <span className="petit block text-gris">{option.hint}</span>
+            </span>
+          </label>
+        ))}
+      </div>
+      <p className="petit mt-2 text-gris">
+        Vaut pour les présences pointées ensuite. Les points déjà attribués ne changent pas ; une
+        présence décochée puis recochée suit la règle du moment.
+      </p>
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <Button
+          size="sm"
+          variant={value !== mode ? "principal" : "contour"}
+          disabled={pending || value === mode}
+          onClick={() =>
+            run(() => setAttendancePointModeAction({ mode: value }), "Règle enregistrée.")
+          }
+        >
+          {pending ? "…" : "Enregistrer"}
+        </Button>
+        {feedback}
+      </div>
+    </fieldset>
   );
 }
 

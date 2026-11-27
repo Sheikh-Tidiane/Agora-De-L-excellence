@@ -59,11 +59,14 @@ export async function listQuizzesForAdmin(
   }));
 }
 
-/** Rencontres « Génies du soir » proposées au lien (non archivées, des 3 derniers mois et à venir). */
+/**
+ * Rencontres proposées au lien d'un quiz : celles qui comptent les Génies du soir parmi leurs
+ * activités (non archivées, des 3 derniers mois et à venir).
+ */
 export async function listGeniesEvents(now: Date = new Date(), db: Db = prisma) {
   return db.event.findMany({
     where: {
-      type: "GENIES_DU_SOIR",
+      activities: { has: "GENIES_DU_SOIR" },
       archivedAt: null,
       startsAt: { gte: new Date(now.getTime() - 90 * 86_400_000) },
     },

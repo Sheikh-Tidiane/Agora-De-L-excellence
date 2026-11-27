@@ -490,7 +490,11 @@ model Event {
   id                        String            @id @default(cuid())
   slug                      String            @unique
   title                     String
+  /// Activité principale (affichage, tri) ; toujours présente dans `activities`.
   type                      EventType
+  /// Activités de la rencontre (au moins une, sans doublon, contient `type`) : contrainte
+  /// CHECK écrite à la main dans la migration 20261127100000_rencontres_multi_activites.
+  activities                EventType[]
   status                    EventStatus       @default(DRAFT)
   summary                   String?
   description               String
@@ -536,6 +540,7 @@ model Event {
 
   @@index([status, startsAt])
   @@index([type])
+  @@index([activities], type: Gin)
 }
 
 /// Inscription d'un membre (userId) OU d'un invité (guestName + guestEmail).
@@ -902,13 +907,17 @@ model PointTransaction {
   reason      String?
   createdById String?
   createdBy   User?             @relation("PointGrantor", fields: [createdById], references: [id], onDelete: SetNull)
+  /// Rang de l'attribution pour (membre, règle, source) : 0 à l'origine, puis +1 à chaque
+  /// nouvelle attribution après une correction (présence décochée puis recochée).
+  grantSeq    Int               @default(0)
   reversesId  String?           @unique
   reverses    PointTransaction? @relation("PointReversal", fields: [reversesId], references: [id], onDelete: Restrict)
   reversedBy  PointTransaction? @relation("PointReversal")
   createdAt   DateTime          @default(now())
 
-  /// Anti-doublon : une même règle ne paie qu'une fois pour une même source et un même membre.
-  @@unique([userId, ruleId, sourceType, sourceId])
+  /// Anti-doublon : une même règle ne paie qu'une fois par rang, pour une même source et un même
+  /// membre. Plusieurs règles peuvent payer une même source (rencontre à plusieurs activités).
+  @@unique([userId, ruleId, sourceType, sourceId, grantSeq])
   @@index([userId, createdAt])
   @@index([sourceType, sourceId])
 }

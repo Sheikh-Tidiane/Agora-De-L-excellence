@@ -1,12 +1,14 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageIntro } from "@/components/layout/page-intro";
+import { FilterChip } from "@/components/shared/filter-chip";
 import { EmptyState } from "@/components/shared/states";
 import { buttonVariants } from "@/components/ui/button";
 import { membershipHref } from "@/config/navigation";
 import { EventList } from "@/features/events/components/event-list";
 import { getPastEvents, getUpcomingEvents, type PublicEvent } from "@/features/events/queries";
-import { eventTypeLabels } from "@/features/events/rules";
+import { activities, activityBySlug, activityLabels, eventHasActivity } from "@/config/activities";
 import { formatDate, formatMonthYear } from "@/lib/dates";
 import { ForVisitors } from "@/components/layout/by-viewer";
 
@@ -29,25 +31,56 @@ function byMonth(events: PublicEvent[]) {
   return groups;
 }
 
-export default async function EventsPage() {
-  const [upcoming, past] = await Promise.all([getUpcomingEvents(), getPastEvents()]);
+/** Agenda filtré par activité (`?activite=`) : une rencontre paraît sous chacune de ses activités. */
+async function Agenda({ searchParams }: Pick<PageProps<"/events">, "searchParams">) {
+  const params = await searchParams;
+  const activity = activityBySlug(
+    typeof params.activite === "string" ? params.activite : undefined,
+  );
+  // Filtrée, la liste des rencontres passées est prise plus large, puis ramenée à six.
+  const [allUpcoming, allPast] = await Promise.all([
+    getUpcomingEvents(),
+    getPastEvents(activity ? 60 : 6),
+  ]);
+  const matches = (event: PublicEvent) => !activity || eventHasActivity(event, activity);
+  const upcoming = allUpcoming.filter(matches);
+  const past = allPast.filter(matches).slice(0, 6);
   const groups = byMonth(upcoming);
 
   return (
     <>
-      <PageIntro
-        surtitre="Agenda"
-        letter="É"
-        tone="clair"
-        arc="c"
-        title="Les prochaines rencontres."
-      >
-        Une rencontre en présentiel tous les quinze jours. Les rencontres ouvertes au public sont
-        signalées, les autres sont réservées aux membres.
-      </PageIntro>
-
       <div className="page py-12 lg:py-24">
-        {groups.length === 0 ? (
+        <nav aria-label="Filtrer l’agenda par activité" className="mb-10 lg:mb-16">
+          <ul className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 md:mx-0 md:flex-wrap md:px-0">
+            <li>
+              <FilterChip active={!activity} to="/events">
+                Toutes les activités
+              </FilterChip>
+            </li>
+            {activities.map((item) => (
+              <li key={item.slug}>
+                <FilterChip
+                  active={activity?.slug === item.slug}
+                  to={`/events?activite=${item.slug}`}
+                >
+                  {item.shortName}
+                </FilterChip>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        {groups.length === 0 && activity ? (
+          <EmptyState
+            title={`Aucune rencontre « ${activity.shortName} » annoncée`}
+            action={
+              <Link href="/events" className={buttonVariants({ variant: "contour" })}>
+                Voir toutes les rencontres
+              </Link>
+            }
+          >
+            Les autres activités ont peut-être des dates : retirez le filtre pour les voir.
+          </EmptyState>
+        ) : groups.length === 0 ? (
           <EmptyState
             title="Aucune rencontre annoncée pour l’instant"
             action={
@@ -97,7 +130,7 @@ export default async function EventsPage() {
                       {event.title}
                     </span>
                     <span className="petit shrink-0 text-gris">
-                      {eventTypeLabels[event.type]} · {formatDate(event.startsAt)}
+                      {activityLabels(event).join(", ")} · {formatDate(event.startsAt)}
                     </span>
                   </Link>
                 </li>
@@ -106,6 +139,27 @@ export default async function EventsPage() {
           </div>
         </section>
       ) : null}
+    </>
+  );
+}
+
+export default function EventsPage({ searchParams }: PageProps<"/events">) {
+  return (
+    <>
+      <PageIntro
+        surtitre="Agenda"
+        letter="É"
+        tone="clair"
+        arc="c"
+        title="Les prochaines rencontres."
+      >
+        Une rencontre en présentiel tous les quinze jours. Les rencontres ouvertes au public sont
+        signalées, les autres sont réservées aux membres.
+      </PageIntro>
+
+      <Suspense fallback={<div className="page min-h-[60vh] py-12 lg:py-24" aria-busy="true" />}>
+        <Agenda searchParams={searchParams} />
+      </Suspense>
 
       <ForVisitors>
         <section className="page py-16 lg:py-24">

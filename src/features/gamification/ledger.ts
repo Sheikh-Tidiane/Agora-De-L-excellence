@@ -45,7 +45,7 @@ export async function assertMember(tx: Db, userId: string): Promise<void> {
  * Sérialise les attributions d'une même source (verrou consultatif de transaction) :
  * deux validations simultanées ne peuvent pas décider chacune qu'il faut payer.
  */
-async function lockSource(tx: Tx, key: string): Promise<void> {
+export async function lockSource(tx: Tx, key: string): Promise<void> {
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${key}, 0))`;
 }
 
@@ -75,11 +75,16 @@ const alreadyAwarded = (transactionId: string | null): AwardResult => ({
   badges: [],
 });
 
+/** Clé du verrou d'une source : partagée par l'attribution et le retrait des points. */
+export const sourceLockKey = (userId: string, sourceType: PointSourceType, sourceId: string) =>
+  `points:${userId}:${sourceType}:${sourceId}`;
+
 /**
- * Paie une règle pour une source, une seule fois. L'anti-doublon tient à deux niveaux :
- * le verrou de source, puis la contrainte unique (membre, règle, type, source) en base, écrite
- * par `INSERT … ON CONFLICT DO NOTHING` (`skipDuplicates`) : une violation ne fait pas échouer la
- * transaction de l'appelant, elle se lit « déjà attribué ».
+ * Paie une règle pour une source, une seule fois par rang. L'anti-doublon tient à deux niveaux :
+ * le verrou de source, puis la contrainte unique (membre, règle, type, source, rang) en base,
+ * écrite par `INSERT … ON CONFLICT DO NOTHING` (`skipDuplicates`) : une violation ne fait pas
+ * échouer la transaction de l'appelant, elle se lit « déjà attribué ». Plusieurs règles peuvent
+ * payer une même source (rencontre à plusieurs activités) : chacune a sa ligne.
  */
 export async function awardForSource(
   tx: Tx,
@@ -92,10 +97,16 @@ export async function awardForSource(
   },
 ): Promise<AwardResult> {
   const { userId, rule, sourceType, sourceId, actorId } = input;
-  await lockSource(tx, `points:${userId}:${sourceType}:${sourceId}`);
+  await lockSource(tx, sourceLockKey(userId, sourceType, sourceId));
   const lines = await tx.pointTransaction.findMany({
     where: { userId, sourceType, sourceId },
-    select: { id: true, points: true, ruleId: true, reversedBy: { select: { id: true } } },
+    select: {
+      id: true,
+      points: true,
+      ruleId: true,
+      grantSeq: true,
+      reversedBy: { select: { id: true } },
+    },
   });
   const decision = decideAward(
     lines.map((line) => ({ ...line, reversed: line.reversedBy !== null })),
@@ -105,43 +116,30 @@ export async function awardForSource(
     return alreadyAwarded(decision.transactionId);
   }
   const id = randomUUID();
-  if (decision.kind === "create_original") {
-    const { count } = await tx.pointTransaction.createMany({
-      data: [
-        {
-          id,
-          userId,
-          ruleId: rule.id,
-          points: rule.points,
-          sourceType,
-          sourceId,
-          createdById: actorId,
-        },
-      ],
-      skipDuplicates: true,
-    });
-    if (count === 0) {
-      const existing = await tx.pointTransaction.findFirst({
-        where: { userId, ruleId: rule.id, sourceType, sourceId },
-        select: { id: true },
-      });
-      return alreadyAwarded(existing?.id ?? null);
-    }
-  } else {
-    // Nouvelle attribution après une correction (présence décochée puis recochée) : sans règle
-    // liée, la contrainte unique est déjà prise par la ligne d'origine ; le verrou garantit l'unicité.
-    await tx.pointTransaction.create({
-      data: {
+  const regrant = decision.grantSeq > 0;
+  const { count } = await tx.pointTransaction.createMany({
+    data: [
+      {
         id,
         userId,
-        ruleId: null,
+        ruleId: rule.id,
+        grantSeq: decision.grantSeq,
         points: rule.points,
         sourceType,
         sourceId,
-        reason: `Nouvelle attribution : ${rule.label}`,
+        // Nouvelle attribution après une correction (présence décochée puis recochée).
+        reason: regrant ? `Nouvelle attribution : ${rule.label}` : null,
         createdById: actorId,
       },
+    ],
+    skipDuplicates: true,
+  });
+  if (count === 0) {
+    const existing = await tx.pointTransaction.findFirst({
+      where: { userId, ruleId: rule.id, sourceType, sourceId, grantSeq: decision.grantSeq },
+      select: { id: true },
     });
+    return alreadyAwarded(existing?.id ?? null);
   }
   await audit(
     {
@@ -155,7 +153,8 @@ export async function awardForSource(
         points: rule.points,
         sourceType,
         sourceId,
-        regrant: decision.kind === "create_regrant",
+        regrant,
+        grantSeq: decision.grantSeq,
       },
     },
     tx,

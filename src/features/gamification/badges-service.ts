@@ -31,7 +31,10 @@ export async function measureCriteria(
     REVIEWS_APPROVED: () => db.review.count({ where: { userId, status: "APPROVED" } }),
     EVENTS_ATTENDED: () => db.eventRegistration.count({ where: attended }),
     DEBATES_ATTENDED: () =>
-      db.eventRegistration.count({ where: { ...attended, event: { type: "DEBAT_IDEES" } } }),
+      // Rencontres dont le débat est l'une des activités, principale ou non.
+      db.eventRegistration.count({
+        where: { ...attended, event: { activities: { has: "DEBAT_IDEES" } } },
+      }),
     TOURNAMENTS_PLAYED: () =>
       db.tournamentParticipant.count({
         where: { userId, withdrawnAt: null, tournament: { status: "COMPLETED" } },

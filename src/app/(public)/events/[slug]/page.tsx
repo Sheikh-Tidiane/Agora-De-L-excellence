@@ -1,17 +1,18 @@
+import { activityLabels } from "@/config/activities";
 import { Suspense } from "react";
 import { serializeJsonLd } from "@/lib/json-ld";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { Tag } from "@/components/shared/event-row";
+import { ActivityTags, Tag } from "@/components/shared/event-row";
 import { site } from "@/config/site";
 import {
   RegistrationPanel,
   RegistrationPanelSkeleton,
 } from "@/features/events/components/registration-panel";
 import { getEventBySlug, getEventReport, getPublishedEventSlugs } from "@/features/events/queries";
-import { eventTypeLabels, parseProgram, placeLabel } from "@/features/events/rules";
+import { parseProgram, placeLabel } from "@/features/events/rules";
 import { Markdown } from "@/lib/markdown";
 import { eventDateParts, formatFullDate, formatTime } from "@/lib/dates";
 import { env } from "@/lib/env";
@@ -97,7 +98,7 @@ async function EventSheet({ params }: Pick<Props, "params">) {
         </time>
         <div className="mt-6 lg:col-span-8 lg:col-start-5 lg:mt-0">
           <div className="flex flex-wrap items-center gap-2">
-            <Tag tone="accent">{eventTypeLabels[event.type]}</Tag>
+            <ActivityTags labels={activityLabels(event)} />
             <Tag>{event.isPublic ? "Ouvert au public" : "Réservé aux membres"}</Tag>
             {event.isTentative ? <Tag tone="alerte">Date provisoire</Tag> : null}
             {cancelled ? <Tag tone="erreur">Annulé</Tag> : null}
@@ -188,6 +189,9 @@ async function EventSheet({ params }: Pick<Props, "params">) {
             "@context": "https://schema.org",
             "@type": "Event",
             name: event.title,
+            // Les activités de la rencontre (principale d'abord) : schema.org n'a pas de champ
+            // dédié ; `keywords` les expose aux moteurs de recherche.
+            keywords: activityLabels(event).join(", "),
             startDate: event.startsAt.toISOString(),
             ...(event.endsAt ? { endDate: event.endsAt.toISOString() } : {}),
             eventStatus: cancelled

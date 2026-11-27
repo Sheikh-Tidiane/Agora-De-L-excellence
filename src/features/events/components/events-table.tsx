@@ -1,5 +1,6 @@
 "use client";
 
+import { activityLabels, eventActivities } from "@/config/activities";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
@@ -22,6 +23,7 @@ export type EventRowData = {
   id: string;
   title: string;
   type: EventTypeCode;
+  activities: EventTypeCode[];
   status: EventStatusCode;
   startsAt: Date;
   location: string | null;
@@ -55,8 +57,9 @@ const columns: Column<EventRowData>[] = [
   },
   {
     key: "type",
-    header: "Type",
-    cell: (row) => eventTypeLabels[row.type],
+    header: "Activités",
+    // L'activité principale d'abord ; le tri suit la principale.
+    cell: (row) => activityLabels(row).join(", "),
     sort: (row) => eventTypeLabels[row.type],
     className: "max-lg:hidden",
   },
@@ -117,8 +120,8 @@ export function EventsTable({ rows }: { rows: EventRowData[] }) {
           },
           {
             key: "type",
-            label: "Type",
-            get: (row) => row.type,
+            label: "Activité",
+            get: (row) => eventActivities(row),
             options: Object.entries(eventTypeLabels).map(([value, label]) => ({ value, label })),
           },
         ]}

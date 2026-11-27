@@ -194,7 +194,7 @@ export async function readLinkableEvents(tournamentId: string | null, db: Db = p
   return db.event.findMany({
     where: {
       archivedAt: null,
-      type: { in: ["TOURNOI_SCRABBLE", "INITIATION_SCRABBLE"] },
+      activities: { hasSome: ["TOURNOI_SCRABBLE", "INITIATION_SCRABBLE"] },
       OR: [
         { tournament: { is: null } },
         ...(tournamentId ? [{ tournament: { is: { id: tournamentId } } }] : []),

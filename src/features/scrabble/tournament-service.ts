@@ -17,14 +17,17 @@ async function checkEvent(tx: Db, eventId: string | null, tournamentId: string |
   if (!eventId) return;
   const event = await tx.event.findFirst({
     where: { id: eventId, archivedAt: null },
-    select: { type: true, tournament: { select: { id: true } } },
+    select: { activities: true, tournament: { select: { id: true } } },
   });
   if (!event) {
     throw new AppError("VALIDATION", undefined, {
       fieldErrors: { eventId: "Rencontre introuvable." },
     });
   }
-  if (!(SCRABBLE_EVENT_TYPES as readonly string[]).includes(event.type)) {
+  // Au moins une activité Scrabble parmi celles de la rencontre (principale ou non).
+  if (
+    !event.activities.some((code) => (SCRABBLE_EVENT_TYPES as readonly string[]).includes(code))
+  ) {
     throw new AppError("VALIDATION", undefined, {
       fieldErrors: { eventId: "Choisissez une rencontre de Scrabble (tournoi ou initiation)." },
     });

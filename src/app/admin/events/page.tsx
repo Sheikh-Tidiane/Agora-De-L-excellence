@@ -19,6 +19,7 @@ async function Events() {
       id: true,
       title: true,
       type: true,
+      activities: true,
       status: true,
       startsAt: true,
       location: true,

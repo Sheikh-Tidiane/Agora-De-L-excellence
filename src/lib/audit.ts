@@ -26,6 +26,7 @@ export type AuditAction =
   | "points.granted"
   | "points.reversed"
   | "points.rule_updated"
+  | "points.attendance_mode_updated"
   | "badge.awarded"
   | "charter.updated"
   | "contents.imported"

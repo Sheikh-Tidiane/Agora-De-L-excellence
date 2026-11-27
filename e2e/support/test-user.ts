@@ -25,13 +25,28 @@ import { prisma } from "@/lib/prisma";
 //     Supprime les quiz de test (tentatives d'abord : elles retiennent le quiz).
 //   tsx e2e/support/test-user.ts delete-contact E2E-<début de l'objet>
 //     Supprime les messages de contact de test dont l'objet commence ainsi.
+//   tsx e2e/support/test-user.ts create-genies-rule E2E
+//     Règle d'essai « Génies du soir » (10 points), si le barème n'en a pas : le barème du club n'en
+//     a pas, et une rencontre lecture + quiz doit pouvoir prouver que chaque activité paie.
+//   tsx e2e/support/test-user.ts delete-genies-rule E2E
+//     Retire cette règle d'essai (et seulement elle), ainsi que les points qu'elle a payés.
+//   tsx e2e/support/test-user.ts get-attendance-mode E2E
+//     Affiche la règle des points de présence enregistrée (ALL_ACTIVITIES, PRIMARY_ONLY) ou « none ».
+//   tsx e2e/support/test-user.ts set-attendance-mode E2E <ALL_ACTIVITIES|PRIMARY_ONLY|none>
+//     La remet telle qu'elle était avant le parcours (« none » : aucun réglage enregistré).
 //   tsx e2e/support/test-user.ts delete <email>
 //     Supprime le compte de test, sa demande d'adhésion, ses adhésions et ses encaissements.
+/** Code de la règle d'essai : jamais une règle du barème du club. */
+const E2E_GENIES_RULE = "e2e_genies_du_soir";
+
 async function main() {
   const [command, email, firstName, role = "member"] = process.argv.slice(2);
   if (
     !command?.startsWith("delete-") &&
     command !== "create-content" &&
+    command !== "create-genies-rule" &&
+    command !== "get-attendance-mode" &&
+    command !== "set-attendance-mode" &&
     !email?.endsWith("@e2e.agora.test")
   ) {
     throw new Error("Par sécurité, ce script n’agit que sur des adresses @e2e.agora.test.");
@@ -80,6 +95,48 @@ async function main() {
     await prisma.payment.create({
       data: { kind: "MEMBERSHIP_CARD", amount: 1000, userId: user.id, paidAt: new Date() },
     });
+  } else if (command === "create-genies-rule" && email === "E2E") {
+    const existing = await prisma.pointRule.findUnique({ where: { eventType: "GENIES_DU_SOIR" } });
+    if (!existing) {
+      await prisma.pointRule.create({
+        data: {
+          code: E2E_GENIES_RULE,
+          label: "E2E Participer aux Génies du soir",
+          points: 10,
+          eventType: "GENIES_DU_SOIR",
+        },
+      });
+    }
+  } else if (command === "delete-genies-rule" && email === "E2E") {
+    const rule = await prisma.pointRule.findUnique({ where: { code: E2E_GENIES_RULE } });
+    if (rule) {
+      const lines = await prisma.pointTransaction.findMany({
+        where: { ruleId: rule.id },
+        select: { id: true },
+      });
+      await prisma.pointTransaction.deleteMany({
+        where: { sourceType: "CORRECTION", sourceId: { in: lines.map((l) => l.id) } },
+      });
+      await prisma.pointTransaction.deleteMany({ where: { ruleId: rule.id } });
+      await prisma.pointRule.delete({ where: { id: rule.id } });
+    }
+  } else if (command === "get-attendance-mode" && email === "E2E") {
+    const row = await prisma.setting.findUnique({ where: { key: "points.attendance" } });
+    const mode = (row?.value as { mode?: string } | null)?.mode;
+    process.stdout.write(mode ?? "none");
+  } else if (command === "set-attendance-mode" && email === "E2E") {
+    const mode = firstName;
+    if (mode === "none") {
+      await prisma.setting.deleteMany({ where: { key: "points.attendance" } });
+    } else if (mode === "ALL_ACTIVITIES" || mode === "PRIMARY_ONLY") {
+      await prisma.setting.upsert({
+        where: { key: "points.attendance" },
+        update: { value: { mode } },
+        create: { key: "points.attendance", value: { mode } },
+      });
+    } else {
+      throw new Error(`Règle inconnue : ${mode}`);
+    }
   } else if (command === "delete-events" && email?.startsWith("E2E-")) {
     // Rencontres créées par un parcours (titre « E2E-… ») : encaissements, puis inscriptions en cascade.
     const where = { title: { startsWith: email } };

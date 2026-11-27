@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { emailSchema } from "@/features/auth/schemas";
+import { normalizeActivities } from "@/config/activities";
 import { eventTypeCodes } from "@/features/events/rules";
 import { parseLocalDateTime } from "@/lib/dates";
 
@@ -45,7 +46,16 @@ const dateTime = (message: string) =>
 export const eventSchema = z
   .object({
     title: z.string().trim().min(3, "Donnez un titre à la rencontre.").max(120),
-    type: z.enum(eventTypeCodes, { error: "Choisissez un type." }),
+    /** Activité principale : affichage, tri ; doit faire partie de `activities`. */
+    type: z.enum(eventTypeCodes, { error: "Choisissez l’activité principale." }),
+    /** Toutes les activités de la rencontre (au moins une). Doublons retirés. */
+    activities: z
+      .array(z.enum(eventTypeCodes, { error: "Activité inconnue." }), {
+        error: "Choisissez au moins une activité.",
+      })
+      .min(1, "Choisissez au moins une activité.")
+      .max(eventTypeCodes.length, `Pas plus de ${eventTypeCodes.length} activités.`)
+      .transform((list) => [...new Set(list)]),
     summary: z.string().trim().max(240, "Pas plus de 240 caractères."),
     description: z.string().trim().min(10, "Décrivez la rencontre en quelques phrases.").max(5000),
     /** Vide : « Lieu à confirmer ». */
@@ -83,6 +93,10 @@ export const eventSchema = z
     isPublic: z.boolean(),
     cancellationDeadlineHours: optionalInt(0, 720, "Entre 0 et 720 heures, ou rien."),
   })
+  .refine((value) => value.activities.includes(value.type), {
+    path: ["type"],
+    message: "L’activité principale doit faire partie des activités cochées.",
+  })
   .refine((value) => !value.endsAt || value.endsAt > value.startsAt, {
     path: ["endsAt"],
     message: "La fin doit être après le début.",
@@ -90,7 +104,13 @@ export const eventSchema = z
   .refine((value) => !value.speakerName || value.speakerMode !== "", {
     path: ["speakerMode"],
     message: "Précisez si l’invité vient sur place ou intervient à distance.",
-  });
+  })
+  // En dernier : une transformation arrête les vérifications qui la suivent quand une précédente
+  // échoue ; placée ici, toutes les erreurs remontent en une seule fois.
+  .transform((value) => ({
+    ...value,
+    activities: normalizeActivities(value.type, value.activities),
+  }));
 export type EventInput = z.input<typeof eventSchema>;
 export type EventData = z.output<typeof eventSchema>;
 

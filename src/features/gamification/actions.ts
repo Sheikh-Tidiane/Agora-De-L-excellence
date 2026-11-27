@@ -1,6 +1,7 @@
 "use server";
 
 import {
+  attendancePointModeSchema,
   grantPointsSchema,
   manualBadgeSchema,
   pointRuleSchema,
@@ -10,6 +11,7 @@ import {
   awardManualBadge,
   grantManualPoints,
   reversePointTransaction,
+  setAttendancePointMode,
   updatePointRule,
 } from "@/features/gamification/service";
 import { parseInput, runAction, type ActionResult } from "@/lib/errors";
@@ -62,5 +64,16 @@ export async function updatePointRuleAction(input: {
   return runAction("points.rules", async () => {
     const actor = await requirePermission("points.rules.manage");
     return updatePointRule(parseInput(pointRuleSchema, input), actor.id);
+  });
+}
+
+/** Points de présence : toutes les activités de la rencontre, ou la principale seulement. */
+export async function setAttendancePointModeAction(input: {
+  mode: string;
+}): Promise<ActionResult<{ changed: boolean }>> {
+  return runAction("points.attendanceMode", async () => {
+    const actor = await requirePermission("points.rules.manage");
+    const { mode } = parseInput(attendancePointModeSchema, input);
+    return setAttendancePointMode(mode, actor.id);
   });
 }

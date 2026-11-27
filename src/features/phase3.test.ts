@@ -108,6 +108,7 @@ describe("inscriptions aux rencontres", () => {
     const base = {
       title: "Rencontre",
       type: "RENDEZ_VOUS_LECTURE",
+      activities: ["RENDEZ_VOUS_LECTURE"],
       summary: "",
       description: "Une description assez longue.",
       location: "",

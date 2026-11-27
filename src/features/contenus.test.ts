@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   activities,
+  activityLabels,
+  eventActivities,
+  eventHasActivity,
+  normalizeActivities,
   activityBySlug,
   activityOfType,
   eventTypeCodes,
@@ -55,6 +59,48 @@ describe("identité et activités", () => {
     expect(activityOfType("INITIATION_SCRABBLE")?.slug).toBe("tournois-de-scrabble");
     expect(activityBySlug("agora-cine")?.rhythm).toBe("Tous les trois mois");
     expect(activityBySlug("inconnue")).toBeUndefined();
+  });
+
+  it("rencontre à plusieurs activités : principale d'abord, ordre du catalogue, sans doublon", () => {
+    expect(
+      normalizeActivities("GENIES_DU_SOIR", ["AGORA_CINE", "RENDEZ_VOUS_LECTURE", "AGORA_CINE"]),
+    ).toEqual(["GENIES_DU_SOIR", "RENDEZ_VOUS_LECTURE", "AGORA_CINE"]);
+    // La principale manquante est ajoutée : la base l'exige.
+    expect(normalizeActivities("DEBAT_IDEES", [])).toEqual(["DEBAT_IDEES"]);
+    expect(eventActivities({ type: "DEBAT_IDEES", activities: null })).toEqual(["DEBAT_IDEES"]);
+    const lancement = {
+      type: "LANCEMENT_AUTRE" as const,
+      activities: ["LANCEMENT_AUTRE", "RENDEZ_VOUS_LECTURE", "GENIES_DU_SOIR"] as const,
+    };
+    expect(activityLabels(lancement)).toEqual([
+      "Vie du club",
+      "Rendez-vous lecture",
+      "Génies du soir",
+    ]);
+  });
+
+  it("une rencontre paraît sous chacune de ses activités, Scrabble compris", () => {
+    const bySlug = (slug: string) => activityBySlug(slug)!;
+    const lectureQuiz = {
+      type: "RENDEZ_VOUS_LECTURE" as const,
+      activities: ["RENDEZ_VOUS_LECTURE", "GENIES_DU_SOIR"] as const,
+    };
+    expect(eventHasActivity(lectureQuiz, bySlug("rendez-vous-lecture"))).toBe(true);
+    expect(eventHasActivity(lectureQuiz, bySlug("genies-du-soir"))).toBe(true);
+    expect(eventHasActivity(lectureQuiz, bySlug("agora-cine"))).toBe(false);
+    // Une initiation au Scrabble en activité secondaire relève de l'activité « Scrabble ».
+    const debatScrabble = {
+      type: "DEBAT_IDEES" as const,
+      activities: ["DEBAT_IDEES", "INITIATION_SCRABBLE"] as const,
+    };
+    expect(eventHasActivity(debatScrabble, bySlug("tournois-de-scrabble"))).toBe(true);
+    // Le lancement (« Vie du club ») n'est sous aucune activité par sa principale, mais l'est par les autres.
+    expect(
+      eventHasActivity(
+        { type: "LANCEMENT_AUTRE", activities: ["LANCEMENT_AUTRE"] },
+        bySlug("rendez-vous-lecture"),
+      ),
+    ).toBe(false);
   });
 
   it("propose un centre d'intérêt par activité", () => {
@@ -124,6 +170,7 @@ describe("événements", () => {
   const event = {
     title: "Débat d’idées",
     type: "DEBAT_IDEES",
+    activities: ["DEBAT_IDEES"],
     summary: "",
     description: "Un sujet de société est choisi et débattu.",
     location: "",
@@ -139,6 +186,37 @@ describe("événements", () => {
     isPublic: true,
     cancellationDeadlineHours: "",
   };
+
+  it("fiche d'une rencontre : au moins une activité, la principale parmi elles", () => {
+    const parsed = eventSchema.parse({
+      ...event,
+      type: "DEBAT_IDEES",
+      activities: ["AGORA_CINE", "DEBAT_IDEES", "AGORA_CINE"],
+    });
+    expect(parsed.activities).toEqual(["DEBAT_IDEES", "AGORA_CINE"]);
+    expect(eventSchema.safeParse({ ...event, activities: [] }).success).toBe(false);
+    const outside = eventSchema.safeParse({
+      ...event,
+      type: "DEBAT_IDEES",
+      activities: ["AGORA_CINE"],
+    });
+    expect(outside.success).toBe(false);
+    expect(outside.error?.issues[0]?.path).toEqual(["type"]);
+    // Toutes les erreurs remontent en une fois, même avec la principale hors de la liste.
+    const several = eventSchema.safeParse({
+      ...event,
+      type: "DEBAT_IDEES",
+      activities: ["AGORA_CINE"],
+      startsAt: "2027-01-10T18:00",
+      endsAt: "2027-01-10T17:00",
+    });
+    expect(several.error?.issues.map((issue) => issue.path[0]).sort()).toEqual(["endsAt", "type"]);
+    const tooMany = eventSchema.safeParse({
+      ...event,
+      activities: Array.from({ length: 50 }, () => "DEBAT_IDEES"),
+    });
+    expect(tooMany.error?.issues[0]?.message).toBe("Pas plus de 7 activités.");
+  });
 
   it("accepte un événement sans lieu et refuse les anciens types", () => {
     expect(eventSchema.safeParse(event).success).toBe(true);

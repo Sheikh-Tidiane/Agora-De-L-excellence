@@ -169,6 +169,12 @@ async function seedReference() {
  */
 const committee = ["Yaye Arête Sagna Diop", "Mame Cheikh Diop", "Ndèye Absa Diop", "Mansour Diop"];
 
+/**
+ * Activités du lancement : la présentation du club (principale), un Rendez-vous lecture et un
+ * quiz des Génies du soir (déroulé, 17 h 40). Même liste dans scripts/lancement-16-janvier.ts.
+ */
+const LAUNCH_ACTIVITIES = ["LANCEMENT_AUTRE", "RENDEZ_VOUS_LECTURE", "GENIES_DU_SOIR"] as const;
+
 /** Dakar est à UTC+0 toute l'année : 16:00Z = 16 h à Dakar. */
 const LAUNCH_LOCATION = "Foyer des jeunes de Yeumbeul Nord";
 
@@ -205,6 +211,7 @@ async function seedClub() {
     create: {
       ...launch,
       type: "LANCEMENT_AUTRE",
+      activities: [...LAUNCH_ACTIVITIES],
       status: "PUBLISHED",
       isTentative: false,
       location: LAUNCH_LOCATION,

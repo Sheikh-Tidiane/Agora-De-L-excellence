@@ -40,16 +40,18 @@ export async function loadLocked(tx: Tx, quizId: string) {
   });
 }
 
-/** Rencontre liée : une « Génies du soir » non archivée. */
+/** Rencontre liée : non archivée, avec les Génies du soir parmi ses activités. */
 async function checkEvent(db: Db, eventId: string | null): Promise<void> {
   if (!eventId) return;
   const event = await db.event.findUnique({
     where: { id: eventId },
-    select: { type: true, archivedAt: true },
+    select: { activities: true, archivedAt: true },
   });
-  if (!event || event.archivedAt || event.type !== "GENIES_DU_SOIR") {
+  if (!event || event.archivedAt || !event.activities.includes("GENIES_DU_SOIR")) {
     throw new AppError("VALIDATION", undefined, {
-      fieldErrors: { eventId: "Choisissez une rencontre « Génies du soir »." },
+      fieldErrors: {
+        eventId: "Choisissez une rencontre qui compte les Génies du soir parmi ses activités.",
+      },
     });
   }
 }

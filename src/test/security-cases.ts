@@ -68,6 +68,7 @@ export const articleValid = {
 export const eventValid = {
   title: "Rendez-vous lecture de janvier",
   type: eventTypeCodes[0],
+  activities: [eventTypeCodes[0]],
   summary: "",
   description: "Une rencontre autour du livre du mois.",
   location: "",
@@ -268,6 +269,14 @@ export const protectedCases: ProtectedCase[] = [
     eventValid,
     {
       "type inconnu": { ...eventValid, type: "CONCERT" },
+      "activités : liste vide": { ...eventValid, activities: [] },
+      "activités : activité inconnue": { ...eventValid, activities: ["CONCERT"] },
+      "activités : chaîne": { ...eventValid, activities: "RENDEZ_VOUS_LECTURE" },
+      "activité principale hors de la liste": { ...eventValid, activities: ["AGORA_CINE"] },
+      "activités : liste géante": {
+        ...eventValid,
+        activities: Array.from({ length: 2000 }, () => eventTypeCodes[0]),
+      },
       "début manquant": { ...eventValid, startsAt: "" },
       "fin illisible": { ...eventValid, endsAt: "plus tard" },
       "fin avant le début": { ...eventValid, endsAt: "2027-01-10T15:00" },
@@ -689,6 +698,18 @@ export const protectedCases: ProtectedCase[] = [
       "au-delà de 1 000": { id: ID, points: 1001, isActive: true },
       "points : chaîne": { id: ID, points: "20", isActive: true },
       "actif : chaîne": { id: ID, points: 20, isActive: "true" },
+    },
+  ),
+  protectedCase(
+    `${f.gamification}#setAttendancePointModeAction`,
+    gamification.setAttendancePointModeAction,
+    ["points.rules.manage"],
+    { mode: "PRIMARY_ONLY" },
+    {
+      "règle inconnue": { mode: "EVERYTHING" },
+      "règle vide": { mode: "" },
+      "règle : objet": { mode: { not: "" } },
+      "règle manquante": {},
     },
   ),
 

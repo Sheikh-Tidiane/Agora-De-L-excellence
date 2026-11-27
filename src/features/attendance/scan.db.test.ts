@@ -46,6 +46,7 @@ async function makeEvent(
       slug: `vt-scan-${label}-${tag}`,
       title: `Rendez-vous ${label} ${tag}`,
       type: "RENDEZ_VOUS_LECTURE",
+      activities: ["RENDEZ_VOUS_LECTURE"],
       description: "Test",
       startsAt,
       status,

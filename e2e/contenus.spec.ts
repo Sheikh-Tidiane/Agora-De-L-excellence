@@ -226,7 +226,10 @@ test("adhésion avec charte, validation, carte encaissée, encaissements", async
     const today = new Date().toISOString().slice(0, 10);
     await page.goto("/admin/events/new");
     await page.getByLabel("Titre").fill(title);
-    await page.getByLabel("Type").selectOption("DEBAT_IDEES");
+    // Débat seul : on coche le débat, on décoche la lecture (cochée par défaut).
+    await page.getByRole("checkbox", { name: "Débat d’idées" }).check();
+    await page.getByRole("checkbox", { name: "Rendez-vous lecture" }).uncheck();
+    await expect(page.getByLabel("Activité principale")).toHaveValue("DEBAT_IDEES");
     await page.getByLabel("Début").fill(`${today}T23:59`);
     await page.getByLabel("Présentation").fill("Un sujet de société est choisi et débattu.");
     await page.getByLabel("Nom de l’invité").fill("Une invitée");

@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { Prisma } from "@/generated/prisma/client";
+import { normalizeActivities, type EventTypeCode } from "@/config/activities";
 import { audit } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import { isStoredImage } from "@/lib/storage-names";
@@ -199,6 +200,11 @@ async function main() {
       }
       for (const e of bundle.events) {
         const data = toDates(e, eventDates) as Prisma.EventUncheckedCreateInput;
+        // Export d'avant les rencontres à plusieurs activités : l'activité principale seule.
+        data.activities = normalizeActivities(
+          data.type,
+          (Array.isArray(data.activities) ? data.activities : []) as EventTypeCode[],
+        );
         await tx.event.upsert({ where: { slug: data.slug }, update: data, create: data });
       }
       for (const a of bundle.articles) {

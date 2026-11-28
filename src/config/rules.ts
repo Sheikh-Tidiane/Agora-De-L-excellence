@@ -21,6 +21,10 @@ export const rules = {
   "membership.cardGraceDays": 30,
   /** Masquer le lien de visio d'un membre dont la carte n'est pas réglée après le délai de grâce. */
   "events.hideVideoWhenCardUnpaid": false,
+  /** Rappel par e-mail la veille des rencontres, aux inscrits confirmés. */
+  "events.remindersEnabled": true,
+  /** Heure d'envoi du rappel la veille (heure de Dakar, 0 à 23). */
+  "events.reminderHour": 10,
   /** Délai d'annulation d'une inscription avant le début de l'événement, en heures. */
   "events.cancellationDeadlineHours": 24,
   /** Avis publics sur le catalogue (critique validée + accord du membre). */

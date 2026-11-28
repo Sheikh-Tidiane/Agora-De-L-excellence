@@ -35,11 +35,29 @@ export type Layout = {
   paragraphs: string[];
   /** Bouton principal. Absent pour un simple accusé de réception. */
   action?: { label: string; url: string };
+  /** Liens secondaires sous le bouton (agenda, visio). */
+  links?: { label: string; url: string }[];
   /** Précisions sous le bouton (durée de validité, quoi faire si l'on n'est pas concerné). */
   notes: string[];
 };
 
-function renderHtml({ preheader, surtitre, title, paragraphs, action, notes }: Layout): string {
+function renderHtml({
+  preheader,
+  surtitre,
+  title,
+  paragraphs,
+  action,
+  links = [],
+  notes,
+}: Layout): string {
+  const secondary = links.length
+    ? `<p style="margin:0 0 18px;font-family:${sans};font-size:15px;line-height:1.9;">${links
+        .map(
+          (link) =>
+            `<a href="${escapeHtml(link.url)}" style="color:${couleurs.terracottaFonce};font-weight:600;">${escapeHtml(link.label)}</a>`,
+        )
+        .join("<br>")}</p>`
+    : "";
   const url = action ? escapeHtml(action.url) : "";
   const button = action
     ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:26px 0 22px;"><tr>
@@ -83,6 +101,7 @@ function renderHtml({ preheader, surtitre, title, paragraphs, action, notes }: L
       )
       .join("\n    ")}
     ${button}
+    ${secondary}
     ${notes
       .map(
         (n) =>
@@ -102,13 +121,14 @@ function renderHtml({ preheader, surtitre, title, paragraphs, action, notes }: L
 </html>`;
 }
 
-function renderText({ title, paragraphs, action, notes }: Layout): string {
+function renderText({ title, paragraphs, action, links = [], notes }: Layout): string {
   return [
     title,
     "",
     ...paragraphs,
     "",
     ...(action ? [`${action.label} : ${action.url}`, ""] : []),
+    ...(links.length ? [...links.map((link) => `${link.label} : ${link.url}`), ""] : []),
     ...notes,
     "",
     `${site.name} · ${site.baseline} à ${site.city}`,

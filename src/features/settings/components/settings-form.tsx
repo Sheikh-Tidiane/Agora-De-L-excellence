@@ -142,6 +142,18 @@ export function SettingsForm({ initial }: { initial: ClubSettingsInput }) {
           autoComplete="off"
           hint="S’applique aux prochaines validations et aux renouvellements."
         />
+        <CheckboxField form={form} name="eventRemindersEnabled">
+          Envoyer un rappel par e-mail la veille des rencontres aux inscrits confirmés
+        </CheckboxField>
+        <TextField
+          form={form}
+          name="eventReminderHour"
+          idPrefix="reg"
+          label="Heure du rappel la veille (heure de Dakar, 0 à 23)"
+          inputMode="numeric"
+          autoComplete="off"
+          hint="Un membre peut désactiver ces rappels dans son profil."
+        />
       </Group>
       <Group
         title="Cotisations"

@@ -90,6 +90,66 @@ export function registrationConfirmedEmail(input: {
   });
 }
 
+/**
+ * Rappel la veille d'une rencontre (src/features/events/reminders.ts). Le membre reçoit le lien
+ * de visio (sauf s'il est masqué : carte non réglée après le délai), l'invité jamais.
+ */
+export function eventReminderEmail(input: {
+  to: string;
+  name: string;
+  event: EventInfo;
+  /** « demain à 18 h » ou « aujourd’hui à 18 h » (rattrapage). */
+  dayAndTime: string;
+  audience: "member" | "guest";
+  /** Membre : la page de la rencontre ; invité : son lien personnel (voir, annuler). */
+  manageUrl: string;
+  videoLink: string | null;
+  videoHidden: boolean;
+  cardUrl: string;
+  calendar: { ics: string; google: string };
+  cancelBefore: string | null;
+  rescheduled: boolean;
+  preferencesUrl: string | null;
+}): MailMessage {
+  const member = input.audience === "member";
+  return build(input.to, `Rappel : ${input.event.title}, ${input.dayAndTime}`, {
+    preheader: `${input.event.when} · ${input.event.place}`,
+    surtitre: input.rescheduled ? "Rappel · horaire modifié" : "Rappel",
+    title: `À ${input.dayAndTime.startsWith("demain") ? "demain" : "tout à l’heure"} !`,
+    paragraphs: [
+      `Bonjour ${input.name},`,
+      input.rescheduled
+        ? "Attention, l’horaire de cette rencontre a changé. Nous vous attendons :"
+        : "Nous vous attendons à cette rencontre :",
+      input.event.title,
+      `Date : ${input.event.when}`,
+      `Lieu : ${input.event.place}`,
+    ],
+    action: {
+      label: member ? "Voir la rencontre" : "Gérer mon inscription",
+      url: input.manageUrl,
+    },
+    links: [
+      ...(member && input.videoLink && !input.videoHidden
+        ? [{ label: "Suivre la rencontre à distance", url: input.videoLink }]
+        : []),
+      { label: "Ajouter à mon agenda (fichier .ics)", url: input.calendar.ics },
+      { label: "Ajouter à Google Agenda", url: input.calendar.google },
+    ],
+    notes: [
+      input.cancelBefore
+        ? `Un empêchement ? Annulez votre inscription depuis ce lien jusqu’au ${input.cancelBefore} : la place profitera à quelqu’un d’autre.`
+        : "Un empêchement ? Prévenez le club dès que possible.",
+      ...(member && input.videoLink && input.videoHidden
+        ? [`Le lien de visio est réservé aux membres dont la carte est réglée : ${input.cardUrl}`]
+        : []),
+      ...(input.preferencesUrl
+        ? [`Ne plus recevoir ces rappels : ${input.preferencesUrl}`]
+        : ["C’est le seul rappel envoyé pour cette inscription."]),
+    ],
+  });
+}
+
 export function contactEmail(input: {
   to: string;
   name: string;

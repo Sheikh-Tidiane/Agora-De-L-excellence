@@ -1,20 +1,16 @@
 import "dotenv/config";
-import { sendCardReminders } from "@/features/members/card-reminders";
+import { runDueTasks } from "@/features/tasks/registry";
 import { prisma } from "@/lib/prisma";
 
 /**
- * Rappels « carte à régler » : à lancer une fois par jour (relancé, il n'envoie rien en double).
- *
- *   pnpm exec tsx scripts/rappels-carte.ts
- *
- * En production, par la minuterie deploy/systemd/agora-rappels-carte.timer :
- *   bash scripts/prod-compose.sh run --rm -T tools pnpm exec tsx scripts/rappels-carte.ts
+ * Ancien lanceur des rappels « carte à régler », gardé le temps qu'un serveur déjà installé passe à
+ * la minuterie commune agora-taches.timer (docs/DEPLOIEMENT.md). Équivaut à :
+ *   pnpm taches lancer rappels-carte
  */
 async function main() {
-  const run = await sendCardReminders();
-  console.log(
-    `${run.checked} membre(s) avec une carte à régler ; ${run.sent.length} rappel(s) envoyé(s).`,
-  );
+  const [outcome] = await runDueTasks(new Date(), { only: "rappels-carte", force: true });
+  console.log(outcome!.summary);
+  if (!outcome!.ok) process.exitCode = 1;
 }
 
 main()

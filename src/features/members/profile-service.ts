@@ -21,6 +21,7 @@ export async function getOwnProfile(userId: string) {
       image: true,
       memberNumber: true,
       hiddenFromRankings: true,
+      eventReminders: true,
     },
   });
 }
@@ -31,7 +32,11 @@ export async function updateOwnProfile(
 ): Promise<void> {
   await prisma.user.update({
     where: { id: userId },
-    data: { phone: data.phone, hiddenFromRankings: data.hiddenFromRankings },
+    data: {
+      phone: data.phone,
+      hiddenFromRankings: data.hiddenFromRankings,
+      eventReminders: data.eventReminders,
+    },
   });
 }
 

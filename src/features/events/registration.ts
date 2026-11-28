@@ -105,7 +105,17 @@ export async function registerMember(
   return { id: registration.id };
 }
 
-const registrationUrl = (token: string) => `${env.APP_URL}/events/registration?token=${token}`;
+export const registrationUrl = (token: string) =>
+  `${env.APP_URL}/events/registration?token=${token}`;
+
+/**
+ * Inscription invitée désignée par un jeton : celui du lien de confirmation, ou celui joint à un
+ * e-mail automatique (rappel la veille). Les deux restent valables ; seuls leurs SHA-256 sont gardés.
+ */
+const byGuestToken = (token: string) => {
+  const hash = hashToken(token);
+  return { OR: [{ tokenHash: hash }, { mails: { some: { tokenHash: hash } } }] };
+};
 
 /**
  * Inscription d'un invité (rencontre ouverte au public) : en attente jusqu'au clic sur le lien
@@ -168,8 +178,8 @@ export async function registerGuest(
 /** Inscription invitée désignée par le jeton de son lien, avec sa rencontre. */
 export async function getGuestRegistration(token: string) {
   if (!token || token.length < 16 || token.length > 200) return null;
-  const registration = await prisma.eventRegistration.findUnique({
-    where: { tokenHash: hashToken(token) },
+  const registration = await prisma.eventRegistration.findFirst({
+    where: byGuestToken(token),
     select: {
       id: true,
       status: true,
@@ -255,8 +265,8 @@ async function assertCancellable(
 
 /** Annulation par l'invité, depuis son lien. */
 export async function cancelGuestRegistration(token: string): Promise<void> {
-  const registration = await prisma.eventRegistration.findUnique({
-    where: { tokenHash: hashToken(token) },
+  const registration = await prisma.eventRegistration.findFirst({
+    where: byGuestToken(token),
     include: { event: true },
   });
   if (!registration)

@@ -48,6 +48,7 @@ const inventory: Record<string, "public" | "session" | "mutation"> = {
   "api/member/photo#POST": "mutation",
   "api/member/photo#DELETE": "mutation",
   "api/member/photo/[...path]#GET": "session",
+  "events/[slug]/agenda.ics#GET": "public",
   "uploads/[...path]#GET": "public",
 };
 

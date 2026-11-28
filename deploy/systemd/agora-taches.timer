@@ -1,0 +1,11 @@
+# Chaque heure, à la 5e minute (UTC = heure de Dakar). Persistent=true : un passage manqué
+# (serveur éteint) est rattrapé au démarrage.
+[Unit]
+Description=Tâches planifiées du club, chaque heure
+
+[Timer]
+OnCalendar=*-*-* *:05:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target

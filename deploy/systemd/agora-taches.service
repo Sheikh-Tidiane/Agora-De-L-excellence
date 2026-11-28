@@ -1,0 +1,17 @@
+# Tâches planifiées du club (scripts/taches.ts) : rappels « carte à régler », rappels la veille des
+# rencontres, et les suivantes. Chaque tâche décide si c'est son heure ; relancée, elle n'envoie
+# rien en double. systemd ne lance jamais deux fois ce service en même temps.
+# Journal : journalctl -u agora-taches
+[Unit]
+Description=Tâches planifiées de L'Agora de l'Excellence
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=agora
+Group=agora
+WorkingDirectory=/srv/agora
+ExecStart=/usr/bin/bash /srv/agora/scripts/prod-compose.sh run --rm -T tools pnpm exec tsx scripts/taches.ts
+TimeoutStartSec=20min

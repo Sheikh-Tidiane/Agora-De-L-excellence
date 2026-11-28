@@ -81,6 +81,7 @@ async function Profile() {
             defaults={{
               phone: profile.phone ?? "",
               hiddenFromRankings: profile.hiddenFromRankings,
+              eventReminders: profile.eventReminders,
             }}
           />
         </div>

@@ -39,6 +39,8 @@ model User {
   memberNumber       String?    @unique
   /// Le membre a demandé à ne pas apparaître dans les classements de points.
   hiddenFromRankings Boolean    @default(false)
+  /// Rappel par e-mail la veille des rencontres où il est inscrit (désactivable dans son profil).
+  eventReminders     Boolean    @default(true)
   /// Carte de membre : numéro de série aléatoire porté (signé) par le QR code, sans lien avec
   /// l'identifiant ni le numéro de membre. Créé à la première émission. Voir features/members/card-token.ts.
   cardSerial         String?    @unique
@@ -569,6 +571,7 @@ model EventRegistration {
   updatedAt     DateTime           @updatedAt
 
   payments Payment[]
+  mails    RegistrationMail[]
 
   @@unique([eventId, userId])
   @@unique([eventId, guestEmail])
@@ -640,6 +643,32 @@ model CardReminder {
   sentAt DateTime         @default(now())
 
   @@unique([userId, kind])
+}
+
+/// E-mail automatique lié à une inscription (rappel la veille ; plus tard : demande d'avis).
+/// Réservé avant l'envoi (`claimedAt`, bail de 30 min), marqué envoyé après (`sentAt`) : deux
+/// passages simultanés n'envoient qu'une fois ; un envoi échoué est retenté (3 tentatives au plus).
+model RegistrationMail {
+  id             String               @id @default(cuid())
+  registrationId String
+  registration   EventRegistration    @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  kind           RegistrationMailKind
+  /// Début de la rencontre annoncé dans l'e-mail : si elle est déplacée, un nouveau rappel part.
+  eventStartsAt  DateTime
+  claimedAt      DateTime?
+  sentAt         DateTime?
+  attempts       Int                  @default(1)
+  /// SHA-256 du jeton du lien invité joint à cet e-mail (le jeton d'origine reste valable).
+  tokenHash      String?              @unique
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  @@unique([registrationId, kind, eventStartsAt])
+  @@index([kind, sentAt])
+}
+
+enum RegistrationMailKind {
+  EVENT_REMINDER // la veille de la rencontre
 }
 
 enum CardReminderKind {

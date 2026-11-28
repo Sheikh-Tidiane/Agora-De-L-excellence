@@ -5,6 +5,7 @@ import { POST as upload } from "@/app/api/admin/uploads/route";
 import { GET as servePhoto } from "@/app/api/member/photo/[...path]/route";
 import { DELETE as removePhoto, POST as uploadPhoto } from "@/app/api/member/photo/route";
 import { GET as serveUpload } from "@/app/uploads/[...path]/route";
+import { GET as eventIcs } from "@/app/(public)/events/[slug]/agenda.ics/route";
 import { storedImageName } from "@/lib/storage-names";
 import {
   ACTOR_ID,
@@ -206,6 +207,54 @@ describe("GET /api/admin/events/[id]/registrations", () => {
     expect(world.calls[1]!.args[0]).toMatchObject({
       data: { action: "data.exported", entityId: ID, metadata: { rows: 1 } },
     });
+  });
+});
+
+describe("GET /events/[slug]/agenda.ics", () => {
+  const call = (slug: string) =>
+    eventIcs(new Request(`http://localhost/events/${slug}/agenda.ics`), {
+      params: Promise.resolve({ slug }),
+    });
+  const event = {
+    id: ID,
+    slug: "rendez-vous",
+    title: "Rendez-vous lecture",
+    summary: null,
+    location: "Dakar",
+    startsAt: new Date("2031-03-05T18:00:00Z"),
+    endsAt: null,
+    status: "PUBLISHED",
+    updatedAt: new Date("2031-03-01T10:00:00Z"),
+  };
+
+  it("public : le fichier de la rencontre, sans session, sans lien de visio demandé à la base", async () => {
+    const where: unknown[] = [];
+    world.handlers["event.findFirst"] = (args) => {
+      where.push(args);
+      return event;
+    };
+    const response = await call("rendez-vous");
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("text/calendar; charset=utf-8");
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+    const body = await response.text();
+    expect(body).toContain("DTSTART;TZID=Africa/Dakar:20310305T180000");
+    expect(JSON.stringify(where)).not.toContain("videoLink");
+    expect(JSON.stringify(where)).toContain('"not":"DRAFT"');
+    expect(JSON.stringify(where)).toContain('"archivedAt":null');
+  });
+
+  it.each(["../../admin", "a b", "x".repeat(121), "%2e%2e", "Majuscule"])(
+    "adresse invalide « %s » : 404 sans lecture",
+    async (slug) => {
+      expect((await call(slug)).status).toBe(404);
+      expect(businessTargets()).toEqual([]);
+    },
+  );
+
+  it("rencontre inconnue, en brouillon ou archivée : 404", async () => {
+    world.handlers["event.findFirst"] = () => null;
+    expect((await call("inconnue")).status).toBe(404);
   });
 });
 

@@ -212,19 +212,59 @@ bash scripts/prod-compose.sh run --rm tools pnpm create-admin
 systemd, premier essai, contrôle dans B2 et healthchecks.io, puis **une restauration complète
 sur le serveur** avant l'ouverture.
 
-La même commande active la minuterie des **rappels de carte** (`agora-rappels-carte.timer`,
-chaque jour à 09:10 UTC). Elle lance, dans le conteneur d'outils :
+#### Tâches planifiées
+
+La même commande active la minuterie des **tâches planifiées** (`agora-taches.timer`, chaque
+heure à la 5e minute, UTC = heure de Dakar). Elle lance, dans le conteneur d'outils (accès à la
+base et au serveur d'e-mails, aucun port ouvert, aucun secret de plus) :
 
 ```bash
-bash scripts/prod-compose.sh run --rm -T tools pnpm exec tsx scripts/rappels-carte.ts
+bash scripts/prod-compose.sh run --rm -T tools pnpm exec tsx scripts/taches.ts
 ```
 
-Elle envoie, une seule fois chacun, les rappels « carte à régler » (notification et e-mail) :
-7 jours après l'acceptation, puis 3 jours avant la fin du délai de grâce (`docs/REGLES-METIER.md`).
-Premier essai à la main, puis lecture du journal :
+Chaque tâche décide si c'est son heure et n'envoie jamais rien en double si elle tourne deux fois
+(`docs/REGLES-METIER.md`) :
+
+| Tâche                | Quand                                                                                         | Ce qu'elle fait                                                                         |
+| -------------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `rappels-carte`      | À partir de 9 h                                                                               | Rappels « carte à régler » : 7 jours après l'acceptation, 3 jours avant la fin du délai |
+| `rappels-rencontres` | La veille de chaque rencontre, à l'heure réglée (10 h par défaut), jusqu'à 2 h avant le début | Rappel par e-mail aux inscrits confirmés (membres et invités)                           |
+
+Une nouvelle tâche s'ajoute dans `src/features/tasks/registry.ts` : rien à changer sur le serveur.
+Les tâches et leur description, puis une tâche lancée à la main (même hors de son heure) :
 
 ```bash
-sudo systemctl start agora-rappels-carte.service && journalctl -u agora-rappels-carte -n 5
+bash scripts/prod-compose.sh run --rm -T tools pnpm exec tsx scripts/taches.ts liste
+```
+
+```bash
+bash scripts/prod-compose.sh run --rm -T tools pnpm exec tsx scripts/taches.ts lancer rappels-rencontres
+```
+
+Premier essai par systemd, puis lecture du journal :
+
+```bash
+sudo systemctl start agora-taches.service && journalctl -u agora-taches -n 20
+```
+
+**Serveur installé avant les tâches planifiées** (minuterie `agora-rappels-carte.timer`) : après
+la mise en ligne de cette version, remplacer l'ancienne minuterie par la nouvelle. Sans doublon
+même si les deux tournent un moment (rappels de carte uniques par membre et par sorte).
+
+```bash
+sudo cp /srv/agora/deploy/systemd/agora-taches.service /srv/agora/deploy/systemd/agora-taches.timer /etc/systemd/system/
+```
+
+```bash
+sudo systemctl daemon-reload && sudo systemctl enable --now agora-taches.timer
+```
+
+```bash
+sudo systemctl disable --now agora-rappels-carte.timer
+```
+
+```bash
+sudo rm /etc/systemd/system/agora-rappels-carte.service /etc/systemd/system/agora-rappels-carte.timer && sudo systemctl daemon-reload
 ```
 
 Dans **Administration › Paramètres**, renseigner les numéros Wave et Orange Money du club avant

@@ -27,3 +27,35 @@ export async function linkFromEmail(
   const url = new URL(link!);
   return url.pathname + url.search;
 }
+
+/** Le plus récent e-mail envoyé à `to` dont l'objet contient `subject` : texte et HTML. */
+export async function emailFor(
+  request: APIRequestContext,
+  { to, subject }: { to: string; subject: string },
+): Promise<{ subject: string; text: string; html: string }> {
+  let found: { subject: string; text: string; html: string } | undefined;
+  await expect(async () => {
+    const search = await request.get(`${mailpit}/api/v1/search`, {
+      params: { query: `to:"${to}" subject:"${subject}"`, limit: "1" },
+    });
+    expect(search.ok(), "Mailpit doit être démarré (docker compose up -d)").toBe(true);
+    const { messages } = (await search.json()) as { messages: { ID: string }[] };
+    expect(messages.length, `e-mail « ${subject} » pour ${to}`).toBeGreaterThan(0);
+    const message = await request.get(`${mailpit}/api/v1/message/${messages[0]!.ID}`);
+    const body = (await message.json()) as { Subject: string; Text: string; HTML: string };
+    found = { subject: body.Subject, text: body.Text, html: body.HTML };
+  }).toPass({ timeout: 30_000, intervals: [500, 1000, 2000] });
+  return found!;
+}
+
+/** Nombre d'e-mails envoyés à `to` dont l'objet contient `subject`. */
+export async function countEmails(
+  request: APIRequestContext,
+  { to, subject }: { to: string; subject: string },
+): Promise<number> {
+  const search = await request.get(`${mailpit}/api/v1/search`, {
+    params: { query: `to:"${to}" subject:"${subject}"` },
+  });
+  const { messages } = (await search.json()) as { messages: unknown[] };
+  return messages.length;
+}

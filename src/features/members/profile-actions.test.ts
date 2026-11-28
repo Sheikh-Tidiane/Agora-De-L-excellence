@@ -36,7 +36,11 @@ beforeEach(() => {
 
 describe("noms publics du Scrabble", () => {
   it("le retrait des classements invalide le cache public du Scrabble", async () => {
-    const result = await updateOwnProfileAction({ phone: "", hiddenFromRankings: true });
+    const result = await updateOwnProfileAction({
+      phone: "",
+      hiddenFromRankings: true,
+      eventReminders: true,
+    });
     expect(result.ok).toBe(true);
     expect(tags).toContain(cacheTags.scrabble);
   });

@@ -16,5 +16,7 @@ export const ownProfileSchema = z.object({
     .refine((value) => value === "" || normalizePhone(value) !== null, { message: phoneMessage })
     .transform((value) => (value === "" ? null : normalizePhone(value))),
   hiddenFromRankings: z.boolean(),
+  /** Rappel par e-mail la veille des rencontres où il est inscrit. */
+  eventReminders: z.boolean(),
 });
 export type OwnProfileInput = z.input<typeof ownProfileSchema>;

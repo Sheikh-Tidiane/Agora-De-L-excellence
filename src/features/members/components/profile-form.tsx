@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { updateOwnProfileAction } from "@/features/members/profile-actions";
 import { ownProfileSchema, type OwnProfileInput } from "@/features/members/profile-schemas";
 
-/** Ce que le membre modifie lui-même : son téléphone et sa présence dans les classements. */
+/** Ce que le membre modifie lui-même : téléphone, présence dans les classements, rappels. */
 export function ProfileForm({ defaults }: { defaults: OwnProfileInput }) {
   const { form, pending, formError, result, submit } = useActionForm({
     schema: ownProfileSchema,
@@ -32,6 +32,12 @@ export function ProfileForm({ defaults }: { defaults: OwnProfileInput }) {
         Ne pas apparaître dans les classements de points
         <span className="petit mt-0.5 block text-gris">
           Vos points restent comptés et visibles de vous seul.
+        </span>
+      </CheckboxField>
+      <CheckboxField form={form} name="eventReminders" idPrefix="profil">
+        Recevoir un rappel par e-mail la veille des rencontres où je suis inscrit
+        <span className="petit mt-0.5 block text-gris">
+          Avec l’heure, le lieu, le lien de visio et l’ajout à votre agenda.
         </span>
       </CheckboxField>
       {formError ? (

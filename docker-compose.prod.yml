@@ -89,7 +89,7 @@ services:
     # Le volume des fichiers téléversés : pour l'import des contenus (scripts/contenus-import.ts).
     volumes:
       - uploads:/app/uploads
-    # `web` : accès sortant au serveur d'e-mails (rappels de carte, scripts/rappels-carte.ts).
+    # `web` : accès sortant au serveur d'e-mails (tâches planifiées, scripts/taches.ts).
     networks: [internal, web]
     depends_on:
       postgres:

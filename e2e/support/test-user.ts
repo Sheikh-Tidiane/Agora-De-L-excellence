@@ -40,6 +40,13 @@ import { prisma } from "@/lib/prisma";
 //     Affiche, en JSON, les réglages des paiements à distance (numéros, délai, masquage visio).
 //   tsx e2e/support/test-user.ts set-payment-settings E2E '<json>'
 //     Les remet tels qu'ils étaient (une clé absente du JSON est supprimée).
+//   tsx e2e/support/test-user.ts create-reminder-event E2E-<titre> [heures]
+//     Rencontre publiée, ouverte au public, avec lien de visio, dans <heures> (6 par défaut) :
+//     dans la fenêtre du rappel la veille. Affiche son adresse publique.
+//   tsx e2e/support/test-user.ts backdate-registrations E2E-<début du titre>
+//     Inscriptions confirmées 3 jours plus tôt (avant l'ouverture de la fenêtre du rappel).
+//   tsx e2e/support/test-user.ts send-event-reminders E2E-<début du titre>
+//     Lance l'envoi des rappels pour ces seules rencontres ; affiche le bilan en JSON.
 //   tsx e2e/support/test-user.ts delete <email>
 //     Supprime le compte de test, sa demande d'adhésion, ses adhésions et ses encaissements.
 /** Réglages des paiements à distance, sauvegardés puis restaurés par e2e/carte-a-distance.spec.ts. */
@@ -63,6 +70,11 @@ async function main() {
     command !== "set-attendance-mode" &&
     command !== "get-payment-settings" &&
     command !== "set-payment-settings" &&
+    !(
+      ["create-reminder-event", "backdate-registrations", "send-event-reminders"].includes(
+        command ?? "",
+      ) && email?.startsWith("E2E-")
+    ) &&
     !email?.endsWith("@e2e.agora.test")
   ) {
     throw new Error("Par sécurité, ce script n’agit que sur des adresses @e2e.agora.test.");
@@ -177,6 +189,43 @@ async function main() {
     } else {
       throw new Error(`Règle inconnue : ${mode}`);
     }
+  } else if (command === "create-reminder-event" && email?.startsWith("E2E-")) {
+    const hours = Number(firstName ?? 6);
+    const slug = `${email.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+    await prisma.event.create({
+      data: {
+        slug,
+        title: email,
+        type: "RENDEZ_VOUS_LECTURE",
+        activities: ["RENDEZ_VOUS_LECTURE"],
+        description: "Rencontre de test des rappels la veille.",
+        location: "Maison de la culture Douta Seck",
+        videoLink: "https://visio.exemple.sn/e2e-rappel",
+        startsAt: new Date(Date.now() + hours * 3_600_000),
+        status: "PUBLISHED",
+        publishedAt: new Date(),
+        isPublic: true,
+        // Annulation possible jusqu'à 1 h avant : le lien du rappel doit pouvoir annuler.
+        cancellationDeadlineHours: 1,
+        isDemo: true,
+      },
+    });
+    console.log(`/events/${slug}`);
+  } else if (command === "backdate-registrations" && email?.startsWith("E2E-")) {
+    const past = new Date(Date.now() - 3 * 86_400_000);
+    const { count } = await prisma.eventRegistration.updateMany({
+      where: { status: "CONFIRMED", event: { title: { startsWith: email } } },
+      data: { confirmedAt: past, createdAt: past },
+    });
+    console.log(count);
+  } else if (command === "send-event-reminders" && email?.startsWith("E2E-")) {
+    const { sendEventReminders } = await import("@/features/events/reminders");
+    const events = await prisma.event.findMany({
+      where: { title: { startsWith: email } },
+      select: { id: true },
+    });
+    const run = await sendEventReminders(new Date(), { eventIds: events.map((e) => e.id) });
+    console.log(JSON.stringify(run));
   } else if (command === "delete-events" && email?.startsWith("E2E-")) {
     // Rencontres créées par un parcours (titre « E2E-… ») : encaissements, puis inscriptions en cascade.
     const where = { title: { startsWith: email } };

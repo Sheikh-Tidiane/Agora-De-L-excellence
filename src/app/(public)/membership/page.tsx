@@ -36,8 +36,18 @@ const etapes = [
   ["Vous activez votre espace", "Un lien personnel vous permet de choisir votre mot de passe."],
 ];
 
-const pratique = [
-  ["Paiement", "En espèces, sur place. Rien n’est à régler en ligne."],
+/** Moyens de paiement annoncés : Wave et Orange Money seulement si le club a saisi leurs numéros. */
+function paymentText(club: { waveNumber: string; orangeMoneyNumber: string }) {
+  const remote = [club.waveNumber && "Wave", club.orangeMoneyNumber && "Orange Money"].filter(
+    Boolean,
+  );
+  return remote.length > 0
+    ? `En espèces sur place, ou par ${remote.join(" ou ")} au numéro du club. Rien n’est à régler sur le site.`
+    : "En espèces, sur place. Rien n’est à régler en ligne.";
+}
+
+const practical = (club: { waveNumber: string; orangeMoneyNumber: string }) => [
+  ["Paiement", paymentText(club)],
   ["Mineurs", "Le nom et le téléphone d’un parent ou tuteur sont demandés."],
 ];
 
@@ -54,7 +64,14 @@ function RequestForm({ charterProvisional }: { charterProvisional: boolean }) {
 }
 
 /** Ce que voit un membre ou un responsable connecté à la place du formulaire. */
-function AlreadyMember({ viewer }: { viewer: Exclude<Viewer, { kind: "visitor" }> }) {
+function AlreadyMember({
+  viewer,
+  remote,
+}: {
+  viewer: Exclude<Viewer, { kind: "visitor" }>;
+  /** Le club a un numéro Wave ou Orange Money : la carte peut se régler à distance. */
+  remote: boolean;
+}) {
   return (
     <div className="mt-6">
       <h2 className="titre-3">
@@ -64,7 +81,9 @@ function AlreadyMember({ viewer }: { viewer: Exclude<Viewer, { kind: "visitor" }
       </h2>
       <p className="mt-2 text-gris">
         {viewer.kind === "member" && !viewer.cardPaid
-          ? "Votre carte de membre reste à régler, en espèces, auprès d’un responsable lors d’une rencontre."
+          ? remote
+            ? "Votre carte de membre reste à régler : en espèces auprès d’un responsable lors d’une rencontre, ou à distance. Tout est indiqué dans votre espace."
+            : "Votre carte de membre reste à régler, en espèces, auprès d’un responsable lors d’une rencontre."
           : "Il n’y a rien à remplir ici. Votre espace réunit votre adhésion et vos inscriptions."}
       </p>
       <Link
@@ -121,7 +140,7 @@ export default async function MembershipPage() {
             </ForVisitors>
 
             <dl className="mt-6 hidden border-t border-indigo/20 lg:block">
-              {pratique.map(([label, value]) => (
+              {practical(club).map(([label, value]) => (
                 <div key={label} className="grid grid-cols-[6.5rem_1fr] gap-4 py-3">
                   <dt className="petit pt-0.5 text-gris">{label}</dt>
                   <dd className="text-[0.9375rem]">{value}</dd>
@@ -168,7 +187,10 @@ export default async function MembershipPage() {
                 viewer.kind === "visitor" ? (
                   <RequestForm charterProvisional={charter.provisional} />
                 ) : (
-                  <AlreadyMember viewer={viewer} />
+                  <AlreadyMember
+                    viewer={viewer}
+                    remote={Boolean(club.waveNumber || club.orangeMoneyNumber)}
+                  />
                 )
               }
             />
@@ -182,7 +204,7 @@ export default async function MembershipPage() {
             </p>
           </ForVisitors>
           <dl className="mt-6 border-t border-indigo/20 lg:hidden">
-            {pratique.map(([label, value]) => (
+            {practical(club).map(([label, value]) => (
               <div key={label} className="grid grid-cols-[6.5rem_1fr] gap-4 py-3">
                 <dt className="petit pt-0.5 text-gris">{label}</dt>
                 <dd className="text-[0.9375rem]">{value}</dd>

@@ -226,7 +226,10 @@ for (const kind of ["member-unpaid", "member", "staff"] as const) {
           page.getByText(kind === "member" ? /Carte réglée le/ : "Carte à régler"),
         ).toBeVisible();
         if (kind === "member-unpaid") {
-          await expect(page.getByText(/en espèces auprès d’un responsable/)).toBeVisible();
+          // Encadré « Régler ma carte » : montant et moyens (ici, sans numéro Wave ou Orange Money).
+          const box = page.getByRole("region", { name: "Régler ma carte" });
+          await expect(box).toBeVisible();
+          await expect(box.getByText(/En espèces, auprès d’un responsable/)).toBeVisible();
         }
       } else {
         await page.goto("/");

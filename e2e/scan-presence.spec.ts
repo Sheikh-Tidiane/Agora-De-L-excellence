@@ -110,7 +110,7 @@ test("scan : carte, secours par recherche, participation et points", async ({
     await page.getByRole("button", { name: `Pointer Moussa ${setup.moussa.lastName}` }).click();
     await expect(sheet.getByText("Saisie manuelle")).toBeVisible();
     await expect(sheet.getByText("Non réglée", { exact: true })).toBeVisible();
-    await sheet.getByRole("button", { name: /^Encaisser 100/ }).click();
+    await sheet.getByRole("button", { name: "Encaisser la participation" }).click();
     await expect(sheet.getByText(/^Déjà pointé à/)).toBeVisible();
     await expect(sheet.getByText("Non réglée", { exact: true })).toHaveCount(0);
     await next.click();

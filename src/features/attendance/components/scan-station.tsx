@@ -254,7 +254,7 @@ export function ScanStation({
                 onClick={collectNow}
                 disabled={busy}
               >
-                Encaisser {sessionFee}
+                Encaisser la participation
               </Button>
             ) : null}
           </div>

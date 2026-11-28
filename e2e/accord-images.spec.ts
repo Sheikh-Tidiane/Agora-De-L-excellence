@@ -64,8 +64,12 @@ test("accord photos : facultatif à l’adhésion, donné dans le profil, visibl
     await expect(admin.getByText(/Accord donné le/)).toBeVisible();
 
     // Retiré : de nouveau « pas d'accord ».
-    await page.reload();
-    await page.getByLabel(/publie des photos ou vidéos où je suis reconnaissable/).uncheck();
+    // Page rechargée : on attend l'hydratation (sinon React rétablit la case cochée).
+    await page.reload({ waitUntil: "networkidle" });
+    const again = page.getByLabel(/publie des photos ou vidéos où je suis reconnaissable/);
+    await expect(again).toBeChecked();
+    await again.uncheck();
+    await expect(again).not.toBeChecked();
     await page.getByRole("button", { name: "Enregistrer", exact: true }).click();
     await expect(page.getByText("Modifications enregistrées.")).toBeVisible();
     await panel();

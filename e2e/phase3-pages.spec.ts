@@ -18,10 +18,18 @@ function watch(page: Page) {
   const problems: string[] = [];
   page.on("pageerror", (error) => problems.push(`exception : ${error.message}`));
   page.on("console", (message) => {
-    if (message.type() === "error") problems.push(`console : ${message.text()}`);
+    // Les réponses en erreur sont relevées avec leur adresse ci-dessous.
+    if (message.type() === "error" && !message.text().startsWith("Failed to load resource")) {
+      problems.push(`console : ${message.text()}`);
+    }
   });
   page.on("response", (response) => {
-    if (response.status() >= 500) problems.push(`${response.status()} : ${response.url()}`);
+    // Une fiche d'essai effacée en base par un autre passage peut rester dans une liste en cache
+    // (et être préchargée) : son 404 est la bonne réponse.
+    const staleTestSheet = response.status() === 404 && response.url().includes("/e2e-");
+    if (response.status() >= 400 && !staleTestSheet) {
+      problems.push(`${response.status()} : ${response.url()}`);
+    }
   });
   return problems;
 }
@@ -70,13 +78,22 @@ test("site public : bibliothèque, actualités, contact, confidentialité", asyn
     await search.press("Enter");
     await expect(page.getByText("Rien sur cette étagère")).toBeVisible();
     await page.goto("/library");
-    await books.first().click();
+    // Un livre réel : la liste en cache peut encore montrer un livre d'essai déjà effacé en base
+    // par un autre passage (sa fiche répond alors, à juste titre, 404).
+    await books.and(page.locator(':not([href*="/e2e-"])')).first().click();
     await expect(page).toHaveURL(/\/library\/[a-z0-9-]+$/);
     await expect(h1(page)).toBeVisible();
     await page.goto(`/library/${slug}-livre`);
     await expect(h1(page)).toHaveText(`${prefix} Livre`);
     if (capture) await shot(page, "library-fiche", publicWidths);
-    await page.goto("/library/livre-qui-n-existe-pas");
+    // Adresse inconnue : vrai 404 (attendu, retiré du relevé).
+    const missing = await page.goto("/library/livre-qui-n-existe-pas");
+    expect(missing?.status()).toBe(404);
+    problems.splice(
+      0,
+      problems.length,
+      ...problems.filter((p) => !p.includes("livre-qui-n-existe-pas")),
+    );
     await expect(
       page.getByRole("link", { name: /bibliothèque|catalogue|accueil/i }).first(),
     ).toBeVisible();
@@ -87,7 +104,7 @@ test("site public : bibliothèque, actualités, contact, confidentialité", asyn
     const articles = page.getByRole("main").locator('a[href^="/news/"]');
     await expect(articles.first()).toBeVisible();
     if (capture) await shot(page, "news", publicWidths);
-    await articles.first().click();
+    await articles.and(page.locator(':not([href*="/e2e-"])')).first().click();
     await expect(page).toHaveURL(/\/news\/[a-z0-9-]+$/);
     await expect(h1(page)).toBeVisible();
     if (capture) await shot(page, "news-article", publicWidths);

@@ -46,7 +46,8 @@ describe.skipIf(!reachable)("avis après les rencontres (base réelle)", () => {
         startsAt,
         endsAt,
         status: "PUBLISHED",
-        isDemo: true,
+        // Comptée dans les tableaux (qui excluent les données de démonstration).
+        isDemo: false,
       },
     });
     events.push(event.id);

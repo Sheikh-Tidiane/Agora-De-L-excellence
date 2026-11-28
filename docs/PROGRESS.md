@@ -79,3 +79,17 @@ Playwright du parcours, contrôle visuel à 375 px et 1440 px, `docs/REGLES-METI
 - Tests : `src/features/feedback/rules.test.ts`, `feedback.db.test.ts` (invitations en parallèle,
   un seul avis, 7 jours, absent refusé, masquage, agrégats multi-activités, purge), sécurité des
   actions et des réglages, parcours `e2e/avis-rencontres.spec.ts` à 375 et 1440 px.
+
+## Étape 5 — Statistiques pour le comité
+
+- `/admin/stats` (permission `stats.read`) : présence (par rencontre et par mois, taux de la
+  période), activités les plus suivies (présences, note moyenne ; mode « toutes activités » ou
+  « principale »), membres (nouveaux par mois, adhérents à jour, actifs), membres qui ne reviennent
+  plus (seuil réglable, liste nominative avec `members.read`), listes d'attente.
+- Graphiques SVG sobres rendus côté serveur (aucune bibliothèque), infobulles et tableau de données
+  équivalent ; export CSV par bloc (`/api/admin/stats`, `data.export`, consigné au journal).
+- Version partenaires imprimable, sans aucune donnée personnelle (effectifs < 3 masqués).
+- Pas de changement du modèle de données ; nouvelle permission (`seed --acces-seulement` au
+  déploiement, déjà dans `scripts/deploy.sh`).
+- Tests : `src/features/stats/rules.test.ts`, `stats.db.test.ts` (jeu de données contrôlé),
+  sécurité de la route CSV, parcours `e2e/statistiques.spec.ts` à 375 et 1440 px.

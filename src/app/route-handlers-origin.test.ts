@@ -22,6 +22,11 @@ const disk = vi.hoisted(() => ({
 
 vi.mock("node:fs/promises", () => ({ ...disk, default: disk }));
 vi.mock("next/headers", async () => (await import("@/test/security-harness")).headersModule);
+// Hors d'une requête Next, `connection()` lève : sans effet ici.
+vi.mock("next/server", async (original) => ({
+  ...(await original<typeof import("next/server")>()),
+  connection: async () => undefined,
+}));
 vi.mock("next/cache", async () => (await import("@/test/security-harness")).cacheModule);
 vi.mock("@/lib/auth", async () => (await import("@/test/security-harness")).authModule);
 vi.mock("@/lib/prisma", async () => (await import("@/test/security-harness")).prismaModule);
@@ -43,6 +48,7 @@ const inventory: Record<string, "public" | "session" | "mutation"> = {
   "api/admin/attendance/scan#POST": "mutation",
   "api/admin/attendance/search#POST": "mutation",
   "api/admin/events/[id]/registrations#GET": "session",
+  "api/admin/stats#GET": "session",
   "api/admin/uploads#POST": "mutation",
   "api/assistant#POST": "mutation",
   "api/member/photo#POST": "mutation",

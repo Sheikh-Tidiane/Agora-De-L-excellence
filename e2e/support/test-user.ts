@@ -46,7 +46,7 @@ import { prisma } from "@/lib/prisma";
 //   tsx e2e/support/test-user.ts create-waitlist-event E2E-<titre>
 //     Rencontre publiée, ouverte au public, d'une seule place, dans 3 jours. Affiche en JSON son
 //     adresse publique et son identifiant.
-//   tsx e2e/support/test-user.ts create-feedback-event E2E-<titre>
+//   tsx e2e/support/test-user.ts create-feedback-event E2E-<titre> [reel]
 //     Rencontre publiée, terminée il y a deux jours (dans la fenêtre des demandes d'avis).
 //     Affiche son adresse publique.
 //   tsx e2e/support/test-user.ts check-in <email> E2E-<titre>
@@ -260,7 +260,8 @@ async function main() {
         endsAt: new Date(Date.now() - 48 * 3_600_000),
         status: "PUBLISHED",
         publishedAt: new Date(),
-        isDemo: true,
+        // « reel » : comptée dans les statistiques (qui excluent les données de démonstration).
+        isDemo: firstName !== "reel",
       },
     });
     console.log(`/events/${slug}`);

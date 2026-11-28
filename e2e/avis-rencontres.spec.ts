@@ -63,7 +63,7 @@ test("avis : invitation le lendemain, dépôt et modification, lecture et masqua
   await page.setViewportSize(viewport);
   const admin = await browser.newPage({ viewport, extraHTTPHeaders: randomClient() });
   try {
-    const path = tool("create-feedback-event", title);
+    const path = tool("create-feedback-event", title, "reel");
     const slug = path.split("/").pop()!;
 
     // Le membre, pointé présent, reçoit l'invitation.

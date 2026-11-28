@@ -29,8 +29,10 @@ export const PERMISSIONS = {
   "data.export": "Exporter des listes (CSV)",
   "settings.manage": "Modifier les paramètres du club",
   "audit.read": "Consulter le journal des actions sensibles",
-  "feedback.read": "Consulter les avis des participants sur les rencontres (notes, commentaires, auteurs)",
+  "feedback.read":
+    "Consulter les avis des participants sur les rencontres (notes, commentaires, auteurs)",
   "feedback.moderate": "Masquer ou rétablir le commentaire d’un avis",
+  "stats.read": "Consulter les statistiques de fréquentation du club",
   "roles.manage": "Gérer les comptes administratifs et les rôles",
 } as const;
 
@@ -92,6 +94,7 @@ export const ROLES = {
       "audit.read",
       "feedback.read",
       "feedback.moderate",
+      "stats.read",
     ],
   },
   super_admin: {

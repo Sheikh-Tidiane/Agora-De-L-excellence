@@ -94,6 +94,7 @@ const expected: Record<RoleCode, PermissionCode[]> = {
     "audit.read",
     "feedback.read",
     "feedback.moderate",
+    "stats.read",
   ],
   super_admin: ALL_PERMISSIONS,
 };

@@ -6,6 +6,7 @@ import { GET as servePhoto } from "@/app/api/member/photo/[...path]/route";
 import { DELETE as removePhoto, POST as uploadPhoto } from "@/app/api/member/photo/route";
 import { GET as serveUpload } from "@/app/uploads/[...path]/route";
 import { GET as eventIcs } from "@/app/(public)/events/[slug]/agenda.ics/route";
+import { GET as exportStats } from "@/app/api/admin/stats/route";
 import { storedImageName } from "@/lib/storage-names";
 import {
   ACTOR_ID,
@@ -32,6 +33,11 @@ const disk = vi.hoisted(() => ({
 
 vi.mock("node:fs/promises", () => ({ ...disk, default: disk }));
 vi.mock("next/headers", async () => (await import("@/test/security-harness")).headersModule);
+// Hors d'une requête Next, `connection()` lève : sans effet ici.
+vi.mock("next/server", async (original) => ({
+  ...(await original<typeof import("next/server")>()),
+  connection: async () => undefined,
+}));
 vi.mock("next/cache", async () => (await import("@/test/security-harness")).cacheModule);
 vi.mock("@/lib/auth", async () => (await import("@/test/security-harness")).authModule);
 vi.mock("@/lib/prisma", async () => (await import("@/test/security-harness")).prismaModule);
@@ -207,6 +213,55 @@ describe("GET /api/admin/events/[id]/registrations", () => {
     expect(world.calls[1]!.args[0]).toMatchObject({
       data: { action: "data.exported", entityId: ID, metadata: { rows: 1 } },
     });
+  });
+});
+
+describe("GET /api/admin/stats (export CSV des statistiques)", () => {
+  const call = (query: string) =>
+    exportStats(new Request(`http://localhost/api/admin/stats?${query}`));
+  const allowData = () => {
+    world.handlers["event.findMany"] = () => [];
+    world.handlers["membership.groupBy"] = () => [];
+    world.handlers["user.count"] = () => 0;
+    world.handlers["user.findMany"] = () => [];
+    world.handlers["eventRegistration.groupBy"] = () => [];
+    world.handlers["auditLog.create"] = () => ({});
+  };
+
+  it("sans session : 401, aucune lecture", async () => {
+    expect((await call("jeu=presence")).status).toBe(401);
+    expect(businessTargets()).toEqual([]);
+  });
+
+  it.each(ROLE_CODES)("rôle %s : il faut `data.export` ET `stats.read`", async (role) => {
+    world.role = role;
+    allowData();
+    const response = await call("jeu=presence&du=2026-01-01&au=2026-03-31");
+    if (roleHasAny(role, ["data.export"]) && roleHasAny(role, ["stats.read"])) {
+      expect(response.status).toBe(200);
+      expect(response.headers.get("content-type")).toBe("text/csv; charset=utf-8");
+      expect(response.headers.get("content-disposition")).toContain(
+        "statistiques-presence-2026-01-01_2026-03-31.csv",
+      );
+      expect(businessTargets()).toContain("auditLog.create");
+    } else {
+      expect(response.status).toBe(403);
+      expect(businessTargets()).toEqual([]);
+    }
+  });
+
+  it.each([
+    "jeu=tout",
+    "jeu=presence&du=hier",
+    "jeu=presence&du=2026-02-30&au=2026-03-31",
+    "jeu=presence&du=2026-04-01&au=2026-03-01",
+    "jeu=presence&mode=autre",
+    "jeu=relances&seuil=abc",
+    "",
+  ])("paramètres invalides « %s » : 400 sans lecture", async (query) => {
+    world.role = "super_admin";
+    expect((await call(query)).status).toBe(400);
+    expect(businessTargets()).toEqual([]);
   });
 });
 

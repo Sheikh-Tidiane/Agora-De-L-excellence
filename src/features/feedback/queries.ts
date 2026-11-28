@@ -65,6 +65,8 @@ export async function getFeedbackOverview(filters: FeedbackFilters, now: Date = 
   const events = await prisma.event.findMany({
     where: {
       archivedAt: null,
+      // Mêmes rencontres que les statistiques : hors données de démonstration.
+      isDemo: false,
       status: { in: ["PUBLISHED", "CLOSED"] },
       startsAt: { gte: filters.from, lt: now },
     },

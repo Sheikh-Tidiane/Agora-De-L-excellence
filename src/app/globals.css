@@ -416,6 +416,33 @@
   }
 }
 
+/*
+ * Statistiques, version partenaires (src/app/admin/stats/partenaires) : à l'impression, le rapport
+ * seul — ni barre latérale, ni en-tête, ni nom de la personne connectée —, avec des marges.
+ */
+@page rapport {
+  size: A4 portrait;
+  margin: 15mm;
+}
+@media print {
+  body:has(.rapport-partenaires) * {
+    visibility: hidden;
+  }
+  body:has(.rapport-partenaires) .rapport-partenaires,
+  body:has(.rapport-partenaires) .rapport-partenaires * {
+    visibility: visible;
+  }
+  body:has(.rapport-partenaires) .rapport-partenaires {
+    page: rapport;
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    max-width: none;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}
+
 /* Liste déroulante du club : fond blanc et chevron indigo (src/components/ui/field.tsx). */
 .champ-select {
   background-color: var(--color-blanc);

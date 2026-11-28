@@ -145,7 +145,9 @@ export function eventReminderEmail(input: {
         : []),
       ...(input.preferencesUrl
         ? [`Ne plus recevoir ces rappels : ${input.preferencesUrl}`]
-        : ["C’est le seul rappel envoyé pour cette inscription."]),
+        : input.rescheduled
+          ? []
+          : ["C’est le seul rappel envoyé pour cette inscription."]),
     ],
   });
 }

@@ -70,7 +70,10 @@ describe("e-mail de rappel la veille", () => {
     expect(mail.text).not.toContain("visio");
     expect(mail.text).not.toContain("/member/profile");
     expect(mail.text).toContain("l’horaire de cette rencontre a changé");
-    expect(mail.text).toContain("C’est le seul rappel envoyé pour cette inscription.");
+    expect(mail.text).not.toContain("seul rappel");
+    expect(eventReminderEmail({ ...base, audience: "guest", preferencesUrl: null }).text).toContain(
+      "C’est le seul rappel envoyé pour cette inscription.",
+    );
     expect(mail.subject).toContain("aujourd’hui à 18 h");
   });
 });

@@ -39,11 +39,15 @@ export const endOf = (event: Pick<CalendarEvent, "startsAt" | "endsAt">) =>
 
 /** Texte d'une propriété : \ ; , et retours à la ligne échappés. */
 export function escapeIcsText(value: string): string {
-  return value
-    .replace(/\\/g, "\\\\")
-    .replace(/;/g, "\\;")
-    .replace(/,/g, "\\,")
-    .replace(/\r?\n/g, "\\n");
+  return (
+    value
+      .replace(/\\/g, "\\\\")
+      .replace(/;/g, "\\;")
+      .replace(/,/g, "\\,")
+      .replace(/\r\n|\r|\n/g, "\\n")
+      // Autres caractères de contrôle : retirés (interdits dans une valeur iCalendar).
+      .replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, "")
+  );
 }
 
 /** Ligne repliée à 75 octets UTF-8 au plus (continuation : CRLF + espace), sans couper un caractère. */

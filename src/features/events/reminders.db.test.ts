@@ -23,8 +23,11 @@ vi.mock("@/lib/mail", () => ({
 }));
 
 const { sendEventReminders } = await import("@/features/events/reminders");
-const { getGuestRegistration, cancelGuestRegistration } =
-  await import("@/features/events/registration");
+const {
+  getGuestRegistration,
+  cancelGuestRegistration,
+  registerGuest: signUpGuest,
+} = await import("@/features/events/registration");
 const { hashToken } = await import("@/features/auth/service");
 
 const reachable = await databaseReachable();
@@ -276,5 +279,11 @@ describe.skipIf(!reachable)("rappels la veille des rencontres (base réelle)", (
     expect(await db.eventRegistration.findUniqueOrThrow({ where: { id: guest.id } })).toMatchObject(
       { status: "CANCELLED" },
     );
+
+    // Réinscription : le lien du rappel précédent ne vaut plus, le nouveau lien oui.
+    await signUpGuest(event.id, { name: "Moussa", email: guest.guestEmail! });
+    expect(await getGuestRegistration(token)).toBeNull();
+    await expect(cancelGuestRegistration(token)).rejects.toMatchObject({ code: "INVALID_TOKEN" });
+    await expect(cancelGuestRegistration("court")).rejects.toMatchObject({ code: "INVALID_TOKEN" });
   });
 });

@@ -23,6 +23,7 @@ const event: CalendarEvent = {
 describe("agenda (.ics, Google Agenda)", () => {
   it("échappe le texte et replie les lignes à 75 octets sans couper un caractère accentué", () => {
     expect(escapeIcsText("a;b,c\\d\ne")).toBe(String.raw`a\;b\,c\\d\ne`);
+    expect(escapeIcsText("a\rb\r\nc\u0000d\te")).toBe("a\\nb\\ncd\te");
     const line = `SUMMARY:${"é".repeat(60)}`;
     const folded = foldIcsLine(line);
     for (const part of folded.split("\r\n")) {

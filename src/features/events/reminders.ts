@@ -32,7 +32,7 @@ import { prisma } from "@/lib/prisma";
  * rencontre. Deux passages simultanés : le second ne réserve rien. Envoi réussi : `sentAt` ; échec :
  * la réservation est libérée et le passage suivant réessaie (3 tentatives au plus). Un processus
  * tombé entre l'envoi et le marquage laisse une réservation reprise après 30 min (doublon rare,
- * préféré à un rappel perdu).
+ * préféré à un rappel perdu ; un envoi réussi dont seul le marquage échoue n'est pas relancé avant).
  */
 export type EventReminderRun = { checked: number; sent: number; failed: number; skipped: number };
 
@@ -145,15 +145,24 @@ export async function sendEventReminders(
     });
     try {
       await sendMail(message);
+    } catch (error) {
+      // Pas parti : la réservation est libérée, le passage suivant réessaie.
+      logger.error("Rappel de rencontre non envoyé", error);
+      run.failed += 1;
+      await prisma.registrationMail
+        .update({ where: { id: claimed }, data: { claimedAt: null } })
+        .catch((release) => logger.error("Réservation de rappel non libérée", release));
+      continue;
+    }
+    run.sent += 1;
+    try {
       await prisma.registrationMail.update({
         where: { id: claimed },
         data: { sentAt: new Date() },
       });
-      run.sent += 1;
     } catch (error) {
-      await prisma.registrationMail.update({ where: { id: claimed }, data: { claimedAt: null } });
-      logger.error("Rappel de rencontre non envoyé", error);
-      run.failed += 1;
+      // Parti, mais non marqué : la réservation reste (reprise seulement après le bail de 30 min).
+      logger.error("Rappel de rencontre envoyé mais non marqué", error);
     }
   }
   logger.info("Rappels de rencontre", run);
@@ -178,6 +187,10 @@ async function claim(
     SELECT ${randomUUID()}, r."id", 'EVENT_REMINDER', e."startsAt", ${now}, 1, ${tokenHash}, ${now}
     FROM "EventRegistration" r JOIN "Event" e ON e."id" = r."eventId"
     WHERE r."id" = ${registrationId} AND r."status" = 'CONFIRMED'
+      AND (r."userId" IS NULL OR EXISTS (
+        SELECT 1 FROM "User" u WHERE u."id" = r."userId" AND u."status" = 'ACTIVE'
+          AND u."archivedAt" IS NULL AND u."eventReminders"
+      ))
       AND e."status" IN ('PUBLISHED', 'CLOSED') AND e."archivedAt" IS NULL
       AND e."startsAt" = ${startsAt}
     ON CONFLICT ("registrationId", "kind", "eventStartsAt") DO UPDATE

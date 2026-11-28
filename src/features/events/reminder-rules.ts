@@ -10,6 +10,8 @@ const HOUR = 3_600_000;
 
 /** Plus de rappel moins de 2 h avant le début. */
 export const REMINDER_CLOSE_HOURS = 2;
+/** Fenêtre d'envoi minimale : plus que l'écart entre deux passages de la tâche (1 h). */
+export const MIN_WINDOW_HOURS = 2;
 /** Une réservation non suivie d'envoi est reprise après ce délai (processus tombé). */
 export const CLAIM_LEASE_MINUTES = 30;
 /** Tentatives d'envoi au plus, pour un même rappel. */
@@ -17,15 +19,17 @@ export const MAX_ATTEMPTS = 3;
 /** Rencontre déplacée de moins de 15 min : pas de nouveau rappel. */
 export const RESCHEDULE_TOLERANCE_MINUTES = 15;
 
-export function reminderWindow(
-  startsAt: Date,
-  hour: number,
-): { opensAt: Date; closesAt: Date } | null {
+export function reminderWindow(startsAt: Date, hour: number): { opensAt: Date; closesAt: Date } {
   const opensAt = new Date(
     Date.UTC(startsAt.getUTCFullYear(), startsAt.getUTCMonth(), startsAt.getUTCDate() - 1, hour),
   );
   const closesAt = new Date(startsAt.getTime() - REMINDER_CLOSE_HOURS * HOUR);
-  return closesAt > opensAt ? { opensAt, closesAt } : null;
+  // Heure tardive et rencontre très matinale (rappel à 23 h, rencontre à 0 h 30) : la fenêtre
+  // serait vide ou plus courte que l'écart entre deux passages. Elle s'ouvre alors 12 h avant sa fin.
+  if (closesAt.getTime() - opensAt.getTime() < MIN_WINDOW_HOURS * HOUR) {
+    return { opensAt: new Date(closesAt.getTime() - 12 * HOUR), closesAt };
+  }
+  return { opensAt, closesAt };
 }
 
 export function reminderDue(
@@ -34,7 +38,6 @@ export function reminderDue(
   now: Date,
 ): boolean {
   const window = reminderWindow(registration.startsAt, hour);
-  if (!window) return false;
   if (now < window.opensAt || now >= window.closesAt) return false;
   return (registration.confirmedAt ?? registration.createdAt) < window.opensAt;
 }

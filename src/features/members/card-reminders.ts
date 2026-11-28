@@ -15,8 +15,8 @@ import { prisma } from "@/lib/prisma";
 /**
  * Rappels « carte à régler » (docs/REGLES-METIER.md, « Cotisations ») : une notification et un
  * e-mail au membre, 7 jours après l'acceptation de son adhésion, puis 3 jours avant la fin du délai
- * de grâce, tant que la carte n'est pas réglée. Lancé chaque jour (scripts/rappels-carte.ts,
- * minuterie deploy/systemd/agora-rappels-carte.*).
+ * de grâce, tant que la carte n'est pas réglée. Tâche `rappels-carte` du lanceur commun
+ * (scripts/taches.ts, src/features/tasks/registry.ts), chaque heure à partir de 9 h.
  *
  * Sans doublon : le rappel est réservé dans `CardReminder` (unique par membre et par sorte) dans la
  * même transaction que la notification. Deux passages simultanés ne peuvent pas envoyer deux fois :

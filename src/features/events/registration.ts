@@ -110,12 +110,23 @@ export const registrationUrl = (token: string) =>
 
 /**
  * Inscription invitée désignée par un jeton : celui du lien de confirmation, ou celui joint à un
- * e-mail automatique (rappel la veille). Les deux restent valables ; seuls leurs SHA-256 sont gardés.
+ * e-mail automatique (rappel la veille). Les deux restent valables ; seuls leurs SHA-256 sont
+ * gardés. Deux recherches par index unique (pas de `OR` sur une relation, qui parcourrait la table).
  */
-const byGuestToken = (token: string) => {
+async function registrationIdByGuestToken(token: string, db: Db = prisma): Promise<string | null> {
+  if (!token || token.length < 16 || token.length > 200) return null;
   const hash = hashToken(token);
-  return { OR: [{ tokenHash: hash }, { mails: { some: { tokenHash: hash } } }] };
-};
+  const direct = await db.eventRegistration.findUnique({
+    where: { tokenHash: hash },
+    select: { id: true },
+  });
+  if (direct) return direct.id;
+  const mail = await db.registrationMail.findUnique({
+    where: { tokenHash: hash },
+    select: { registrationId: true },
+  });
+  return mail?.registrationId ?? null;
+}
 
 /**
  * Inscription d'un invité (rencontre ouverte au public) : en attente jusqu'au clic sur le lien
@@ -159,8 +170,15 @@ export async function registerGuest(
       confirmedAt: null,
       cancelledAt: null,
     };
-    if (existing) await tx.eventRegistration.update({ where: { id: existing.id }, data });
-    else await tx.eventRegistration.create({ data: { eventId, guestEmail: guest.email, ...data } });
+    if (existing) {
+      await tx.eventRegistration.update({ where: { id: existing.id }, data });
+      // Nouvelle demande : les liens des rappels de l'inscription précédente ne valent plus.
+      await tx.registrationMail.updateMany({
+        where: { registrationId: existing.id },
+        data: { tokenHash: null },
+      });
+    } else
+      await tx.eventRegistration.create({ data: { eventId, guestEmail: guest.email, ...data } });
     return event;
   });
   // Ici l'e-mail est indispensable : sans lui, l'invité ne peut pas confirmer. Son échec remonte.
@@ -177,9 +195,10 @@ export async function registerGuest(
 
 /** Inscription invitée désignée par le jeton de son lien, avec sa rencontre. */
 export async function getGuestRegistration(token: string) {
-  if (!token || token.length < 16 || token.length > 200) return null;
-  const registration = await prisma.eventRegistration.findFirst({
-    where: byGuestToken(token),
+  const id = await registrationIdByGuestToken(token);
+  if (!id) return null;
+  const registration = await prisma.eventRegistration.findUnique({
+    where: { id },
     select: {
       id: true,
       status: true,
@@ -265,10 +284,10 @@ async function assertCancellable(
 
 /** Annulation par l'invité, depuis son lien. */
 export async function cancelGuestRegistration(token: string): Promise<void> {
-  const registration = await prisma.eventRegistration.findFirst({
-    where: byGuestToken(token),
-    include: { event: true },
-  });
+  const id = await registrationIdByGuestToken(token);
+  const registration = id
+    ? await prisma.eventRegistration.findUnique({ where: { id }, include: { event: true } })
+    : null;
   if (!registration)
     throw new AppError("INVALID_TOKEN", "Ce lien d’inscription n’est plus valable.");
   if (registration.status === "CANCELLED") return;

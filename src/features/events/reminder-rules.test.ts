@@ -35,8 +35,16 @@ describe("rappel la veille : fenêtre d'envoi", () => {
     expect(reminderWindow(at("2026-12-05T18:00:00Z"), 23)!.opensAt).toEqual(
       at("2026-12-04T23:00:00Z"),
     );
-    // Rencontre à 1 h, rappel réglé à 23 h la veille : fermée avant d'ouvrir, pas de rappel.
-    expect(reminderWindow(at("2026-12-05T01:00:00Z"), 23)).toBeNull();
+    // Rencontre à 1 h, rappel réglé à 23 h la veille : la fenêtre serait vide ; elle s'ouvre
+    // 12 h avant sa fin (23 h la veille - 2 h = fin), donc jamais manquée par la tâche horaire.
+    expect(reminderWindow(at("2026-12-05T01:00:00Z"), 23)).toEqual({
+      opensAt: at("2026-12-04T11:00:00Z"),
+      closesAt: at("2026-12-04T23:00:00Z"),
+    });
+    // Rencontre à 0 h 30, rappel à 22 h : 30 min seulement, élargie de même.
+    expect(reminderWindow(at("2026-12-05T00:30:00Z"), 22)!.opensAt).toEqual(
+      at("2026-12-04T10:30:00Z"),
+    );
   });
 
   it("une inscription confirmée après l'ouverture de la fenêtre n'a pas de rappel", () => {

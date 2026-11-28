@@ -98,7 +98,7 @@ services:
   # Tunnel vers la base pour `next build` (voir Dockerfile), sur 127.0.0.1 seulement, démarré et
   # arrêté par scripts/deploy.sh le temps du build.
   build-db-tunnel:
-    image: alpine/socat:1.8.0.3
+    image: alpine/socat:1.8.1.1
     profiles: [build]
     command: TCP-LISTEN:5432,fork,reuseaddr TCP:postgres:5432
     ports:

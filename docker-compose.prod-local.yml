@@ -7,7 +7,7 @@
 # Boîte de réception : http://127.0.0.1:8025. Voir docs/DEPLOIEMENT.md, « Essai en local ».
 services:
   mailpit:
-    image: axllent/mailpit:v1.29
+    image: axllent/mailpit:v1.34
     restart: unless-stopped
     ports:
       - "127.0.0.1:8025:8025"

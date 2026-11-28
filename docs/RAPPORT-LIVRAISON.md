@@ -117,19 +117,20 @@ Décisions détaillées : [`DECISIONS.md`](DECISIONS.md). Règles du club : [`RE
 
 En production : `pnpm db:deploy` (lancé par `scripts/deploy.sh`).
 
-## 5. Tests exécutés et résultats réels (20/11/2026)
+## 5. Tests exécutés et résultats réels
 
-| Contrôle                      | Résultat                                                                                                      |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `pnpm typecheck`, `pnpm lint` | Sans erreur                                                                                                   |
-| `pnpm test` (Vitest)          | **2 694 tests réussis** (35 fichiers), dont une partie contre la vraie base PostgreSQL                        |
-| `pnpm test:e2e` (Playwright)  | **88 réussis, 16 ignorés volontairement, 0 échec** (build de production, mobile et ordinateur)                |
-| Matrice des permissions       | 7 profils (visiteur, membre, 5 rôles de responsables) × chaque zone protégée : aucun écart                    |
-| Lighthouse mobile (médiane)   | Performance 92 à 99, accessibilité 100 sur 10 pages ; LCP 0,9 à 1,2 s ; CLS ≤ 0,002                           |
-| Audit                         | Aucune erreur de console sur 40 pages ; clavier (lien d'évitement, focus visible) ; mouvement réduit respecté |
-| Revue de sécurité             | 101 Server Actions et 9 Route Handlers relus ; 4 défauts corrigés avec leurs tests                            |
-| Revue design                  | 51 pages : 43 au niveau, aucune « template » ; 7 défauts P1 corrigés (`REVUE-DESIGN.md`)                      |
-| Sauvegarde et restauration    | Testées en local : 44 tables, 2 451 lignes restaurées à l'identique, archive des images identique             |
+| Contrôle                       | Résultat                                                                                                      |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| `pnpm typecheck`, `pnpm lint`  | Sans erreur (28/11/2026)                                                                                      |
+| `pnpm test` (Vitest)           | **3 057 tests réussis** (56 fichiers), dont une partie contre la vraie base PostgreSQL (28/11/2026)           |
+| `pnpm test:e2e` (Playwright)   | **119 réussis, 21 ignorés volontairement, 0 échec** (build de production, 375 px et 1440 px, 28/11/2026)      |
+| Mesures suivantes (20/11/2026) |                                                                                                               |
+| Matrice des permissions        | 7 profils (visiteur, membre, 5 rôles de responsables) × chaque zone protégée : aucun écart                    |
+| Lighthouse mobile (médiane)    | Performance 92 à 99, accessibilité 100 sur 10 pages ; LCP 0,9 à 1,2 s ; CLS ≤ 0,002                           |
+| Audit                          | Aucune erreur de console sur 40 pages ; clavier (lien d'évitement, focus visible) ; mouvement réduit respecté |
+| Revue de sécurité              | 101 Server Actions et 9 Route Handlers relus ; 4 défauts corrigés avec leurs tests                            |
+| Revue design                   | 51 pages : 43 au niveau, aucune « template » ; 7 défauts P1 corrigés (`REVUE-DESIGN.md`)                      |
+| Sauvegarde et restauration     | Testées en local : 44 tables, 2 451 lignes restaurées à l'identique, archive des images identique             |
 
 Lighthouse détaillé : `/` 95, `/about` 97, `/activities` 92, `/library` 94, `/events` 98,
 `/membership` 98, `/charte` 95, `/archives` 98, `/scrabble` 99, `/news` 98 (émulation Android milieu

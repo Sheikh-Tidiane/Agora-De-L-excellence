@@ -31,6 +31,7 @@ export type PublicEvent = {
   speakerMode: "ON_SITE" | "REMOTE" | null;
   /** Date de publication du compte rendu ; `null` s'il n'y en a pas (ou pas encore publié). */
   reportPublishedAt: Date | null;
+  updatedAt: Date;
 };
 
 /** Le lien de visio n'en fait pas partie : il n'est lu que pour un membre inscrit. */
@@ -55,6 +56,8 @@ const eventSelect = {
   speakerTitle: true,
   speakerMode: true,
   reportPublishedAt: true,
+  // Agenda (.ics) : version de la rencontre. Jamais le lien de visio ici.
+  updatedAt: true,
 };
 
 /** Une rencontre reste « à venir » jusqu'à trois heures après son début. */

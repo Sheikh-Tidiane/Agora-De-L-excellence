@@ -12,6 +12,7 @@ import {
   RegistrationPanelSkeleton,
 } from "@/features/events/components/registration-panel";
 import { getEventBySlug, getEventReport, getPublishedEventSlugs } from "@/features/events/queries";
+import { EventActions } from "@/features/events/components/event-actions";
 import { parseProgram, placeLabel } from "@/features/events/rules";
 import { Markdown } from "@/lib/markdown";
 import { eventDateParts, formatFullDate, formatTime } from "@/lib/dates";
@@ -48,7 +49,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: event.title,
     description,
     alternates: { canonical: `/events/${event.slug}` },
-    openGraph: { type: "article", title: event.title, description },
+    // L'image (og:image) vient de ./opengraph-image.tsx, en adresse absolue (metadataBase).
+    openGraph: {
+      type: "article",
+      siteName: site.name,
+      locale: site.locale,
+      url: `/events/${event.slug}`,
+      title: event.title,
+      description,
+    },
   };
 }
 
@@ -175,12 +184,16 @@ async function EventSheet({ params }: Pick<Props, "params">) {
           </dl>
         </div>
 
-        {/* Inscription : un panneau qui suit la lecture sur desktop. */}
-        <aside className="mt-12 lg:col-span-5 lg:col-start-8 lg:mt-0">
+        {/* Inscription d'abord (téléphone, ordre de tabulation) ; sur ordinateur, agenda et partage
+            au-dessus, et seule l'inscription suit la lecture (bloc collant plus court que l'écran). */}
+        <aside className="mt-12 flex flex-col gap-5 lg:col-span-5 lg:col-start-8 lg:mt-0">
           <div className="rounded-feuille bg-blanc p-5 sm:p-7 lg:sticky lg:top-32">
             <Suspense fallback={<RegistrationPanelSkeleton />}>
               <RegistrationPanel event={event} />
             </Suspense>
+          </div>
+          <div className="lg:order-first">
+            <EventActions event={event} appUrl={env.APP_URL} />
           </div>
         </aside>
       </div>

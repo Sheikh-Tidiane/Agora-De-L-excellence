@@ -128,6 +128,17 @@ Précisions de mise en œuvre :
 | Lieu         | Non communiqué : non affiché (« à confirmer » pour le lancement uniquement)                |
 | Compte rendu | Rédigé par un responsable sur un événement passé ; visible sur sa page et dans `/archives` |
 
+### Agenda et partage
+
+| Règle              | Valeur                                                                                                                                                                                                   |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Où                 | Fiche de chaque rencontre (sauf annulée), e-mail de confirmation d'inscription (membre et invité), e-mail « place obtenue » de la liste d'attente, rappel la veille                                      |
+| Ajouter à l'agenda | Fichier `.ics` (`/events/<adresse>/agenda.ics`, fuseau Africa/Dakar, lieu, lien de la page ; une rencontre modifiée remplace l'ancienne dans l'agenda) et lien Google Agenda                             |
+| WhatsApp           | « Partager sur WhatsApp » (lien wa.me) : titre, date, heure, lieu et lien de la page, sur trois lignes ; titre coupé au-delà de 120 caractères                                                           |
+| Partage natif      | Sur téléphone, « Partager… » ouvre le partage du téléphone quand le navigateur le propose ; absent sinon                                                                                                 |
+| Aperçu du lien     | Image propre à chaque rencontre (1200 × 630 : date, titre, heure, lieu, « Rencontre annulée » le cas échéant), titre et description de la rencontre, adresse de la page                                  |
+| Confidentialité    | Jamais le lien de visio, ni dans le fichier d'agenda, ni dans le message partagé, ni dans l'aperçu. Une rencontre en brouillon ou archivée n'a ni fichier d'agenda ni aperçu (image du site sans donnée) |
+
 ### Liste d'attente
 
 | Règle                 | Valeur                                                                                                                                                                                                                                                                                                 |

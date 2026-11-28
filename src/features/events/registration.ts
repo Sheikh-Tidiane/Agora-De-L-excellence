@@ -15,6 +15,7 @@ import { sendMail } from "@/lib/mail";
 import { guestConfirmationEmail, registrationConfirmedEmail } from "@/lib/mail/club-templates";
 import { prisma, type Db } from "@/lib/prisma";
 import { audit } from "@/lib/audit";
+import { calendarLinks } from "@/features/events/calendar";
 import {
   catchUpWaitlist,
   fillFreedSeats,
@@ -92,6 +93,7 @@ export async function registerMember(
       event: eventInfo(event),
       url: `${env.APP_URL}/events/${event.slug}`,
       cancelBefore: await cancelBeforeLabel(event, now),
+      calendar: calendarLinks(event, env.APP_URL),
     }),
   );
   // L'e-mail de confirmation vient de partir : la notification reste dans l'espace.
@@ -301,6 +303,7 @@ export async function confirmGuestRegistration(token: string): Promise<void> {
       event: eventInfo(result.event),
       url: registrationUrl(token),
       cancelBefore: await cancelBeforeLabel(result.event, now),
+      calendar: calendarLinks(result.event, env.APP_URL),
     }),
   );
 }

@@ -47,3 +47,20 @@ Playwright du parcours, contrôle visuel à 375 px et 1440 px, `docs/REGLES-METI
   (base réelle : deux annulations simultanées, une place pour deux personnes en attente avec
   tâche et inscription concurrentes, capacité augmentée, invité, seuil, promotion manuelle),
   déclarations de sécurité, parcours `e2e/liste-attente.spec.ts` à 375 et 1440 px.
+
+## Étape 3 — Agenda et partage WhatsApp
+
+- Fiche de rencontre : bloc « Agenda et partage » (fichier .ics, Google Agenda, « Partager sur
+  WhatsApp », partage natif du téléphone s'il existe), prérendu avec la fiche ; sur ordinateur
+  au-dessus de l'inscription (seule à suivre la lecture), sur téléphone en dessous ; masqué une
+  fois la rencontre passée.
+- E-mail de confirmation d'inscription (membre et invité) : liens d'agenda, comme le rappel et
+  l'e-mail de place obtenue.
+- Aperçu du lien partagé : image Open Graph propre à chaque rencontre (polices du club, OFL,
+  `src/assets/og/`, reprises dans le build autonome), dont l'adresse change à chaque modification
+  de la rencontre (WhatsApp ne garde pas un ancien aperçu) ; `og:url`, `og:site_name`, `og:locale`.
+- Pas de changement du modèle de données.
+- Tests : `src/features/events/share.test.ts` (message, encodage wa.me, lieu à confirmer, titre
+  long, jamais la visio, e-mail de confirmation), parcours `e2e/partage-agenda.spec.ts` à 375 et
+  1440 px (téléchargement .ics, Google Agenda, WhatsApp, partage natif simulé, balises og et image
+  PNG 1200 × 630, e-mail de confirmation d'un invité).

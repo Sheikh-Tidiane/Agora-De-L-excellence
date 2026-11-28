@@ -75,6 +75,7 @@ export function registrationConfirmedEmail(input: {
   /** Page où retrouver (et annuler) l'inscription. */
   url: string;
   cancelBefore: string | null;
+  calendar: { ics: string; google: string };
 }): MailMessage {
   return build(input.to, `Vous êtes inscrit · ${input.event.title}`, {
     preheader: `${input.event.when} · ${input.event.place}`,
@@ -82,6 +83,10 @@ export function registrationConfirmedEmail(input: {
     title: "Votre place est réservée.",
     paragraphs: [`Bonjour ${input.name},`, "Nous vous attendons :", ...eventLines(input.event)],
     action: { label: "Voir mon inscription", url: input.url },
+    links: [
+      { label: "Ajouter à mon agenda (fichier .ics)", url: input.calendar.ics },
+      { label: "Ajouter à Google Agenda", url: input.calendar.google },
+    ],
     notes: [
       input.cancelBefore
         ? `Un empêchement ? Vous pouvez annuler depuis ce lien jusqu’au ${input.cancelBefore}.`

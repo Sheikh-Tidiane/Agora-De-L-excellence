@@ -69,7 +69,10 @@ async function EventSheet({ params }: Pick<Props, "params">) {
     ],
     ["Lieu", placeLabel(event.location)],
     ["Pour qui", event.isPublic ? "Ouvert à tous, membres ou non" : "Réservé aux membres du club"],
-    ["Places", event.capacity ? `${event.capacity} places` : "Sans limite"],
+    [
+      "Places",
+      event.capacity ? `${event.capacity} place${event.capacity > 1 ? "s" : ""}` : "Sans limite",
+    ],
     ["Participation", "Sur inscription"],
   ];
 

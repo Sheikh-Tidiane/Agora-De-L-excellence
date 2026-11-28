@@ -263,6 +263,13 @@ export const protectedCases: ProtectedCase[] = [
     badIds("eventId"),
   ),
   protectedCase(
+    `${f.events}#joinWaitlistAction`,
+    events.joinWaitlistAction,
+    "session",
+    { eventId: ID },
+    badIds("eventId"),
+  ),
+  protectedCase(
     `${f.events}#cancelMemberRegistrationAction`,
     events.cancelMemberRegistrationAction,
     "session",
@@ -331,6 +338,18 @@ export const protectedCases: ProtectedCase[] = [
     ["events.manage"],
     { registrationId: ID },
     badIds("registrationId"),
+  ),
+  protectedCase(
+    `${f.eventsAdmin}#promoteFromWaitlistAction`,
+    eventsAdmin.promoteFromWaitlistAction,
+    ["events.manage"],
+    { registrationId: ID, force: false },
+    {
+      ...badIds("registrationId", { force: false }),
+      "dépassement : chaîne": { registrationId: ID, force: "true" },
+      "dépassement : nombre": { registrationId: ID, force: 1 },
+      "dépassement manquant": { registrationId: ID },
+    },
   ),
 
   protectedCase(

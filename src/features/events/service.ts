@@ -3,6 +3,9 @@ import type { EventStatusCode } from "@/features/events/rules";
 import { audit } from "@/lib/audit";
 import { AppError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
+import { lockEvent } from "@/features/events/registration-core";
+import { fillFreedSeats, sendPromotionMessages, type Promotion } from "@/features/events/waitlist";
+import { loadClubSettings } from "@/features/settings/club";
 import { uniqueSlug } from "@/lib/slug";
 
 /** Gestion des événements par un administrateur : créer, modifier, publier, clôturer, annuler. */
@@ -43,18 +46,6 @@ export async function createEvent(data: EventData, actorId: string): Promise<{ i
 export async function updateEvent(id: string, data: EventData): Promise<void> {
   const event = await prisma.event.findFirst({ where: { id, archivedAt: null } });
   if (!event) throw new AppError("NOT_FOUND", "Événement introuvable.");
-  if (data.capacity !== null) {
-    const confirmed = await prisma.eventRegistration.count({
-      where: { eventId: id, status: "CONFIRMED" },
-    });
-    if (data.capacity < confirmed) {
-      throw new AppError("VALIDATION", undefined, {
-        fieldErrors: {
-          capacity: `${confirmed} personnes sont déjà inscrites : la capacité ne peut pas descendre en dessous.`,
-        },
-      });
-    }
-  }
   // Un quiz se rattache à une rencontre des Génies du soir, un tournoi à une rencontre de
   // Scrabble : l'activité qui justifie ce lien ne peut pas être retirée tant qu'il existe.
   const [quizzes, tournament] = await Promise.all([
@@ -76,7 +67,32 @@ export async function updateEvent(id: string, data: EventData): Promise<void> {
       },
     });
   }
-  await prisma.event.update({ where: { id }, data: values(data) });
+  // Sous le verrou de l'événement : une capacité augmentée (ou supprimée) donne aussitôt les
+  // nouvelles places aux personnes en attente.
+  const now = new Date();
+  const { waitlistCutoffHours } = await loadClubSettings();
+  const result = await prisma.$transaction(async (tx) => {
+    const locked = await lockEvent(tx, id);
+    if (!locked) throw new AppError("NOT_FOUND", "Événement introuvable.");
+    if (data.capacity !== null) {
+      const confirmed = await tx.eventRegistration.count({
+        where: { eventId: id, status: "CONFIRMED" },
+      });
+      if (data.capacity < confirmed) {
+        throw new AppError("VALIDATION", undefined, {
+          fieldErrors: {
+            capacity: `${confirmed} personnes sont déjà inscrites : la capacité ne peut pas descendre en dessous.`,
+          },
+        });
+      }
+    }
+    const updated = await tx.event.update({ where: { id }, data: values(data) });
+    return {
+      event: updated,
+      promotions: await fillFreedSeats(tx, updated, now, waitlistCutoffHours, "capacity"),
+    };
+  });
+  await sendPromotionMessages(result.event, result.promotions, now);
 }
 
 const SCRABBLE_TYPES: readonly string[] = ["INITIATION_SCRABBLE", "TOURNOI_SCRABBLE"];
@@ -98,16 +114,24 @@ export async function setEventStatus(
   status: EventStatusCode,
   actorId: string,
 ): Promise<void> {
-  await prisma.$transaction(async (tx) => {
-    const event = await tx.event.findFirst({ where: { id, archivedAt: null } });
+  const now = new Date();
+  const { waitlistCutoffHours } = await loadClubSettings();
+  const result = await prisma.$transaction(async (tx) => {
+    const event = await lockEvent(tx, id);
     if (!event) throw new AppError("NOT_FOUND", "Événement introuvable.");
-    if (event.status === status) return;
+    if (event.status === status) return null;
     if (!canTransition(event.status, status)) {
       throw new AppError("CONFLICT", "Ce changement de statut n’est pas possible.");
     }
     if (status === "DRAFT") {
       const registered = await tx.eventRegistration.count({
-        where: { eventId: id, status: { in: ["CONFIRMED", "PENDING"] } },
+        where: {
+          eventId: id,
+          OR: [
+            { status: { in: ["CONFIRMED", "PENDING"] } },
+            { status: "WAITLISTED", waitlistedAt: { not: null } },
+          ],
+        },
       });
       if (registered > 0) {
         throw new AppError(
@@ -116,7 +140,7 @@ export async function setEventStatus(
         );
       }
     }
-    await tx.event.update({
+    const updated = await tx.event.update({
       where: { id },
       data: {
         status,
@@ -133,7 +157,14 @@ export async function setEventStatus(
       },
       tx,
     );
+    // Republiée : des places ont pu se libérer pendant qu'elle était clôturée ou annulée.
+    const promotions: Promotion[] =
+      status === "PUBLISHED"
+        ? await fillFreedSeats(tx, updated, now, waitlistCutoffHours, "republished")
+        : [];
+    return { event: updated, promotions };
   });
+  if (result) await sendPromotionMessages(result.event, result.promotions, now);
 }
 
 /**
@@ -200,12 +231,22 @@ export async function archiveEvent(id: string, actorId: string): Promise<void> {
 
 /** Retire une inscription (désistement signalé au club, doublon…). La place est libérée. */
 export async function removeRegistration(registrationId: string, actorId: string): Promise<void> {
-  await prisma.$transaction(async (tx) => {
+  const found = await prisma.eventRegistration.findUnique({
+    where: { id: registrationId },
+    select: { eventId: true },
+  });
+  if (!found) throw new AppError("NOT_FOUND", "Inscription introuvable.");
+  const now = new Date();
+  const { waitlistCutoffHours } = await loadClubSettings();
+  const result = await prisma.$transaction(async (tx) => {
+    const event = await lockEvent(tx, found.eventId);
+    if (!event) throw new AppError("NOT_FOUND", "Événement introuvable.");
     const registration = await tx.eventRegistration.findUnique({ where: { id: registrationId } });
     if (!registration) throw new AppError("NOT_FOUND", "Inscription introuvable.");
+    const waiting = registration.status === "WAITLISTED";
     await tx.eventRegistration.update({
       where: { id: registrationId },
-      data: { status: "CANCELLED", cancelledAt: new Date() },
+      data: { status: "CANCELLED", cancelledAt: now },
     });
     await audit(
       {
@@ -213,9 +254,21 @@ export async function removeRegistration(registrationId: string, actorId: string
         action: "event.registration_removed",
         entityType: "EventRegistration",
         entityId: registrationId,
-        metadata: { eventId: registration.eventId, guest: registration.userId === null },
+        metadata: {
+          eventId: registration.eventId,
+          guest: registration.userId === null,
+          ...(waiting ? { waitlisted: true } : {}),
+        },
       },
       tx,
     );
+    // Une place confirmée libérée va à la première personne en attente.
+    return {
+      event,
+      promotions: waiting
+        ? []
+        : await fillFreedSeats(tx, event, now, waitlistCutoffHours, "removal"),
+    };
   });
+  await sendPromotionMessages(result.event, result.promotions, now);
 }

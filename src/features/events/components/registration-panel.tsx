@@ -4,7 +4,10 @@ import { loginHref, membershipHref } from "@/config/navigation";
 import { FormNotice } from "@/features/auth/components/form-parts";
 import {
   GuestRegistrationForm,
+  GuestWaitlistForm,
   MemberCancelButton,
+  MemberJoinWaitlistButton,
+  MemberLeaveWaitlistButton,
   MemberRegisterButton,
 } from "@/features/events/components/registration-forms";
 import { StickyCta } from "@/features/events/components/sticky-cta";
@@ -17,9 +20,12 @@ import {
 import {
   canCancel,
   cancellationDeadline,
+  ordinal,
   registrationWindow,
   seatsLeft,
+  waitlistOpen,
 } from "@/features/events/rules";
+import { countWaitlisted, waitlistPosition } from "@/features/events/waitlist";
 import { hideVideoLink } from "@/features/members/card-dues";
 import { getCardDue } from "@/features/members/card-dues-queries";
 import { loadClubSettings } from "@/features/settings/club";
@@ -40,15 +46,24 @@ const closedMessages = {
 export async function RegistrationPanel({ event }: { event: PublicEvent }) {
   await connection();
   const now = new Date();
-  const [user, taken, settings] = await Promise.all([
+  const [user, taken, settings, waiting] = await Promise.all([
     getCurrentUser(),
     countSeatsTaken(event.id, now),
     loadClubSettings(),
+    countWaitlisted(event.id),
   ]);
   const window = registrationWindow(event, now);
   const left = seatsLeft(event.capacity, taken);
   const registration = user ? await getMemberRegistration(event.id, user.id) : null;
   const registered = registration?.status === "CONFIRMED";
+  // Sur la liste d'attente : son rang (1 = la prochaine place libérée est pour lui).
+  const position =
+    registration?.status === "WAITLISTED" && registration.waitlistedAt
+      ? await waitlistPosition({ ...registration, waitlistedAt: registration.waitlistedAt })
+      : null;
+  const listOpen = waitlistOpen(event, now, settings.waitlistCutoffHours);
+  // Complet : plus de place, ou des personnes attendent encore (les places leur reviennent).
+  const full = left === 0 || (waiting > 0 && listOpen);
   // Le lien pour suivre à distance n'est lu que pour un membre inscrit, et pas du tout si le club
   // le masque aux membres dont la carte n'est pas réglée après le délai de grâce (réglage).
   const videoHidden =
@@ -58,15 +73,23 @@ export async function RegistrationPanel({ event }: { event: PublicEvent }) {
   const videoLink = registered && !videoHidden ? await getEventVideoLink(event.id) : null;
   const deadline = cancellationDeadline(event, settings.cancellationDeadlineHours);
   const cancellable = canCancel(event, now, settings.cancellationDeadlineHours);
-  const canRegister = window === "open" && !registered && left !== 0;
+  const canRegister = window === "open" && !registered && position === null && !full;
+  const canJoinList = window === "open" && !registered && position === null && full && listOpen;
+  const cutoffLabel = `${settings.waitlistCutoffHours} h`;
   // Après connexion, retour sur cette rencontre pour s'inscrire en un geste.
   const returnLogin = `${loginHref}?next=${encodeURIComponent(`/events/${event.slug}`)}`;
 
   const seats =
     left === null ? (
       "Sans limite de places."
-    ) : left === 0 ? (
-      "Complet."
+    ) : full ? (
+      <>
+        Complet
+        {waiting > 0
+          ? ` · ${waiting} personne${waiting > 1 ? "s" : ""} sur la liste d’attente`
+          : ""}
+        .
+      </>
     ) : (
       <>
         <span className="font-serif text-[2rem] leading-none text-indigo">{left}</span> place
@@ -113,11 +136,58 @@ export async function RegistrationPanel({ event }: { event: PublicEvent }) {
               </p>
             ) : null}
           </>
+        ) : position !== null && registration ? (
+          <>
+            <FormNotice>
+              Vous êtes sur la liste d’attente : {ordinal(position)}
+              {position === 1 ? ", la prochaine place libérée est pour vous." : "."}
+            </FormNotice>
+            <p className="petit mt-3 text-gris">
+              Si une place se libère jusqu’à {cutoffLabel} avant le début, vous êtes inscrit
+              d’office et prévenu par e-mail.
+            </p>
+            <div className="mt-4">
+              <MemberLeaveWaitlistButton registrationId={registration.id} />
+            </div>
+          </>
         ) : window !== "open" ? (
           <p className="rounded-champ bg-sable px-4 py-3 font-semibold">{closedMessages[window]}</p>
-        ) : left === 0 ? (
+        ) : full && !listOpen ? (
           <p className="rounded-champ bg-alerte-fond px-4 py-3 font-semibold text-alerte">
-            Toutes les places sont prises. Une place peut se libérer : repassez plus tard.
+            Toutes les places sont prises et la liste d’attente est close.
+          </p>
+        ) : full && user ? (
+          <>
+            <p className="rounded-champ bg-alerte-fond px-4 py-3 font-semibold text-alerte">
+              Toutes les places sont prises.
+            </p>
+            <div className="mt-4">
+              <MemberJoinWaitlistButton eventId={event.id} />
+            </div>
+            <p className="petit mt-3 text-gris">
+              Si une place se libère jusqu’à {cutoffLabel} avant le début, la première personne de
+              la liste est inscrite d’office et prévenue par e-mail. Vous pouvez quitter la liste à
+              tout moment.
+            </p>
+          </>
+        ) : full && event.isPublic ? (
+          <>
+            <p className="mb-4 rounded-champ bg-alerte-fond px-4 py-3 font-semibold text-alerte">
+              Toutes les places sont prises : inscrivez-vous sur la liste d’attente.
+            </p>
+            <GuestWaitlistForm eventId={event.id} />
+            <p className="petit mt-4 text-gris">
+              Déjà membre&nbsp;?{" "}
+              <Link href={returnLogin} className="lien">
+                Connectez-vous
+              </Link>{" "}
+              pour rejoindre la liste en un geste.
+            </p>
+          </>
+        ) : full ? (
+          <p className="rounded-champ bg-alerte-fond px-4 py-3 font-semibold text-alerte">
+            Toutes les places sont prises. Les membres connectés peuvent rejoindre la liste
+            d’attente.
           </p>
         ) : user ? (
           <>
@@ -168,6 +238,8 @@ export async function RegistrationPanel({ event }: { event: PublicEvent }) {
               ? "Réserver ma place"
               : "Se connecter pour s’inscrire"}
         </StickyCta>
+      ) : canJoinList && (user || event.isPublic) ? (
+        <StickyCta targetId="inscription">Rejoindre la liste d’attente</StickyCta>
       ) : null}
     </div>
   );

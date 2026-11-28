@@ -34,6 +34,8 @@ export const rateLimits = {
   /** Inscription d'un visiteur à une rencontre : même logique que l'adhésion. */
   "events.guest.email": { limit: 3, windowSeconds: 24 * 60 * 60 },
   "events.guest.ip": { limit: 100, windowSeconds: 60 * 60 },
+  /** Liste d'attente d'un membre : freine les allers-retours entrée / sortie. */
+  "events.waitlist.user": { limit: 10, windowSeconds: 60 * 60 },
   /** Formulaire de contact : limite stricte par IP (un message arrive dans la boîte du club). */
   "contact.ip": { limit: 5, windowSeconds: 60 * 60 },
   /** Confirmation ou annulation par le lien reçu par e-mail : le jeton protège déjà, la limite reste large. */

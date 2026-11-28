@@ -15,6 +15,7 @@ import { prisma, type Db } from "@/lib/prisma";
 export const NOTIFICATION_TYPES = {
   "membership.welcome": "Bienvenue",
   "event.registered": "Inscription",
+  "event.waitlist_promoted": "Place obtenue",
   "reading.validated": "Lecture validée",
   "reading.rejected": "Lecture",
   "review.approved": "Critique publiée",

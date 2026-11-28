@@ -195,7 +195,7 @@ export async function countSeatsTaken(eventId: string, now: Date, db: Db = prism
 export async function getMemberRegistration(eventId: string, userId: string) {
   return prisma.eventRegistration.findUnique({
     where: { eventId_userId: { eventId, userId } },
-    select: { id: true, status: true },
+    select: { id: true, eventId: true, status: true, waitlistedAt: true },
   });
 }
 

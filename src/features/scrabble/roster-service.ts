@@ -38,10 +38,18 @@ async function assertTeam(tx: Db, tournament: LockedTournament, teamId: string |
 async function registerToEvent(tx: Db, eventId: string, userId: string): Promise<boolean> {
   const existing = await tx.eventRegistration.findUnique({
     where: { eventId_userId: { eventId, userId } },
-    select: { id: true, status: true },
+    select: { id: true, status: true, waitlistedAt: true },
   });
   if (existing?.status === "CONFIRMED") return false;
-  const data = { status: "CONFIRMED" as const, confirmedAt: new Date(), cancelledAt: null };
+  const now = new Date();
+  // Depuis la liste d'attente : la place est notée comme obtenue (statistiques des listes).
+  const fromWaitlist = existing?.status === "WAITLISTED" && existing.waitlistedAt !== null;
+  const data = {
+    status: "CONFIRMED" as const,
+    confirmedAt: now,
+    cancelledAt: null,
+    ...(fromWaitlist ? { promotedAt: now } : { waitlistedAt: null, promotedAt: null }),
+  };
   if (existing) await tx.eventRegistration.update({ where: { id: existing.id }, data });
   else await tx.eventRegistration.create({ data: { eventId, userId, ...data } });
   return true;

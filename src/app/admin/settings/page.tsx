@@ -22,6 +22,7 @@ async function Settings() {
           membershipDurationMonths: String(settings.membershipDurationMonths),
           cardGraceDays: String(settings.cardGraceDays),
           eventReminderHour: String(settings.eventReminderHour),
+          waitlistCutoffHours: String(settings.waitlistCutoffHours),
         }}
       />
     </>

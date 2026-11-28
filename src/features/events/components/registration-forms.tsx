@@ -10,6 +10,8 @@ import {
   cancelGuestRegistrationAction,
   cancelMemberRegistrationAction,
   confirmGuestRegistrationAction,
+  joinWaitlistAction,
+  joinWaitlistGuestAction,
   registerGuestAction,
   registerMemberAction,
 } from "@/features/events/actions";
@@ -24,7 +26,7 @@ function ActionButton({
   variant = "action",
   confirm,
 }: {
-  action: () => Promise<ActionResult>;
+  action: () => Promise<ActionResult<unknown>>;
   children: string;
   pendingLabel: string;
   variant?: "action" | "contour";
@@ -66,6 +68,28 @@ function ActionButton({
   );
 }
 
+/** Rencontre complète : le membre rejoint la liste d'attente (ou s'inscrit si une place s'est libérée). */
+export function MemberJoinWaitlistButton({ eventId }: { eventId: string }) {
+  return (
+    <ActionButton action={() => joinWaitlistAction({ eventId })} pendingLabel="Un instant…">
+      Rejoindre la liste d’attente
+    </ActionButton>
+  );
+}
+
+export function MemberLeaveWaitlistButton({ registrationId }: { registrationId: string }) {
+  return (
+    <ActionButton
+      action={() => cancelMemberRegistrationAction({ registrationId })}
+      pendingLabel="Un instant…"
+      variant="contour"
+      confirm="Confirmer : quitter la liste"
+    >
+      Quitter la liste d’attente
+    </ActionButton>
+  );
+}
+
 export function MemberRegisterButton({ eventId }: { eventId: string }) {
   return (
     <ActionButton action={() => registerMemberAction({ eventId })} pendingLabel="Inscription…">
@@ -87,26 +111,38 @@ export function MemberCancelButton({ registrationId }: { registrationId: string 
   );
 }
 
-export function GuestConfirmButton({ token }: { token: string }) {
+export function GuestConfirmButton({
+  token,
+  waitlist = false,
+}: {
+  token: string;
+  waitlist?: boolean;
+}) {
   return (
     <ActionButton
       action={() => confirmGuestRegistrationAction({ token })}
       pendingLabel="Confirmation…"
     >
-      Confirmer mon inscription
+      {waitlist ? "Confirmer ma place sur la liste" : "Confirmer mon inscription"}
     </ActionButton>
   );
 }
 
-export function GuestCancelButton({ token }: { token: string }) {
+export function GuestCancelButton({
+  token,
+  waitlist = false,
+}: {
+  token: string;
+  waitlist?: boolean;
+}) {
   return (
     <ActionButton
       action={() => cancelGuestRegistrationAction({ token })}
-      pendingLabel="Annulation…"
+      pendingLabel={waitlist ? "Un instant…" : "Annulation…"}
       variant="contour"
-      confirm="Confirmer l’annulation"
+      confirm={waitlist ? "Confirmer : quitter la liste" : "Confirmer l’annulation"}
     >
-      Annuler mon inscription
+      {waitlist ? "Quitter la liste d’attente" : "Annuler mon inscription"}
     </ActionButton>
   );
 }
@@ -153,6 +189,54 @@ export function GuestRegistrationForm({ eventId }: { eventId: string }) {
       />
       <Button type="submit" variant="action" size="lg" largeur="pleine" disabled={pending}>
         {pending ? "Envoi…" : "Réserver ma place"}
+      </Button>
+    </form>
+  );
+}
+
+/** Rencontre complète : un visiteur demande une place sur la liste d'attente (nom + e-mail). */
+export function GuestWaitlistForm({ eventId }: { eventId: string }) {
+  const { form, pending, formError, result, submit } = useActionForm({
+    schema: guestRegistrationSchema,
+    defaultValues: { eventId, name: "", email: "" },
+    action: joinWaitlistGuestAction,
+  });
+
+  if (result) {
+    return (
+      <FormNotice>
+        {result.data.outcome === "verify"
+          ? `Presque fini : nous venons d’envoyer un e-mail à ${form.getValues("email")}. Cliquez sur le lien qu’il contient pour prendre votre rang sur la liste d’attente.`
+          : `Une place vient de se libérer ! Nous venons d’envoyer un e-mail à ${form.getValues("email")} : cliquez sur le lien qu’il contient pour confirmer votre place.`}
+      </FormNotice>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} noValidate className="flex flex-col gap-4">
+      <FormError message={formError} />
+      <TextField
+        form={form}
+        name="name"
+        idPrefix="attente"
+        label="Prénom et nom"
+        autoComplete="name"
+        autoCapitalize="words"
+      />
+      <TextField
+        form={form}
+        name="email"
+        idPrefix="attente"
+        label="Adresse e-mail"
+        type="email"
+        inputMode="email"
+        autoComplete="email"
+        autoCapitalize="none"
+        spellCheck={false}
+        hint="Pour confirmer votre rang, puis vous prévenir si une place se libère."
+      />
+      <Button type="submit" variant="action" size="lg" largeur="pleine" disabled={pending}>
+        {pending ? "Envoi…" : "Rejoindre la liste d’attente"}
       </Button>
     </form>
   );

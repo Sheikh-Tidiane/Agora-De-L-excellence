@@ -8,6 +8,7 @@ import {
   eventStatusSchema,
   type EventReportInput,
   registrationIdSchema,
+  promoteSchema,
   type EventInput,
 } from "@/features/events/schemas";
 import {
@@ -18,6 +19,7 @@ import {
   setEventStatus,
   updateEvent,
 } from "@/features/events/service";
+import { promoteFromWaitlist } from "@/features/events/waitlist";
 import { cacheTags } from "@/lib/cache-tags";
 import { parseInput, runAction, type ActionResult } from "@/lib/errors";
 import { requirePermission } from "@/lib/permissions";
@@ -80,6 +82,19 @@ export async function removeRegistrationAction(input: {
   return runAction("events.removeRegistration", async () => {
     const actor = await requirePermission("events.manage");
     await removeRegistration(parseInput(registrationIdSchema, input).registrationId, actor.id);
+    return undefined;
+  });
+}
+
+/** Inscrit une personne en attente, quel que soit son rang (au-delà de la capacité : `force`). */
+export async function promoteFromWaitlistAction(input: {
+  registrationId: string;
+  force: boolean;
+}): Promise<ActionResult> {
+  return runAction("events.promoteFromWaitlist", async () => {
+    const actor = await requirePermission("events.manage");
+    const { registrationId, force } = parseInput(promoteSchema, input);
+    await promoteFromWaitlist(registrationId, actor.id, force);
     return undefined;
   });
 }

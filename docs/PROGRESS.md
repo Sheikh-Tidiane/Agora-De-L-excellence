@@ -30,3 +30,20 @@ Playwright du parcours, contrôle visuel à 375 px et 1440 px, `docs/REGLES-METI
   route `.ics` dans `src/app/route-handlers-security.test.ts`, parcours
   `e2e/rappels-rencontres.spec.ts`.
 - À faire sur le serveur après la mise en ligne : bascule vers `agora-taches.timer`.
+
+## Étape 2 — Liste d'attente
+
+- Rencontre complète : « Rejoindre la liste d'attente » (membres et invités), rang affiché ;
+  l'invité confirme son adresse pour prendre son rang ; on quitte la liste à tout moment.
+- Place libérée (annulation, capacité, republication, invité non confirmé à temps) : la première
+  personne est inscrite d'office dans la même transaction, sous le verrou de la rencontre, et
+  prévenue par e-mail (avec l'agenda) et notification. Arrêt 2 h avant le début (réglable).
+- Administration : liste d'attente sur la fiche de la rencontre, « Inscrire » à la main (seconde
+  pression au-delà de la capacité), journal (entrée, sortie, promotion).
+- Modèle : statut `WAITLISTED`, champs `waitlistedAt` / `promotedAt` (historique gardé pour les
+  statistiques), e-mail `WAITLIST_PROMOTED` renvoyé par la tâche horaire `liste-attente` s'il
+  n'est pas parti.
+- Tests : `src/features/events/waitlist-rules.test.ts`, `src/features/events/waitlist.db.test.ts`
+  (base réelle : deux annulations simultanées, une place pour deux personnes en attente avec
+  tâche et inscription concurrentes, capacité augmentée, invité, seuil, promotion manuelle),
+  déclarations de sécurité, parcours `e2e/liste-attente.spec.ts` à 375 et 1440 px.

@@ -1,4 +1,5 @@
 import { sendEventReminders } from "@/features/events/reminders";
+import { runWaitlistTask } from "@/features/events/waitlist";
 import { sendCardReminders } from "@/features/members/card-reminders";
 import type { ClubSettings } from "@/features/settings/schemas";
 import { loadClubSettings } from "@/features/settings/club";
@@ -37,6 +38,13 @@ export const tasks: ScheduledTask[] = [
       const run = await sendEventReminders(now);
       return `${run.checked} rappel(s) à envoyer ; ${run.sent} envoyé(s), ${run.failed} en échec, ${run.skipped} déjà pris.`;
     },
+  },
+  {
+    name: "liste-attente",
+    description:
+      "Liste d’attente : places rendues par les invités qui n’ont pas confirmé, e-mails de place obtenue à renvoyer",
+    isDue: () => true,
+    run: (now) => runWaitlistTask(now),
   },
 ];
 

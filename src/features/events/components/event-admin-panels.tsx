@@ -9,6 +9,7 @@ import { useAdminAction } from "@/components/admin/use-admin-action";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   archiveEventAction,
+  promoteFromWaitlistAction,
   removeRegistrationAction,
   setEventStatusAction,
 } from "@/features/events/admin-actions";
@@ -324,6 +325,75 @@ export function RegistrantsTable({
         )}
         empty={<p className="py-6 text-gris">Personne n’est encore inscrit à cette rencontre.</p>}
       />
+      {toast}
+    </>
+  );
+}
+
+export type WaitlistRow = {
+  id: string;
+  name: string;
+  email: string;
+  kind: "member" | "guest";
+  /** Rang ; `null` : invité qui n'a pas encore confirmé son adresse. */
+  position: number | null;
+  since: Date | null;
+};
+
+/**
+ * Liste d'attente d'une rencontre, dans l'ordre. « Inscrire » donne une place à la personne,
+ * quel que soit son rang ; si la rencontre est complète, une seconde pression confirme le
+ * dépassement de la capacité.
+ */
+export function WaitlistPanel({ rows, full }: { rows: WaitlistRow[]; full: boolean }) {
+  const { run, toast, pending } = useAdminAction();
+  const [armed, setArmed] = useState<string | null>(null);
+  if (rows.length === 0) {
+    return <p className="text-gris">Personne n’attend une place.</p>;
+  }
+  const promote = (row: WaitlistRow) => {
+    if (full && armed !== row.id) {
+      setArmed(row.id);
+      return;
+    }
+    setArmed(null);
+    void run(() => promoteFromWaitlistAction({ registrationId: row.id, force: full }), {
+      success: `${row.name} est inscrit${full ? " (au-delà de la capacité)" : ""} et prévenu par e-mail.`,
+    });
+  };
+  return (
+    <>
+      <ol className="divide-y divide-trait border-y border-trait" aria-label="Liste d’attente">
+        {rows.map((row) => (
+          <li key={row.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3">
+            <span className="w-10 shrink-0 font-serif text-[1.5rem] leading-none text-indigo tabular-nums">
+              {row.position ?? "–"}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-semibold break-words">{row.name}</span>
+              <span className="petit block break-all text-gris">
+                {row.kind === "member" ? "Membre" : "Invité"} · {row.email}
+              </span>
+              <span className="petit block text-gris">
+                {row.since
+                  ? `En attente depuis le ${formatDateTime(row.since)}`
+                  : "Adresse e-mail pas encore confirmée : pas de rang"}
+              </span>
+            </span>
+            {row.position !== null ? (
+              <Button
+                variant={armed === row.id ? "action" : "contour"}
+                size="md"
+                disabled={pending}
+                onClick={() => promote(row)}
+                className="max-sm:w-full"
+              >
+                {armed === row.id ? "Confirmer : dépasser la capacité" : "Inscrire"}
+              </Button>
+            ) : null}
+          </li>
+        ))}
+      </ol>
       {toast}
     </>
   );

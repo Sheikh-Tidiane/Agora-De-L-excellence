@@ -66,11 +66,11 @@ export function canCancel(
 
 /** Une inscription invitée non confirmée ne retient sa place que pendant `GUEST_HOLD_HOURS`. */
 export function holdsSeat(
-  registration: { status: "PENDING" | "CONFIRMED" | "CANCELLED"; updatedAt: Date },
+  registration: { status: "PENDING" | "CONFIRMED" | "CANCELLED" | "WAITLISTED"; updatedAt: Date },
   now: Date,
 ): boolean {
   if (registration.status === "CONFIRMED") return true;
-  if (registration.status === "CANCELLED") return false;
+  if (registration.status === "CANCELLED" || registration.status === "WAITLISTED") return false;
   return now.getTime() - registration.updatedAt.getTime() < GUEST_HOLD_HOURS * HOUR;
 }
 
@@ -78,6 +78,42 @@ export function holdsSeat(
 export function holdCutoff(now: Date): Date {
   return new Date(now.getTime() - GUEST_HOLD_HOURS * HOUR);
 }
+
+/** Fin de la liste d'attente : plus d'entrée ni de promotion automatique après ce moment. */
+export function waitlistCutoff(event: Pick<EventForRules, "startsAt">, hours: number): Date {
+  return new Date(event.startsAt.getTime() - hours * HOUR);
+}
+
+/**
+ * Liste d'attente ouverte (entrée et promotion automatique) : inscriptions ouvertes, rencontre à
+ * capacité limitée, avant le seuil réglé (2 h avant le début par défaut).
+ */
+export function waitlistOpen(
+  event: Pick<EventForRules, "status" | "startsAt" | "capacity">,
+  now: Date,
+  cutoffHours: number,
+): boolean {
+  return (
+    registrationWindow(event, now) === "open" &&
+    event.capacity !== null &&
+    now.getTime() < waitlistCutoff(event, cutoffHours).getTime()
+  );
+}
+
+/** Promotion automatique : mêmes conditions, capacité illimitée comprise (tout le monde passe). */
+export function promotionOpen(
+  event: Pick<EventForRules, "status" | "startsAt">,
+  now: Date,
+  cutoffHours: number,
+): boolean {
+  return (
+    registrationWindow(event, now) === "open" &&
+    now.getTime() < waitlistCutoff(event, cutoffHours).getTime()
+  );
+}
+
+/** « 1er », « 2e », « 3e »… */
+export const ordinal = (n: number) => (n === 1 ? "1er" : `${n}e`);
 
 export type RegistrationRefusal = "FULL" | "PAST" | "CLOSED" | "CANCELLED" | "MEMBERS_ONLY";
 

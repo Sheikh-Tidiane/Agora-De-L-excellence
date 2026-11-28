@@ -90,6 +90,66 @@ export function registrationConfirmedEmail(input: {
   });
 }
 
+/** Invité qui demande une place sur la liste d'attente : il confirme d'abord son adresse. */
+export function guestWaitlistConfirmEmail(input: {
+  to: string;
+  name: string;
+  event: EventInfo;
+  url: string;
+}): MailMessage {
+  return build(input.to, `Confirmez votre place sur la liste d’attente · ${input.event.title}`, {
+    preheader: "Un clic pour prendre votre rang sur la liste d’attente.",
+    surtitre: "Liste d’attente",
+    title: "Confirmez votre adresse.",
+    paragraphs: [
+      `Bonjour ${input.name},`,
+      "Cette rencontre est complète. Confirmez votre adresse pour prendre votre rang sur la liste d’attente :",
+      ...eventLines(input.event),
+    ],
+    action: { label: "Confirmer ma place sur la liste", url: input.url },
+    notes: [
+      "Si une place se libère, vous êtes inscrit d’office et prévenu par e-mail.",
+      "Ce même lien vous permet de quitter la liste à tout moment.",
+      "Vous n’avez rien demandé ? Ignorez ce message.",
+    ],
+  });
+}
+
+/** Une place s'est libérée : la personne en attente est inscrite d'office (ou par un responsable). */
+export function waitlistPromotedEmail(input: {
+  to: string;
+  name: string;
+  event: EventInfo;
+  /** Membre : la page de la rencontre ; invité : son lien personnel. */
+  url: string;
+  calendar: { ics: string; google: string };
+  cancelBefore: string | null;
+  manual: boolean;
+}): MailMessage {
+  return build(input.to, `Une place s’est libérée : vous êtes inscrit · ${input.event.title}`, {
+    preheader: `${input.event.when} · ${input.event.place}`,
+    surtitre: "Liste d’attente",
+    title: "Votre place est réservée.",
+    paragraphs: [
+      `Bonjour ${input.name},`,
+      input.manual
+        ? "Le club vous a fait une place à cette rencontre :"
+        : "Une place s’est libérée à cette rencontre, et vous étiez le premier sur la liste d’attente :",
+      ...eventLines(input.event),
+    ],
+    action: { label: "Voir mon inscription", url: input.url },
+    links: [
+      { label: "Ajouter à mon agenda (fichier .ics)", url: input.calendar.ics },
+      { label: "Ajouter à Google Agenda", url: input.calendar.google },
+    ],
+    notes: [
+      input.cancelBefore
+        ? `Un empêchement ? Annulez depuis ce lien avant le ${input.cancelBefore} : la place ira à la personne suivante.`
+        : "Un empêchement ? Prévenez le club dès que possible : la place ira à la personne suivante.",
+    ],
+  });
+}
+
 /**
  * Rappel la veille d'une rencontre (src/features/events/reminders.ts). Le membre reçoit le lien
  * de visio (sauf s'il est masqué : carte non réglée après le délai), l'invité jamais.

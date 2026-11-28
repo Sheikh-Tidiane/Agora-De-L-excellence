@@ -481,6 +481,7 @@ enum RegistrationStatus {
   PENDING // invité qui n'a pas encore confirmé par e-mail
   CONFIRMED
   CANCELLED
+  WAITLISTED // sur la liste d'attente d'une rencontre complète
 }
 
 /// Comment la présence a été enregistrée.
@@ -567,6 +568,11 @@ model EventRegistration {
   checkInMethod CheckInMethod?
   checkedInById String?
   checkedInBy   User?              @relation("RegistrationCheckIn", fields: [checkedInById], references: [id], onDelete: SetNull)
+  /// Entrée effective sur la liste d'attente (rang). Invité : posée à la vérification de son
+  /// adresse. Conservée après la promotion ou la sortie (statistiques).
+  waitlistedAt  DateTime?
+  /// Place obtenue depuis la liste d'attente (automatique, manuelle ou directe après le seuil).
+  promotedAt    DateTime?
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
 
@@ -575,7 +581,7 @@ model EventRegistration {
 
   @@unique([eventId, userId])
   @@unique([eventId, guestEmail])
-  @@index([eventId, status])
+  @@index([eventId, status, waitlistedAt])
   @@index([userId])
 }
 
@@ -669,6 +675,7 @@ model RegistrationMail {
 
 enum RegistrationMailKind {
   EVENT_REMINDER // la veille de la rencontre
+  WAITLIST_PROMOTED // place obtenue depuis la liste d'attente
 }
 
 enum CardReminderKind {

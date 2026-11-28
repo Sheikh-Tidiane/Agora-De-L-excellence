@@ -154,6 +154,15 @@ export function SettingsForm({ initial }: { initial: ClubSettingsInput }) {
           autoComplete="off"
           hint="Un membre peut désactiver ces rappels dans son profil."
         />
+        <TextField
+          form={form}
+          name="waitlistCutoffHours"
+          idPrefix="reg"
+          label="Fin de la liste d’attente (heures avant le début)"
+          inputMode="numeric"
+          autoComplete="off"
+          hint="Une place libérée avant ce moment va d’office à la première personne en attente ; après, elle est libre pour tous."
+        />
       </Group>
       <Group
         title="Cotisations"

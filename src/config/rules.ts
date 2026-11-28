@@ -25,6 +25,8 @@ export const rules = {
   "events.remindersEnabled": true,
   /** Heure d'envoi du rappel la veille (heure de Dakar, 0 à 23). */
   "events.reminderHour": 10,
+  /** Liste d'attente : plus d'entrée ni de promotion automatique à moins de X heures du début. */
+  "events.waitlistCutoffHours": 2,
   /** Délai d'annulation d'une inscription avant le début de l'événement, en heures. */
   "events.cancellationDeadlineHours": 24,
   /** Avis publics sur le catalogue (critique validée + accord du membre). */

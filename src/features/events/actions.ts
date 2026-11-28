@@ -8,6 +8,11 @@ import {
   registerMember,
 } from "@/features/events/registration";
 import {
+  joinWaitlistAsGuest,
+  joinWaitlistAsMember,
+  type JoinOutcome,
+} from "@/features/events/waitlist";
+import {
   eventIdSchema,
   guestRegistrationSchema,
   registrationIdSchema,
@@ -53,6 +58,48 @@ export async function registerGuestAction(input: GuestRegistrationInput): Promis
     await enforceRateLimit("events.guest.email", data.email);
     await registerGuest(data.eventId, { name: data.name, email: data.email });
     return undefined;
+  });
+}
+
+/**
+ * Un membre rejoint la liste d'attente d'une rencontre complète. S'il reste une place (libérée
+ * entre-temps), il est inscrit directement.
+ */
+export async function joinWaitlistAction(input: {
+  eventId: string;
+}): Promise<ActionResult<{ outcome: "registered" } | { outcome: "waitlisted"; position: number }>> {
+  return runAction("events.joinWaitlist", async () => {
+    const user = await requireUser();
+    const { eventId } = parseInput(eventIdSchema, input);
+    await enforceRateLimit("events.waitlist.user", user.id);
+    const result: JoinOutcome = await joinWaitlistAsMember(eventId, user.id);
+    if (result.outcome === "register") {
+      await registerMember(eventId, user);
+      return { outcome: "registered" as const };
+    }
+    if (result.outcome === "verify") throw new Error("Résultat inattendu pour un membre.");
+    return result;
+  });
+}
+
+/**
+ * Un visiteur demande une place sur la liste d'attente : un lien de confirmation part à son
+ * adresse. S'il reste une place, il reçoit le lien d'inscription habituel.
+ */
+export async function joinWaitlistGuestAction(
+  input: GuestRegistrationInput,
+): Promise<ActionResult<{ outcome: "pending" | "verify" }>> {
+  return runAction("events.joinWaitlistGuest", async () => {
+    const data = parseInput(guestRegistrationSchema, input);
+    await enforceRateLimit("events.guest.ip", await clientAddress());
+    await enforceRateLimit("events.guest.email", data.email);
+    const guest = { name: data.name, email: data.email };
+    const result = await joinWaitlistAsGuest(data.eventId, guest);
+    if (result.outcome === "register") {
+      await registerGuest(data.eventId, guest);
+      return { outcome: "pending" as const };
+    }
+    return { outcome: "verify" as const };
   });
 }
 

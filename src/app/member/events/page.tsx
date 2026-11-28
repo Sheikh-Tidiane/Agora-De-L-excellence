@@ -10,7 +10,10 @@ import { MyRegistrationsList } from "@/features/events/components/my-registratio
 import { getMyAttendance, getMyUpcomingRegistrations } from "@/features/events/queries";
 import { activityLabels } from "@/config/activities";
 import { loadClubSettings } from "@/features/settings/club";
-import { formatDate } from "@/lib/dates";
+import { MemberLeaveWaitlistButton } from "@/features/events/components/registration-forms";
+import { ordinal } from "@/features/events/rules";
+import { getMyWaitlist } from "@/features/events/waitlist";
+import { formatDate, formatTime } from "@/lib/dates";
 import { requirePageAccess } from "@/lib/permissions";
 
 export const metadata: Metadata = { title: "Mes rencontres" };
@@ -18,10 +21,11 @@ export const metadata: Metadata = { title: "Mes rencontres" };
 async function MyEvents() {
   const user = await requirePageAccess("member.access", `${authRoutes.member}/events`);
   const now = new Date();
-  const [registrations, attendance, settings] = await Promise.all([
+  const [registrations, attendance, settings, waitlist] = await Promise.all([
     getMyUpcomingRegistrations(user.id, now),
     getMyAttendance(user.id),
     loadClubSettings(),
+    getMyWaitlist(user.id, now),
   ]);
 
   return (
@@ -64,7 +68,40 @@ async function MyEvents() {
         )}
       </section>
 
-      <section aria-labelledby="activites-titre" className="lg:col-span-4">
+      {waitlist.length > 0 ? (
+        <section aria-labelledby="attente-titre" className="lg:col-span-5 lg:row-start-2">
+          <h2 id="attente-titre" className="titre-3">
+            Listes d’attente
+          </h2>
+          <p className="petit mt-2 text-gris">
+            Si une place se libère jusqu’à {settings.waitlistCutoffHours}&nbsp;h avant le début,
+            vous êtes inscrit d’office et prévenu par e-mail.
+          </p>
+          <ul className="mt-4 border-b border-indigo/20">
+            {waitlist.map((row) => (
+              <li key={row.id} className="border-t border-indigo/20 py-4">
+                <p className="petit font-semibold text-gris">
+                  {formatDate(row.event.startsAt)}, {formatTime(row.event.startsAt)}
+                </p>
+                <Link
+                  href={`/events/${row.event.slug}`}
+                  className="mt-0.5 block font-serif text-lg leading-snug decoration-terracotta underline-offset-4 hover:underline"
+                >
+                  {row.event.title}
+                </Link>
+                <div className="mt-2 flex flex-wrap items-center gap-3">
+                  <Tag tone="alerte">{`${ordinal(row.position)} sur la liste`}</Tag>
+                </div>
+                <div className="mt-3">
+                  <MemberLeaveWaitlistButton registrationId={row.id} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      <section aria-labelledby="activites-titre" className="lg:col-span-4 lg:row-start-1">
         <div className="flex items-baseline justify-between gap-4">
           <h2 id="activites-titre" className="titre-3">
             Mes activités

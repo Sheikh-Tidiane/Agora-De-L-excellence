@@ -8,6 +8,8 @@ const id = z.string().min(1).max(40);
 
 export const eventIdSchema = z.object({ eventId: id });
 export const registrationIdSchema = z.object({ registrationId: id });
+/** Promotion manuelle depuis la liste d'attente ; `force` : au-delà de la capacité, confirmé. */
+export const promoteSchema = z.object({ registrationId: id, force: z.boolean() });
 export const registrationTokenSchema = z.object({ token: z.string().min(16).max(200) });
 
 export const guestRegistrationSchema = z.object({

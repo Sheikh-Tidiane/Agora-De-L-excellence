@@ -151,6 +151,13 @@ export const publicCases: PublicCase[] = [
     "nom géant": { ...guestValid, name: "x".repeat(81) },
     "adresse e-mail invalide": { ...guestValid, email: "awa@" },
   }),
+  publicCase(`${f.events}#joinWaitlistGuestAction`, events.joinWaitlistGuestAction, guestValid, {
+    "rencontre : identifiant vide": { ...guestValid, eventId: "" },
+    "rencontre : objet": { ...guestValid, eventId: { not: "" } },
+    "nom manquant": { ...guestValid, name: "" },
+    "nom géant": { ...guestValid, name: "x".repeat(81) },
+    "adresse e-mail invalide": { ...guestValid, email: "awa@" },
+  }),
   publicCase(
     `${f.events}#confirmGuestRegistrationAction`,
     events.confirmGuestRegistrationAction,

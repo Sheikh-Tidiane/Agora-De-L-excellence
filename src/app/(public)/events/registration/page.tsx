@@ -9,7 +9,14 @@ import {
   GuestConfirmButton,
 } from "@/features/events/components/registration-forms";
 import { getGuestRegistration } from "@/features/events/registration";
-import { canCancel, cancellationDeadline, holdsSeat, placeLabel } from "@/features/events/rules";
+import {
+  canCancel,
+  cancellationDeadline,
+  holdsSeat,
+  ordinal,
+  placeLabel,
+} from "@/features/events/rules";
+import { waitlistPosition } from "@/features/events/waitlist";
 import { loadClubSettings } from "@/features/settings/club";
 import { formatFullDate, formatTime } from "@/lib/dates";
 
@@ -85,6 +92,48 @@ async function Registration({
         <p className="mt-5 text-gris">
           Changement de programme&nbsp;? Vous pouvez vous réinscrire depuis la page de la rencontre.
         </p>
+        {eventLink}
+      </Shell>
+    );
+  }
+
+  if (registration.status === "WAITLISTED" && !registration.waitlistedAt) {
+    return (
+      <Shell
+        surtitre="Liste d’attente"
+        title={`${registration.guestName?.split(" ")[0] ?? "Bonjour"}, confirmez votre place sur la liste.`}
+      >
+        {summary}
+        <p className="mt-5 text-gris">
+          La rencontre est complète. Confirmez votre adresse pour prendre votre rang : si une place
+          se libère, vous êtes inscrit d’office et prévenu par e-mail.
+        </p>
+        <div className="mt-6">
+          <GuestConfirmButton token={token} waitlist />
+        </div>
+      </Shell>
+    );
+  }
+
+  if (registration.status === "WAITLISTED" && registration.waitlistedAt) {
+    const position = await waitlistPosition({
+      id: registration.id,
+      eventId: registration.eventId,
+      waitlistedAt: registration.waitlistedAt,
+    });
+    return (
+      <Shell
+        surtitre="Liste d’attente"
+        title={`Vous êtes ${ordinal(position)} sur la liste d’attente.`}
+      >
+        {summary}
+        <p className="mt-5 text-gris">
+          Si une place se libère jusqu’à {settings.waitlistCutoffHours}&nbsp;h avant le début, vous
+          êtes inscrit d’office et prévenu par e-mail. Vous pouvez quitter la liste à tout moment.
+        </p>
+        <div className="mt-6">
+          <GuestCancelButton token={token} waitlist />
+        </div>
         {eventLink}
       </Shell>
     );

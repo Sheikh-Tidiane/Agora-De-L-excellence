@@ -225,10 +225,11 @@ bash scripts/prod-compose.sh run --rm -T tools pnpm exec tsx scripts/taches.ts
 Chaque tâche décide si c'est son heure et n'envoie jamais rien en double si elle tourne deux fois
 (`docs/REGLES-METIER.md`) :
 
-| Tâche                | Quand                                                                                         | Ce qu'elle fait                                                                         |
-| -------------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `rappels-carte`      | À partir de 9 h                                                                               | Rappels « carte à régler » : 7 jours après l'acceptation, 3 jours avant la fin du délai |
-| `rappels-rencontres` | La veille de chaque rencontre, à l'heure réglée (10 h par défaut), jusqu'à 2 h avant le début | Rappel par e-mail aux inscrits confirmés (membres et invités)                           |
+| Tâche                | Quand                                                                                         | Ce qu'elle fait                                                                                                    |
+| -------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `rappels-carte`      | À partir de 9 h                                                                               | Rappels « carte à régler » : 7 jours après l'acceptation, 3 jours avant la fin du délai                            |
+| `rappels-rencontres` | La veille de chaque rencontre, à l'heure réglée (10 h par défaut), jusqu'à 2 h avant le début | Rappel par e-mail aux inscrits confirmés (membres et invités)                                                      |
+| `liste-attente`      | Chaque heure                                                                                  | Places rendues par les invités qui n'ont pas confirmé : à la liste d'attente ; e-mails de place obtenue à renvoyer |
 
 Une nouvelle tâche s'ajoute dans `src/features/tasks/registry.ts` : rien à changer sur le serveur.
 Les tâches et leur description, puis une tâche lancée à la main (même hors de son heure) :

@@ -3,58 +3,44 @@ import { hashToken } from "@/features/auth/service";
 import { countSeatsTaken } from "@/features/events/queries";
 import {
   canCancel,
-  cancellationDeadline,
   GUEST_HOLD_HOURS,
   refusalMessages,
   refuseRegistration,
-  placeLabel,
 } from "@/features/events/rules";
 import { loadClubSettings } from "@/features/settings/club";
-import { formatFullDate, formatTime } from "@/lib/dates";
 import { env } from "@/lib/env";
 import { AppError } from "@/lib/errors";
-import { logger } from "@/lib/logger";
 import { notify } from "@/features/notifications/service";
-import { sendMail, type MailMessage } from "@/lib/mail";
+import { sendMail } from "@/lib/mail";
 import { guestConfirmationEmail, registrationConfirmedEmail } from "@/lib/mail/club-templates";
 import { prisma, type Db } from "@/lib/prisma";
+import { audit } from "@/lib/audit";
+import { fillFreedSeats, sendPromotionMessages } from "@/features/events/waitlist";
+import {
+  cancelBeforeLabel,
+  eventInfo,
+  lockEvent,
+  registrationUrl,
+  sendSafely,
+  type LockedEvent,
+} from "@/features/events/registration-core";
 
 /**
  * Inscriptions aux rencontres : membre connecté, ou invité si la rencontre est ouverte au public.
  * La capacité est vérifiée dans une transaction qui verrouille la ligne de l'événement :
  * deux inscriptions simultanées ne peuvent pas prendre la même dernière place.
  */
-type LockedEvent = NonNullable<Awaited<ReturnType<typeof lockEvent>>>;
-
-async function lockEvent(tx: Db, eventId: string) {
-  await tx.$queryRaw`SELECT id FROM "Event" WHERE id = ${eventId} FOR UPDATE`;
-  return tx.event.findFirst({ where: { id: eventId, archivedAt: null } });
-}
-
-const whenOf = (event: { startsAt: Date }) =>
-  `${formatFullDate(event.startsAt)}, ${formatTime(event.startsAt)}`;
-
-const eventInfo = (event: LockedEvent) => ({
-  title: event.title,
-  when: whenOf(event),
-  place: placeLabel(event.location),
-});
-
-/** Un e-mail qui ne part pas ne doit pas annuler une inscription déjà enregistrée. */
-async function sendSafely(message: MailMessage) {
-  try {
-    await sendMail(message);
-  } catch (error) {
-    logger.error("E-mail d’inscription non envoyé", error);
-  }
-}
-
-async function cancelBeforeLabel(event: LockedEvent, now: Date) {
-  const { cancellationDeadlineHours: hours } = await loadClubSettings();
-  const deadline = cancellationDeadline(event, hours);
-  return deadline.getTime() > now.getTime()
-    ? `${formatFullDate(deadline)} à ${formatTime(deadline)}`
-    : null;
+/**
+ * Inscription directe d'une ligne existante : depuis la liste d'attente (place libre après le
+ * seuil), le rang est gardé et la promotion notée ; après une annulation, l'historique repart à zéro.
+ */
+function waitlistFields(
+  existing: { status: string; waitlistedAt: Date | null } | null,
+  now: Date,
+): { waitlistedAt?: Date | null; promotedAt?: Date | null } {
+  if (!existing) return {};
+  if (existing.status === "WAITLISTED" && existing.waitlistedAt) return { promotedAt: now };
+  return { waitlistedAt: null, promotedAt: null };
 }
 
 /** Inscription d'un membre connecté : confirmée tout de suite. */
@@ -63,9 +49,12 @@ export async function registerMember(
   member: { id: string; firstName: string; email: string },
 ): Promise<{ id: string }> {
   const now = new Date();
-  const { event, registration } = await prisma.$transaction(async (tx) => {
+  const { waitlistCutoffHours } = await loadClubSettings();
+  const { event, registration, promotions } = await prisma.$transaction(async (tx) => {
     const event = await lockEvent(tx, eventId);
     if (!event) throw new AppError("NOT_FOUND", "Cette rencontre est introuvable.");
+    // Une place rendue (invité qui n'a pas confirmé à temps) revient d'abord à la liste d'attente.
+    const promotions = await fillFreedSeats(tx, event, now, waitlistCutoffHours, "catch-up");
     const existing = await tx.eventRegistration.findUnique({
       where: { eventId_userId: { eventId, userId: member.id } },
     });
@@ -79,12 +68,18 @@ export async function registerMember(
       "member",
     );
     if (refusal) throw new AppError("CONFLICT", refusalMessages[refusal]);
-    const data = { status: "CONFIRMED" as const, confirmedAt: now, cancelledAt: null };
+    const data = {
+      status: "CONFIRMED" as const,
+      confirmedAt: now,
+      cancelledAt: null,
+      ...waitlistFields(existing, now),
+    };
     const registration = existing
       ? await tx.eventRegistration.update({ where: { id: existing.id }, data })
       : await tx.eventRegistration.create({ data: { eventId, userId: member.id, ...data } });
-    return { event, registration };
+    return { event, registration, promotions };
   });
+  await sendPromotionMessages(event, promotions, now);
   await sendSafely(
     registrationConfirmedEmail({
       to: member.email,
@@ -105,8 +100,7 @@ export async function registerMember(
   return { id: registration.id };
 }
 
-export const registrationUrl = (token: string) =>
-  `${env.APP_URL}/events/registration?token=${token}`;
+export { registrationUrl };
 
 /**
  * Inscription invitée désignée par un jeton : celui du lien de confirmation, ou celui joint à un
@@ -138,9 +132,11 @@ export async function registerGuest(
 ): Promise<void> {
   const now = new Date();
   const token = randomBytes(32).toString("base64url");
-  const event = await prisma.$transaction(async (tx) => {
+  const { waitlistCutoffHours } = await loadClubSettings();
+  const { event, promotions } = await prisma.$transaction(async (tx) => {
     const event = await lockEvent(tx, eventId);
     if (!event) throw new AppError("NOT_FOUND", "Cette rencontre est introuvable.");
+    const promotions = await fillFreedSeats(tx, event, now, waitlistCutoffHours, "catch-up");
     const existing = await tx.eventRegistration.findUnique({
       where: { eventId_guestEmail: { eventId, guestEmail: guest.email } },
     });
@@ -169,6 +165,7 @@ export async function registerGuest(
       tokenHash: hashToken(token),
       confirmedAt: null,
       cancelledAt: null,
+      ...waitlistFields(existing, now),
     };
     if (existing) {
       await tx.eventRegistration.update({ where: { id: existing.id }, data });
@@ -179,8 +176,9 @@ export async function registerGuest(
       });
     } else
       await tx.eventRegistration.create({ data: { eventId, guestEmail: guest.email, ...data } });
-    return event;
+    return { event, promotions };
   });
+  await sendPromotionMessages(event, promotions, now);
   // Ici l'e-mail est indispensable : sans lui, l'invité ne peut pas confirmer. Son échec remonte.
   await sendMail(
     guestConfirmationEmail({
@@ -201,9 +199,11 @@ export async function getGuestRegistration(token: string) {
     where: { id },
     select: {
       id: true,
+      eventId: true,
       status: true,
       guestName: true,
       updatedAt: true,
+      waitlistedAt: true,
       event: {
         select: {
           slug: true,
@@ -220,9 +220,13 @@ export async function getGuestRegistration(token: string) {
   return registration && !registration.event.archivedAt ? registration : null;
 }
 
-/** L'invité confirme sa place depuis le lien reçu par e-mail. */
+/**
+ * L'invité confirme depuis le lien reçu par e-mail : sa place (inscription en attente de
+ * confirmation), ou son adresse pour la liste d'attente (il prend alors son rang).
+ */
 export async function confirmGuestRegistration(token: string): Promise<void> {
   const now = new Date();
+  const { waitlistCutoffHours } = await loadClubSettings();
   const result = await prisma.$transaction(async (tx) => {
     const found = await tx.eventRegistration.findUnique({ where: { tokenHash: hashToken(token) } });
     if (!found) throw new AppError("INVALID_TOKEN", "Ce lien d’inscription n’est plus valable.");
@@ -232,6 +236,27 @@ export async function confirmGuestRegistration(token: string): Promise<void> {
     if (found.status === "CANCELLED") {
       throw new AppError("CONFLICT", "Cette inscription a été annulée. Inscrivez-vous à nouveau.");
     }
+    if (found.status === "WAITLISTED") {
+      if (found.waitlistedAt) return null;
+      await tx.eventRegistration.update({
+        where: { id: found.id },
+        data: { waitlistedAt: now },
+      });
+      await audit(
+        {
+          actorId: null,
+          action: "event.waitlist_joined",
+          entityType: "EventRegistration",
+          entityId: found.id,
+          metadata: { eventId: event.id, guest: true },
+        },
+        tx,
+      );
+      // Une place s'est peut-être libérée entre-temps : la file avance (lui compris).
+      const promotions = await fillFreedSeats(tx, event, now, waitlistCutoffHours, "catch-up");
+      return { event, registration: found, promotions, confirmed: false };
+    }
+    const promotions = await fillFreedSeats(tx, event, now, waitlistCutoffHours, "catch-up");
     const taken = await tx.eventRegistration.count({
       where: {
         eventId: event.id,
@@ -251,9 +276,11 @@ export async function confirmGuestRegistration(token: string): Promise<void> {
       where: { id: found.id },
       data: { status: "CONFIRMED", confirmedAt: now },
     });
-    return { event, registration: found };
+    return { event, registration: found, promotions, confirmed: true };
   });
   if (!result) return;
+  await sendPromotionMessages(result.event, result.promotions, now);
+  if (!result.confirmed) return;
   await sendSafely(
     registrationConfirmedEmail({
       to: result.registration.guestEmail!,
@@ -282,24 +309,71 @@ async function assertCancellable(
   }
 }
 
-/** Annulation par l'invité, depuis son lien. */
+/**
+ * Annule une inscription (ou une place sur la liste d'attente) sous le verrou de l'événement ;
+ * une place libérée va aussitôt à la première personne en attente. Quitter la liste d'attente
+ * reste possible après le délai d'annulation.
+ */
+async function cancelRegistration(
+  registrationId: string,
+  eventId: string,
+  canCancelNow: (event: LockedEvent) => Promise<void>,
+  actorId: string | null,
+): Promise<void> {
+  const now = new Date();
+  const { waitlistCutoffHours } = await loadClubSettings();
+  const result = await prisma.$transaction(async (tx) => {
+    const event = await lockEvent(tx, eventId);
+    if (!event) throw new AppError("NOT_FOUND", "Cette rencontre est introuvable.");
+    const registration = await tx.eventRegistration.findUnique({ where: { id: registrationId } });
+    if (!registration || registration.status === "CANCELLED") return null;
+    const waiting = registration.status === "WAITLISTED";
+    if (!waiting) await canCancelNow(event);
+    await tx.eventRegistration.update({
+      where: { id: registrationId },
+      data: { status: "CANCELLED", cancelledAt: now },
+    });
+    if (waiting) {
+      await audit(
+        {
+          actorId,
+          action: "event.waitlist_left",
+          entityType: "EventRegistration",
+          entityId: registrationId,
+          metadata: { eventId, guest: registration.userId === null },
+        },
+        tx,
+      );
+      return null;
+    }
+    return {
+      event,
+      promotions: await fillFreedSeats(tx, event, now, waitlistCutoffHours, "cancellation"),
+    };
+  });
+  if (result) await sendPromotionMessages(result.event, result.promotions, now);
+}
+
+/** Annulation par l'invité, depuis son lien (inscription ou liste d'attente). */
 export async function cancelGuestRegistration(token: string): Promise<void> {
   const id = await registrationIdByGuestToken(token);
   const registration = id
-    ? await prisma.eventRegistration.findUnique({ where: { id }, include: { event: true } })
+    ? await prisma.eventRegistration.findUnique({
+        where: { id },
+        select: { id: true, eventId: true },
+      })
     : null;
   if (!registration)
     throw new AppError("INVALID_TOKEN", "Ce lien d’inscription n’est plus valable.");
-  if (registration.status === "CANCELLED") return;
-  const now = new Date();
-  await assertCancellable(registration.event, now);
-  await prisma.eventRegistration.update({
-    where: { id: registration.id },
-    data: { status: "CANCELLED", cancelledAt: now },
-  });
+  await cancelRegistration(
+    registration.id,
+    registration.eventId,
+    (event) => assertCancellable(event, new Date()),
+    null,
+  );
 }
 
-/** Annulation par un membre : uniquement sa propre inscription. */
+/** Annulation par un membre : uniquement sa propre inscription (ou sa place sur la liste). */
 export async function cancelMemberRegistration(
   registrationId: string,
   userId: string,
@@ -312,13 +386,11 @@ export async function cancelMemberRegistration(
   if (!registration || registration.userId !== userId) {
     throw new AppError("NOT_FOUND", "Inscription introuvable.");
   }
-  if (registration.status !== "CANCELLED") {
-    const now = new Date();
-    await assertCancellable(registration.event, now);
-    await prisma.eventRegistration.update({
-      where: { id: registration.id },
-      data: { status: "CANCELLED", cancelledAt: now },
-    });
-  }
+  await cancelRegistration(
+    registration.id,
+    registration.eventId,
+    (event) => assertCancellable(event, new Date()),
+    userId,
+  );
   return { eventSlug: registration.event.slug };
 }

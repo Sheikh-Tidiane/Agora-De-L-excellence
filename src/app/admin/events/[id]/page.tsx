@@ -6,6 +6,7 @@ import { AdminListSkeleton, AdminPageHeader } from "@/components/admin/page-head
 import {
   EventStatusPanel,
   RegistrantsTable,
+  WaitlistPanel,
   type RegistrantRow,
 } from "@/features/events/components/event-admin-panels";
 import { EventForm } from "@/features/events/components/event-form";
@@ -16,13 +17,14 @@ import { loadClubSettings } from "@/features/settings/club";
 import { formatFullDate, formatTime, toLocalDateTime } from "@/lib/dates";
 import { can, requirePageAccess } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { getWaitlist } from "@/features/events/waitlist";
 
 export const metadata: Metadata = { title: "Événement" };
 
 async function EventAdmin({ params }: Pick<PageProps<"/admin/events/[id]">, "params">) {
   const { id } = await params;
   const user = await requirePageAccess("events.manage", `/admin/events/${id}`);
-  const [event, settings] = await Promise.all([
+  const [event, settings, waitlist] = await Promise.all([
     prisma.event.findFirst({
       where: { id, archivedAt: null },
       include: {
@@ -39,22 +41,29 @@ async function EventAdmin({ params }: Pick<PageProps<"/admin/events/[id]">, "par
       },
     }),
     loadClubSettings(),
+    getWaitlist(id),
   ]);
   if (!event) notFound();
   const now = new Date();
   const taken = event.registrations.filter((registration) => holdsSeat(registration, now)).length;
 
-  const registrants: RegistrantRow[] = event.registrations.map((registration) => ({
-    id: registration.id,
-    name: registration.user?.name ?? registration.guestName ?? "Invité",
-    email: registration.user?.email ?? registration.guestEmail ?? "",
-    kind: registration.userId ? "member" : "guest",
-    memberNumber: registration.user?.memberNumber ?? null,
-    status: registration.status,
-    createdAt: registration.createdAt,
-    present: registration.attendedAt !== null,
-    paid: registration.payments.length > 0,
-  }));
+  const registrants: RegistrantRow[] = event.registrations.flatMap((registration) =>
+    registration.status === "WAITLISTED"
+      ? []
+      : [
+          {
+            id: registration.id,
+            name: registration.user?.name ?? registration.guestName ?? "Invité",
+            email: registration.user?.email ?? registration.guestEmail ?? "",
+            kind: registration.userId ? "member" : "guest",
+            memberNumber: registration.user?.memberNumber ?? null,
+            status: registration.status,
+            createdAt: registration.createdAt,
+            present: registration.attendedAt !== null,
+            paid: registration.payments.length > 0,
+          },
+        ],
+  );
   // Le pointage ouvre le jour de la rencontre (heure de Dakar = UTC).
   const dayStart = new Date(event.startsAt);
   dayStart.setUTCHours(0, 0, 0, 0);
@@ -147,6 +156,28 @@ async function EventAdmin({ params }: Pick<PageProps<"/admin/events/[id]">, "par
           />
         </section>
       ) : null}
+
+      <section aria-labelledby="attente-titre" className="mt-14 border-t border-indigo/30 pt-8">
+        <h2 id="attente-titre" className="titre-3">
+          Liste d’attente{waitlist.length > 0 ? ` (${waitlist.length})` : ""}
+        </h2>
+        <p className="mt-1.5 mb-5 max-w-[46rem] text-gris">
+          Une place libérée jusqu’à {settings.waitlistCutoffHours}&nbsp;h avant le début va d’office
+          à la première personne, prévenue par e-mail. Vous pouvez aussi inscrire quelqu’un à la
+          main.
+        </p>
+        <WaitlistPanel
+          full={event.capacity !== null && taken >= event.capacity}
+          rows={waitlist.map((row) => ({
+            id: row.id,
+            name: row.user?.name ?? row.guestName ?? "Invité",
+            email: row.user?.email ?? row.guestEmail ?? "",
+            kind: row.userId ? "member" : "guest",
+            position: row.position,
+            since: row.waitlistedAt,
+          }))}
+        />
+      </section>
 
       <section aria-labelledby="inscrits-titre" className="mt-14 border-t border-indigo/30 pt-8">
         <h2 id="inscrits-titre" className="titre-3 mb-5">

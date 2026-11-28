@@ -6,7 +6,12 @@ import { can, requirePermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
 
-const statusLabels = { CONFIRMED: "Confirmée", PENDING: "À confirmer", CANCELLED: "Annulée" };
+const statusLabels = {
+  CONFIRMED: "Confirmée",
+  PENDING: "À confirmer",
+  CANCELLED: "Annulée",
+  WAITLISTED: "Liste d’attente",
+};
 
 /**
  * Export CSV des inscrits à un événement. Exige `data.export` ET `events.manage` ;

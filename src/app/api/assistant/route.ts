@@ -13,8 +13,9 @@ import { consumeRateLimit } from "@/lib/rate-limit";
 import { assertSameOrigin } from "@/lib/same-origin";
 
 /**
- * Question au « Compagnon des Lettres » (docs/DECISIONS.md §14). Ordre : session et permission
- * `member.access`, Zod, fournisseur configuré, limite de débit, quota du jour, puis appel au modèle.
+ * Question au « Compagnon des Lettres » (docs/DECISIONS.md §14). Ordre : assistant configuré (sinon
+ * 404 : il n'existe pas), session et permission `member.access`, Zod, limite de débit, quota du
+ * jour, puis appel au modèle.
  * Succès : texte brut diffusé au fil de l'eau. Jamais de contenu de conversation dans les journaux.
  */
 const NO_STORE = { "Cache-Control": "no-store" };
@@ -24,6 +25,9 @@ function json(status: number, body: Record<string, unknown>, headers: Record<str
 }
 
 export async function POST(request: Request) {
+  // Non configuré (clé ou modèle absent, voir isAssistantEnabled) : la route n'existe pas.
+  const provider = getLLMProvider();
+  if (!provider) return json(404, { error: "Page introuvable.", code: "NOT_FOUND" });
   try {
     const user = await requirePermission("member.access");
     assertSameOrigin(request);
@@ -37,9 +41,6 @@ export async function POST(request: Request) {
       });
     }
     const { mode, messages } = parsed.data;
-
-    const provider = getLLMProvider();
-    if (!provider) return json(503, { error: "Assistant non connecté", code: "NOT_CONFIGURED" });
 
     const burst = await consumeRateLimit("assistant.ask.user", user.id);
     if (!burst.allowed) {

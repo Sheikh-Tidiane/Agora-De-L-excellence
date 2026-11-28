@@ -4,18 +4,33 @@ import { linkFromEmail } from "./support/mailpit";
 import { randomClient, testUser } from "./support/parcours";
 
 /**
- * Phase 5 : sans clé d'API (cas du poste de développement et de la recette), l'assistant le dit
- * franchement et ne simule aucune réponse ; la route refuse les visiteurs et répond 503 aux membres.
+ * Sans clé ni modèle (cas du poste de développement et de la recette), le « Compagnon des
+ * Lettres » n'existe pas pour les membres : ni lien dans la navigation, ni encart au tableau de
+ * bord, page /member/assistant en 404, route /api/assistant en 404 (visiteur ou membre), et rien
+ * dans le plan du site. Le cas « configuré » est couvert par les tests unitaires
+ * (src/features/assistant/enabled.test.ts, src/app/api/assistant/assistant-route.test.ts).
  */
 test.use({ extraHTTPHeaders: randomClient() });
 
-test("assistant sans clé : « non connecté », aucune réponse simulée", async ({ page, request }) => {
-  // Visiteur : la route exige une session.
-  const anonymous = await request.post("/api/assistant", {
-    data: { mode: "word", messages: [{ role: "user", content: "Que veut dire palabre ?" }] },
-  });
-  expect(anonymous.status()).toBe(401);
+const question = {
+  mode: "word",
+  messages: [{ role: "user", content: "Que veut dire palabre ?" }],
+};
 
+test("assistant non configuré : masqué partout, page et route en 404", async ({
+  page,
+  request,
+  isMobile,
+}) => {
+  // Visiteur : la route n'existe pas.
+  const anonymous = await request.post("/api/assistant", { data: question });
+  expect(anonymous.status()).toBe(404);
+  expect(await anonymous.json()).toMatchObject({ code: "NOT_FOUND" });
+  // Plan du site : aucune adresse de l'assistant.
+  expect(await (await request.get("/sitemap.xml")).text()).not.toContain("assistant");
+
+  const width = isMobile ? 375 : 1440;
+  await page.setViewportSize({ width, height: isMobile ? 812 : 900 });
   const email = `assistant-${randomInt(1e9)}@e2e.agora.test`;
   const password = `phrase-assistant-${randomInt(1e6)}`;
   testUser("create", email, "Mariama", "member");
@@ -36,17 +51,26 @@ test("assistant sans clé : « non connecté », aucune réponse simulée", asyn
     await page.getByRole("button", { name: "Se connecter" }).click();
     await expect(page).toHaveURL(/\/member$/);
 
-    await page.getByRole("link", { name: /Demander à l’assistant/ }).click();
-    await expect(page).toHaveURL(/\/member\/assistant$/);
-    await expect(page.getByRole("heading", { name: "Assistant non connecté" })).toBeVisible();
-    await expect(page.getByRole("textbox", { name: "Votre question" })).toHaveCount(0);
-
-    // Membre connecté : la route répond 503, sans texte inventé.
-    const response = await page.request.post("/api/assistant", {
-      data: { mode: "word", messages: [{ role: "user", content: "Que veut dire palabre ?" }] },
+    // Tableau de bord et navigation : aucune mention de l'assistant.
+    await expect(page.getByRole("heading", { level: 1, name: /Bonjour/ })).toBeVisible();
+    await expect(page.getByText("Ma carte de membre").first()).toBeAttached();
+    await expect(page.getByText(/Compagnon des Lettres/)).toHaveCount(0);
+    await expect(page.getByText(/Demander à l’assistant/)).toHaveCount(0);
+    await expect(page.locator('a[href^="/member/assistant"]')).toHaveCount(0);
+    await page.screenshot({
+      path: `docs/captures/assistant/${width}-espace-membre.png`,
+      fullPage: true,
     });
-    expect(response.status()).toBe(503);
-    expect(await response.json()).toMatchObject({ code: "NOT_CONFIGURED" });
+
+    // Page : vrai 404, sans texte de l'assistant.
+    const response = await page.goto("/member/assistant");
+    expect(response?.status()).toBe(404);
+    await expect(page.getByText(/Compagnon des Lettres/)).toHaveCount(0);
+
+    // Membre connecté : la route refuse aussi (404), sans texte inventé.
+    const answer = await page.request.post("/api/assistant", { data: question });
+    expect(answer.status()).toBe(404);
+    expect(await answer.json()).toEqual({ error: "Page introuvable.", code: "NOT_FOUND" });
   } finally {
     testUser("delete", email);
   }

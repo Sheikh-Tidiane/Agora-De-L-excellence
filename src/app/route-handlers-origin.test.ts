@@ -30,6 +30,12 @@ vi.mock("next/server", async (original) => ({
 vi.mock("next/cache", async () => (await import("@/test/security-harness")).cacheModule);
 vi.mock("@/lib/auth", async () => (await import("@/test/security-harness")).authModule);
 vi.mock("@/lib/prisma", async () => (await import("@/test/security-harness")).prismaModule);
+// Assistant configuré (fournisseur simulé, jamais appelé ici) : sinon sa route répond 404 avant
+// tout contrôle (voir route-handlers-security.test.ts).
+vi.mock("@/lib/llm", async (original) => ({
+  ...(await original<typeof import("@/lib/llm")>()),
+  getLLMProvider: () => ({}) as never,
+}));
 
 beforeEach(() => {
   resetWorld();

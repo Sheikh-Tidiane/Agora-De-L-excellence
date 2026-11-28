@@ -42,7 +42,7 @@
 - Mes récompenses : points, niveaux, badges, classements mensuel et général.
 - Scrabble : classement du mois, mes tournois ; quiz chronométrés des Génies du soir.
 - Notifications in-app (et e-mail pour les plus importantes).
-- Assistant « Le Compagnon des Lettres » (sept modes, quota quotidien), affiché « non connecté »
+- Assistant « Le Compagnon des Lettres » (sept modes, quota quotidien), masqué
   sans clé d'API.
 
 ### Administration (`/admin`)
@@ -139,12 +139,12 @@ remesurer en ligne).
 
 ## 6. Intégrations en attente
 
-| Intégration              | En attente de                                            | Sans elle                                                  |
-| ------------------------ | -------------------------------------------------------- | ---------------------------------------------------------- |
-| Hébergement et domaine   | Commande du VPS OVH et du domaine, puis `DEPLOIEMENT.md` | Le site ne tourne que sur le poste de développement        |
-| E-mails de production    | Compte SMTP (Brevo) ou clé Resend                        | Les e-mails ne partent que vers Mailpit en local           |
-| Assistant IA             | Clé `LLM_API_KEY` (et choix du modèle, du quota)         | « Assistant non connecté » ; aucun appel réel n'a été fait |
-| Sauvegardes automatiques | Hébergement (scripts et minuterie prêts)                 | Procédure manuelle seulement (`SAUVEGARDE.md`)             |
+| Intégration              | En attente de                                            | Sans elle                                                                 |
+| ------------------------ | -------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Hébergement et domaine   | Commande du VPS OVH et du domaine, puis `DEPLOIEMENT.md` | Le site ne tourne que sur le poste de développement                       |
+| E-mails de production    | Compte SMTP (Brevo) ou clé Resend                        | Les e-mails ne partent que vers Mailpit en local                          |
+| Assistant IA             | Clé `LLM_API_KEY` (et choix du modèle, du quota)         | Assistant masqué (ni lien, ni page : 404) ; aucun appel réel n'a été fait |
+| Sauvegardes automatiques | Hébergement (scripts et minuterie prêts)                 | Procédure manuelle seulement (`SAUVEGARDE.md`)                            |
 
 ## 7. Informations attendues du comité
 

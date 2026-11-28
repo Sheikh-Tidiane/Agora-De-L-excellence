@@ -45,7 +45,8 @@ const granted = (remaining: number) => ({
 const logs: string[] = [];
 beforeEach(() => {
   resetWorld();
-  llm.provider = null;
+  // Assistant configuré par défaut ; « non configuré » est testé à part.
+  llm.provider = fakeProvider().provider;
   quota.reserveQuestion.mockReset().mockResolvedValue(granted(7));
   quota.refundQuestion.mockClear();
   logs.length = 0;
@@ -149,15 +150,16 @@ describe("validation", () => {
   });
 });
 
-describe("sans clé d'API", () => {
-  it("503 « Assistant non connecté », aucun compteur touché", async () => {
-    world.role = "member";
+describe("assistant non configuré (clé ou modèle absent)", () => {
+  it.each([
+    ["membre", "member"],
+    ["visiteur", null],
+  ] as const)("%s : 404, la route n'existe pas ; ni session lue, ni compteur", async (_l, role) => {
+    llm.provider = null;
+    world.role = role as never;
     const response = await post(valid);
-    expect(response.status).toBe(503);
-    expect(await response.json()).toEqual({
-      error: "Assistant non connecté",
-      code: "NOT_CONFIGURED",
-    });
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: "Page introuvable.", code: "NOT_FOUND" });
     expect(quota.reserveQuestion).not.toHaveBeenCalled();
     expect(world.rateLimitHits).toBe(0);
     expect(businessTargets()).toEqual([]);

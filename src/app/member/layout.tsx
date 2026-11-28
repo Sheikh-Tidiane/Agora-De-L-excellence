@@ -1,11 +1,13 @@
 import { Suspense, type ReactNode } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { connection } from "next/server";
 import { MemberBottomBar, MemberSideNav } from "@/components/layout/member-nav";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { TileLoader } from "@/components/shared/states";
 import { authRoutes } from "@/config/auth";
+import { isAssistantEnabled } from "@/features/assistant/enabled";
 import { MemberAvatar } from "@/features/members/components/member-avatar";
 import {
   MobileUnreadBanner,
@@ -29,6 +31,20 @@ export const instant = false;
 async function Gate({ children }: { children: ReactNode }) {
   await requirePageAccess("member.access", authRoutes.member);
   return children;
+}
+
+/**
+ * Lien vers l'assistant, seulement s'il est configuré. Lu à la requête (`connection`), jamais figé
+ * dans la partie statique de la page au moment du build.
+ */
+async function AssistantNavLink() {
+  await connection();
+  if (!isAssistantEnabled()) return null;
+  return (
+    <Link href="/member/assistant" className="lien inline-flex min-h-11 items-center">
+      Le Compagnon des Lettres
+    </Link>
+  );
 }
 
 /** En tête de la colonne latérale (desktop) : qui est connecté. */
@@ -87,9 +103,9 @@ export default function MemberLayout({ children }: LayoutProps<"/member">) {
               <Link href="/member/rewards" className="lien inline-flex min-h-11 items-center">
                 Mes récompenses
               </Link>
-              <Link href="/member/assistant" className="lien inline-flex min-h-11 items-center">
-                Le Compagnon des Lettres
-              </Link>
+              <Suspense fallback={null}>
+                <AssistantNavLink />
+              </Suspense>
             </div>
           </div>
         </aside>

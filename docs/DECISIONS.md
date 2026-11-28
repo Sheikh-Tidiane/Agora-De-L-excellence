@@ -349,7 +349,7 @@ Fait le 15/11/2026. Code : `src/lib/llm/` (interface `LLMProvider`, fournisseur 
 ### Fournisseur et paramètres d'API
 
 - SDK officiel du fournisseur (dépendance déclarée dans `package.json`), jamais d'appel HTTP brut. Client construit avec la clé `LLM_API_KEY` explicite (`authToken: null`) : le SDK ne va chercher aucun autre identifiant de la machine (variables d'environnement du SDK, profil local). Délai 90 s par tentative, 2 nouvelles tentatives (défaut du SDK) sur les erreurs passagères.
-- Modèle : `LLM_MODEL`, **obligatoire avec la clé**, sans valeur par défaut dans le code (sans lui : « Assistant non connecté »). Fournisseur : `LLM_PROVIDER` (seul `principal` existe ; un autre fournisseur s'ajoute dans `src/lib/llm/index.ts`).
+- Modèle : `LLM_MODEL`, **obligatoire avec la clé**, sans valeur par défaut dans le code (sans lui, l'assistant est masqué : voir `isAssistantEnabled`). Fournisseur : `LLM_PROVIDER` (seul `principal` existe ; un autre fournisseur s'ajoute dans `src/lib/llm/index.ts`).
 - **Pensée adaptative** (`thinking: { type: "adaptive" }`, la seule possible sur ce modèle) et **effort `low`** (`output_config.effort`) : un échange de chat court, la latence compte sur un téléphone en 4G. Le défaut du modèle serait `medium` ; on le fixe explicitement. Pas de `temperature`, pas de préremplissage.
 - **Repli serveur sur refus activé par défaut** : beta `server-side-fallback-2026-07-01` + `fallbacks: "default"` (l'API choisit le modèle de repli selon la catégorie du refus). D'où l'endpoint beta (`client.beta.messages.stream`). Pour le retirer : ces deux lignes de `src/lib/llm/sdk-provider.ts`.
 - `max_tokens` : **8 000** (pensée comprise). Plafond de coût volontaire pour des réponses qui tiennent sur un écran de téléphone ; au-delà, la réponse se termine par une note « Réponse coupée… ».
@@ -365,7 +365,7 @@ Ordre des contrôles : session et `member.access` → Zod → fournisseur config
 | Sans session (ou compte non actif)            | 401 `{ error, code: "UNAUTHENTICATED" }`                                                                                                              |
 | Sans `member.access`                          | 403 `{ error, code: "FORBIDDEN" }`                                                                                                                    |
 | Corps invalide                                | 400 `{ error, fieldErrors }`                                                                                                                          |
-| Sans clé                                      | 503 `{ error: "Assistant non connecté", code: "NOT_CONFIGURED" }`                                                                                     |
+| Sans clé ou sans modèle                       | 404 `{ error: "Page introuvable.", code: "NOT_FOUND" }`, avant tout contrôle (l'assistant est masqué partout)                                         |
 | Rafale                                        | 429 `{ error, code: "RATE_LIMIT", resetAt }` + `Retry-After`                                                                                          |
 | Quota du jour atteint                         | 429 `{ error, code: "QUOTA", resetAt }` (minuit suivant) + `X-Assistant-Remaining: 0`                                                                 |
 | Panne du fournisseur avant le premier mot     | 502 `{ error, code: "UPSTREAM" }` ; question rendue ; `X-Assistant-Remaining` ajusté                                                                  |

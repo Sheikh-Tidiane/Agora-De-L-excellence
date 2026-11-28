@@ -41,9 +41,15 @@ vi.mock("next/server", async (original) => ({
 vi.mock("next/cache", async () => (await import("@/test/security-harness")).cacheModule);
 vi.mock("@/lib/auth", async () => (await import("@/test/security-harness")).authModule);
 vi.mock("@/lib/prisma", async () => (await import("@/test/security-harness")).prismaModule);
+const assistant = vi.hoisted(() => ({ configured: false }));
+vi.mock("@/lib/llm", async (original) => ({
+  ...(await original<typeof import("@/lib/llm")>()),
+  getLLMProvider: () => (assistant.configured ? ({} as never) : null),
+}));
 
 beforeEach(() => {
   resetWorld();
+  assistant.configured = false;
   vi.clearAllMocks();
   vi.spyOn(console, "error").mockImplementation(() => undefined);
 });
@@ -462,7 +468,7 @@ describe("POST et DELETE /api/member/photo", () => {
   });
 });
 
-describe("POST /api/assistant (sans clé d'API, comme dans les tests)", () => {
+describe("POST /api/assistant", () => {
   const ask = () =>
     askAssistant(
       new Request("http://localhost/api/assistant", {
@@ -475,26 +481,39 @@ describe("POST /api/assistant (sans clé d'API, comme dans les tests)", () => {
       }),
     );
 
-  it("sans session : 401, aucun accès", async () => {
-    expect((await ask()).status).toBe(401);
-    expect(businessTargets()).toEqual([]);
-    expect(world.rateLimitHits).toBe(0);
+  describe("non configuré (clé ou modèle absent, comme dans les tests)", () => {
+    it.each([null, ...ROLE_CODES])(
+      "%s : 404, la route n'existe pas, rien n'est lu",
+      async (role) => {
+        world.role = role;
+        const response = await ask();
+        expect(response.status).toBe(404);
+        expect(await response.json()).toMatchObject({ code: "NOT_FOUND" });
+        expect(businessTargets()).toEqual([]);
+        expect(world.rateLimitHits).toBe(0);
+      },
+    );
   });
 
-  it.each(ROLE_CODES)(
-    "rôle %s : 503 « non connecté » avec `member.access`, 403 sinon",
-    async (role) => {
-      world.role = role;
-      const response = await ask();
-      if (roleHasAny(role, ["member.access"])) {
-        expect(response.status).toBe(503);
-        expect(await response.json()).toMatchObject({ code: "NOT_CONFIGURED" });
-      } else {
-        expect(response.status).toBe(403);
-      }
-      // Sans fournisseur, rien n'est compté ni lu.
+  describe("configuré (fournisseur simulé)", () => {
+    beforeEach(() => {
+      assistant.configured = true;
+    });
+
+    it("sans session : 401, aucun accès", async () => {
+      expect((await ask()).status).toBe(401);
       expect(businessTargets()).toEqual([]);
       expect(world.rateLimitHits).toBe(0);
-    },
-  );
+    });
+
+    it.each(ROLE_CODES.filter((role) => !roleHasAny(role, ["member.access"])))(
+      "rôle %s sans `member.access` : 403, rien n'est compté",
+      async (role) => {
+        world.role = role;
+        expect((await ask()).status).toBe(403);
+        expect(businessTargets()).toEqual([]);
+        expect(world.rateLimitHits).toBe(0);
+      },
+    );
+  });
 });

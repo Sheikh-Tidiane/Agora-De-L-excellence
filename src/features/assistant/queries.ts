@@ -6,7 +6,7 @@ import { isLLMConfigured } from "@/lib/llm";
 import { prisma } from "@/lib/prisma";
 
 export type AssistantStatus = {
-  /** Faux sans clé d'API : l'interface affiche « Assistant non connecté ». */
+  /** Faux sans clé ou sans modèle (voir isAssistantEnabled). */
   connected: boolean;
   dailyLimit: number;
   usedToday: number;

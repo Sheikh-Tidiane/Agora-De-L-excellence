@@ -4,6 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { Tag } from "@/components/shared/event-row";
 import { buttonVariants } from "@/components/ui/button";
 import { authRoutes } from "@/config/auth";
+import { isAssistantEnabled } from "@/features/assistant/enabled";
 import { CardFace } from "@/features/members/components/card-face";
 import {
   ReadingsSection,
@@ -19,6 +20,25 @@ import { formatDate } from "@/lib/dates";
 import { formatFcfa } from "@/lib/money";
 import { can, requirePageAccess } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
+
+/** Encart du tableau de bord, affiché seulement si l'assistant est configuré. */
+function AssistantTeaser() {
+  return (
+    <Link
+      href="/member/assistant"
+      className="group block rounded-[18px] bg-sable p-6 transition-colors duration-200 hover:bg-blanc"
+    >
+      <p className="surtitre">Le Compagnon des Lettres</p>
+      <p className="mt-2 font-serif text-[1.375rem] leading-snug">
+        Un conseil de lecture, un mot à comprendre, un sujet de débat&nbsp;?
+      </p>
+      <span className="lien mt-3 inline-flex items-center gap-1">
+        Demander à l’assistant
+        <ArrowRight aria-hidden="true" className="size-4" />
+      </span>
+    </Link>
+  );
+}
 
 /** Tableau de bord du membre : sa carte, ses rencontres, ses lectures, ses points et badges. */
 async function MemberHome() {
@@ -99,19 +119,7 @@ async function MemberHome() {
             cancellationDeadlineHours={settings.cancellationDeadlineHours}
           />
           <ReadingsSection readings={data.readings} />
-          <Link
-            href="/member/assistant"
-            className="group block rounded-[18px] bg-sable p-6 transition-colors duration-200 hover:bg-blanc"
-          >
-            <p className="surtitre">Le Compagnon des Lettres</p>
-            <p className="mt-2 font-serif text-[1.375rem] leading-snug">
-              Un conseil de lecture, un mot à comprendre, un sujet de débat&nbsp;?
-            </p>
-            <span className="lien mt-3 inline-flex items-center gap-1">
-              Demander à l’assistant
-              <ArrowRight aria-hidden="true" className="size-4" />
-            </span>
-          </Link>
+          {isAssistantEnabled() ? <AssistantTeaser /> : null}
           {can(user, "admin.access") ? (
             <Link
               href={authRoutes.admin}

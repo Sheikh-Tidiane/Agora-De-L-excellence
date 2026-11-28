@@ -91,7 +91,7 @@ Tout est détaillé dans `docs/DEPLOIEMENT.md`, partie A.
   n'a pas pu y être essayé.
 - 🟠 Service worker : jamais installé avec un vrai certificat (refusé avec le certificat local).
 - 🟢 Assistant « Le Compagnon des Lettres » : jamais appelé pour de vrai (pas de clé) ; sans clé,
-  il s'affiche « non connecté », ce qui est acceptable pour l'ouverture.
+  il est masqué (ni lien, ni page), ce qui est acceptable pour l'ouverture.
 
 ## 5. Pages non vérifiées ou défauts connus
 

@@ -35,7 +35,7 @@ const memberPages = [
   "/member/quiz",
   "/member/rewards",
   "/member/notifications",
-  "/member/assistant",
+  // « /member/assistant » : 404 tant que l'assistant n'est pas configuré (voir assistant.spec.ts).
   "/member/profile",
   "/member/card",
 ];

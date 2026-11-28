@@ -110,3 +110,16 @@ Playwright du parcours, contrôle visuel à 375 px et 1440 px, `docs/REGLES-METI
   présent reçoit un lien personnel `/events/avis?token=…` (jeton haché, propre à la demande, sans
   pouvoir sur l'inscription). Tests : `scan.db.test.ts`, `feedback.db.test.ts`, cas de sécurité de
   l'action publique, parcours `e2e/scan-presence.spec.ts` et `e2e/avis-rencontres.spec.ts`.
+
+## Assistant masqué tant qu'il n'est pas configuré
+
+- `isAssistantEnabled()` (`src/features/assistant/enabled.ts`) : vrai seulement si `LLM_API_KEY` et
+  `LLM_MODEL` sont renseignés. Lu à chaque requête (`connection()` dans le menu), jamais figé au
+  build.
+- Non configuré : lien de la navigation et encart du tableau de bord retirés, `/member/assistant`
+  en vrai 404 (proxy), `POST /api/assistant` en 404 JSON avant tout autre contrôle. Plan du site,
+  notifications et e-mails vérifiés : aucune mention de l'assistant.
+- Configuré : tout réapparaît après redémarrage, sans autre changement (vérifié sur le même build
+  avec une clé et un modèle fictifs).
+- Tests : `enabled.test.ts` (les deux cas, proxy et fournisseur), `assistant-route.test.ts`,
+  parcours `e2e/assistant.spec.ts` (capture à 375 px de l'espace membre sans le lien).

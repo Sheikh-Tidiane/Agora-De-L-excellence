@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
 import { authConfig, authRoutes } from "@/config/auth";
+import { isAssistantEnabled, isAssistantPath } from "@/features/assistant/enabled";
 import { logger } from "@/lib/logger";
 import { publicPageExists, type PublicSection } from "@/lib/public-pages";
 
@@ -13,6 +14,7 @@ import { publicPageExists, type PublicSection } from "@/lib/public-pages";
  * 2. Fiches publiques (livre, article, rencontre, tournoi) : une adresse inconnue répond « 404 Not
  *    Found » (la page « introuvable », avec le bon code). Sans ce contrôle, le prérendu partiel
  *    envoie 200 avant que la page ne découvre l'absence de la fiche.
+ * 3. Assistant non configuré (`isAssistantEnabled`) : `/member/assistant` répond 404.
  */
 const PUBLIC_SHEET = /^\/(library|news|events|scrabble)\/([^/]+)$/;
 /** Pages fixes rangées sous ces préfixes : jamais des fiches. */
@@ -20,6 +22,10 @@ const FIXED = new Set(["/events/registration", "/events/avis"]);
 
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
+  // Assistant non configuré : il n'existe pas (vrai 404, même pour un membre connecté).
+  if (isAssistantPath(pathname) && !isAssistantEnabled()) {
+    return NextResponse.rewrite(new URL("/introuvable", request.url), { status: 404 });
+  }
   // Pages publiques fixes (lien personnel d'un invité) : jamais de contrôle de session.
   if (FIXED.has(pathname)) return NextResponse.next();
   const sheet = PUBLIC_SHEET.exec(pathname);

@@ -1,5 +1,5 @@
 allowBuilds:
-  '@prisma/engines': true
+  "@prisma/engines": true
   esbuild: true
   prisma: true
   sharp: false
@@ -7,3 +7,6 @@ allowBuilds:
 minimumReleaseAgeExclude:
   - lucide-react@1.72.0
   - react-hook-form@7.92.0
+overrides:
+  # Faille ReDoS (GHSA-7589-6fvf-x4pw) dans effect <= 3.22.0, tiré par l'outil Prisma.
+  effect: ^3.22.1

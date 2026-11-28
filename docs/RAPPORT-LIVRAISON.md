@@ -1,8 +1,10 @@
 # Rapport de livraison — L’Agora de l’Excellence
 
-> Version livrée : branche `main` au 20 novembre 2026 (phases 0 à 6). Aucune mise en ligne :
-> l'hébergement reste à choisir ([`HEBERGEMENT.md`](HEBERGEMENT.md)). **Aucun dépôt distant** : le
-> code n'existe que sur le poste de développement tant qu'un dépôt n'est pas créé.
+> Version livrée : branche `main` au 28 novembre 2026 (phases 0 à 6, compléments de novembre :
+> multi-activités, paiements à distance, rappels, liste d'attente, agenda et partage, avis,
+> statistiques, accord images, invités). Dépôt distant : GitHub
+> (`sheikh-tidiane/agora-de-l-excellence`). Hébergement retenu (OVHcloud VPS, `HEBERGEMENT.md`) ;
+> **rien n'est encore en ligne** : procédure prête dans [`DEPLOIEMENT.md`](DEPLOIEMENT.md).
 
 ## 1. Fonctionnalités livrées
 
@@ -13,13 +15,17 @@
 - Bibliothèque (catalogue filtrable, fiches livres, couvertures générées ou téléversées, avis des
   membres publiés avec leur accord), livre du mois.
 - Agenda des rencontres, fiche d'une rencontre, inscription des membres et des visiteurs
-  (rencontres ouvertes au public, confirmation par e-mail), comptes rendus.
+  (rencontres ouvertes au public, confirmation par e-mail), comptes rendus. Rencontres à plusieurs
+  activités ; liste d'attente avec rang et promotion automatique ; « Ajouter à mon agenda » (.ics,
+  Google Agenda) et partage WhatsApp ; rappel la veille ; avis des participants le lendemain
+  (membres et invités, lien personnel pour les invités).
 - Actualités (articles, publication programmée), archives filtrables (rencontres, fiches de
   lecture, palmarès Scrabble).
 - Scrabble : tournois à venir, palmarès, records du club (affichés seulement s'ils existent),
   fiche d'un tournoi avec classement final après validation.
 - Adhésion en ligne : montants affichés avant le formulaire, charte à accepter (version
-  enregistrée), demande sans création de compte.
+  enregistrée), accord facultatif pour les photos et témoignages, demande sans création de compte.
+- Une adresse inconnue de fiche répond un vrai « 404 Not Found ».
 - SEO (titres, descriptions, adresses canoniques, image de partage, plan du site, données
   structurées) et application installable (PWA, page hors ligne, carte de membre consultable sans
   réseau).
@@ -30,7 +36,9 @@
   numérique avec QR code signé (sans donnée personnelle, remplaçable).
 - Mes lectures (à lire, en cours, terminés, favoris, progression, note, critique soumise à
   modération, « livre terminé » validé par un responsable).
-- Mes rencontres et mes activités (inscriptions, annulation, présences).
+- Mes rencontres et mes activités (inscriptions, annulation, liste d'attente, présences, avis).
+- Carte de membre réglée à distance (Wave, Orange Money), rappels de paiement.
+- Profil : rappels la veille désactivables, accord photos et témoignages.
 - Mes récompenses : points, niveaux, badges, classements mensuel et général.
 - Scrabble : classement du mois, mes tournois ; quiz chronométrés des Génies du soir.
 - Notifications in-app (et e-mail pour les plus importantes).
@@ -49,17 +57,24 @@
   téléphone, validation, publication, dévalidation motivée), records.
 - Comité, charte, paramètres du club, journal d'audit, QR d'adhésion, recherche globale et
   raccourcis clavier.
+- Scan : pointage des membres (carte) et des invités (recherche), encaissement de la carte et de
+  la participation au même endroit.
+- Avis des participants (moyennes, modération selon la charte) et statistiques du comité
+  (présence, activités, lecture, Scrabble, membres, renouvellements, listes d'attente, export CSV,
+  version partenaires sans donnée personnelle).
+- Tâches planifiées toutes les heures (`agora-taches.timer`) : rappels de carte et de rencontre,
+  liste d'attente, demandes d'avis, purge des avis à 24 mois.
 
 Mode d'emploi : [`GUIDE-ADMINISTRATEUR.md`](GUIDE-ADMINISTRATEUR.md).
 
 ## 2. Pages
 
-| Zone           | Pages                                                                                                                                                                                                                                       |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Public         | `/`, `/about`, `/activities`, `/library` et `/library/[slug]`, `/events` et `/events/[slug]`, `/news` et `/news/[slug]`, `/archives`, `/scrabble` et `/scrabble/[slug]`, `/membership`, `/charte`, `/contact`, `/privacy`, `/offline`       |
-| Comptes        | `/login`, `/activate`, `/forgot-password`, `/reset-password`, `/access-denied`                                                                                                                                                              |
-| Espace membre  | `/member`, `/member/readings` et `/member/readings/[id]`, `/member/events`, `/member/scrabble`, `/member/quiz` et `/member/quiz/[slug]`, `/member/rewards`, `/member/notifications`, `/member/assistant`, `/member/profile`, `/member/card` |
-| Administration | 28 pages : tableau de bord et une page par rubrique ci-dessus, plus les fiches (article, événement, quiz et ses aperçu et résultats, tournoi, réglages, saisie des scores d'une manche)                                                     |
+| Zone           | Pages                                                                                                                                                                                                                                                                                                          |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Public         | `/`, `/about`, `/activities`, `/library` et `/library/[slug]`, `/events` et `/events/[slug]`, `/events/registration` et `/events/avis` (liens personnels des invités), `/news` et `/news/[slug]`, `/archives`, `/scrabble` et `/scrabble/[slug]`, `/membership`, `/charte`, `/contact`, `/privacy`, `/offline` |
+| Comptes        | `/login`, `/activate`, `/forgot-password`, `/reset-password`, `/access-denied`                                                                                                                                                                                                                                 |
+| Espace membre  | `/member`, `/member/readings` et `/member/readings/[id]`, `/member/events` et `/member/events/[slug]/avis`, `/member/scrabble`, `/member/quiz` et `/member/quiz/[slug]`, `/member/rewards`, `/member/notifications`, `/member/assistant`, `/member/profile`, `/member/card`                                    |
+| Administration | 35 pages : tableau de bord et une page par rubrique ci-dessus, plus les fiches (article, événement, quiz et ses aperçu et résultats, tournoi, réglages, saisie des scores d'une manche)                                                                                                                        |
 
 ## 3. Choix d'architecture
 
@@ -86,14 +101,21 @@ Décisions détaillées : [`DECISIONS.md`](DECISIONS.md). Règles du club : [`RE
 
 ## 4. Migrations
 
-| Migration                           | Contenu                                                                     |
-| ----------------------------------- | --------------------------------------------------------------------------- |
-| `20261112003037_init`               | Schéma de départ : comptes, rôles, adhésions, bibliothèque, événements…     |
-| `20261112180000_contenus_officiels` | Types d'événements officiels (cinq activités), contenus du club             |
-| `20261114120000_phase4_communaute`  | Lectures, présences, points, badges, niveaux, Scrabble, quiz, notifications |
+| Migration                                       | Contenu                                                                     |
+| ----------------------------------------------- | --------------------------------------------------------------------------- |
+| `20261112003037_init`                           | Schéma de départ : comptes, rôles, adhésions, bibliothèque, événements…     |
+| `20261112180000_contenus_officiels`             | Types d'événements officiels (cinq activités), contenus du club             |
+| `20261114120000_phase4_communaute`              | Lectures, présences, points, badges, niveaux, Scrabble, quiz, notifications |
+| `20261122040659_messagerie_contact`             | Messages du formulaire de contact                                           |
+| `20261122120000_jetons_reinitialisation_haches` | Jetons de réinitialisation stockés hachés                                   |
+| `20261127100000_rencontres_multi_activites`     | Plusieurs activités par rencontre, activité principale                      |
+| `20261128100000_paiements_a_distance`           | Moyen de paiement et référence (Wave, Orange Money)                         |
+| `20261129100000_rappels_rencontres`             | Rappels la veille (`RegistrationMail`), préférence du membre                |
+| `20261130100000_liste_attente`                  | Liste d'attente (rang, promotion)                                           |
+| `20261201100000_avis_rencontres`                | Avis des participants (`EventFeedback`)                                     |
+| `20261202100000_accord_images`                  | Accord photos, vidéos et témoignages                                        |
 
-La phase 5 n'ajoute aucune migration (le quota de l'assistant utilise la table des limites de
-débit). En production : `pnpm db:deploy`.
+En production : `pnpm db:deploy` (lancé par `scripts/deploy.sh`).
 
 ## 5. Tests exécutés et résultats réels (20/11/2026)
 
@@ -116,13 +138,12 @@ remesurer en ligne).
 
 ## 6. Intégrations en attente
 
-| Intégration              | En attente de                                    | Sans elle                                                  |
-| ------------------------ | ------------------------------------------------ | ---------------------------------------------------------- |
-| Hébergement et domaine   | Choix du porteur du projet (`HEBERGEMENT.md`)    | Le site ne tourne que sur le poste de développement        |
-| E-mails de production    | Compte SMTP (Brevo) ou clé Resend                | Les e-mails ne partent que vers Mailpit en local           |
-| Assistant IA             | Clé `LLM_API_KEY` (et choix du modèle, du quota) | « Assistant non connecté » ; aucun appel réel n'a été fait |
-| Dépôt Git distant        | Création d'un dépôt                              | Aucune copie du code hors de ce poste                      |
-| Sauvegardes automatiques | Hébergement                                      | Procédure manuelle seulement (`SAUVEGARDE.md`)             |
+| Intégration              | En attente de                                            | Sans elle                                                  |
+| ------------------------ | -------------------------------------------------------- | ---------------------------------------------------------- |
+| Hébergement et domaine   | Commande du VPS OVH et du domaine, puis `DEPLOIEMENT.md` | Le site ne tourne que sur le poste de développement        |
+| E-mails de production    | Compte SMTP (Brevo) ou clé Resend                        | Les e-mails ne partent que vers Mailpit en local           |
+| Assistant IA             | Clé `LLM_API_KEY` (et choix du modèle, du quota)         | « Assistant non connecté » ; aucun appel réel n'a été fait |
+| Sauvegardes automatiques | Hébergement (scripts et minuterie prêts)                 | Procédure manuelle seulement (`SAUVEGARDE.md`)             |
 
 ## 7. Informations attendues du comité
 
@@ -136,11 +157,21 @@ expiration de la carte de membre. Rien n'est affiché à leur place.
 Choix à trancher détaillés dans [`REVUE-SECURITE.md`](REVUE-SECURITE.md) et
 [`REVUE-DESIGN.md`](REVUE-DESIGN.md). Les principaux points :
 
-- Aucun dépôt distant : à créer avant toute chose.
-- Une adresse inconnue de livre, d'article, de rencontre ou de tournoi affiche la page
-  « introuvable » mais répond HTTP 200 (marquée `noindex` : sans effet sur les moteurs de
-  recherche, à corriger).
 - Jamais testé sur un vrai téléphone ni derrière le vrai proxy de production (adresse IP lue dans
   `X-Forwarded-For`, en-têtes, cookies hors `localhost`).
 - Assistant jamais appelé pour de vrai (pas de clé) : qualité, coût et délais à constater.
 - Quelques fichiers dépassent la limite indicative de 300 lignes (à découper).
+- `pnpm audit` (28/11/2026) : aucune faille dans les dépendances de l'application (la faille
+  « high » d'`effect`, tiré par l'outil Prisma, est corrigée par un `override` dans
+  `pnpm-workspace.yaml`). Reste une faille « moderate » de `minimatch` dans les seuls outils de
+  développement (ESLint) : sans effet sur le site, corrigée quand `eslint-config-next` la
+  mettra à jour.
+
+## 9. Surveillance des dépendances
+
+- `.github/dependabot.yml` : chaque lundi, GitHub propose les mises à jour (paquets npm groupés,
+  images Docker de la production) sous forme de demandes de fusion, jamais fusionnées seules.
+  À activer une fois dans GitHub : Settings › Code security › « Dependabot alerts » et
+  « Dependabot security updates ».
+- Avant chaque mise en ligne : `pnpm audit --prod` (aucune faille attendue), puis la suite de
+  tests.

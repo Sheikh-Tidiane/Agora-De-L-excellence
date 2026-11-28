@@ -1,0 +1,33 @@
+# Surveillance des dépendances : GitHub propose chaque semaine une demande de fusion par lot de
+# mises à jour (jamais fusionnée automatiquement). Les alertes de sécurité arrivent sans attendre.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Africa/Dakar
+    open-pull-requests-limit: 5
+    groups:
+      mineures-et-correctifs:
+        update-types: [minor, patch]
+    labels: [dependances]
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Africa/Dakar
+    labels: [dependances]
+  # Images PostgreSQL et Caddy de la production (docker-compose.prod.yml).
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Africa/Dakar
+    labels: [dependances]

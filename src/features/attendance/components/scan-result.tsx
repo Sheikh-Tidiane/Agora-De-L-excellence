@@ -1,8 +1,10 @@
 "use client";
 
-import { AlertTriangle, Check } from "lucide-react";
+import { useState } from "react";
+import { AlertTriangle, Check, CreditCard } from "lucide-react";
 import { StatusPill } from "@/components/admin/page-header";
 import type { ScanResponse } from "@/features/attendance/components/scan-api";
+import { ScanCardCollect } from "@/features/attendance/components/scan-card-collect";
 import { formatTime } from "@/lib/dates";
 
 /** Photo du membre pour le contrôle visuel, ou ses initiales sur une tuile. */
@@ -38,7 +40,20 @@ function Line({ label, children }: { label: string; children: React.ReactNode })
 }
 
 /** Contenu de la feuille de résultat : qui est devant le responsable, et ce qui a été enregistré. */
-export function ScanResult({ result }: { result: ScanResponse }) {
+export function ScanResult({
+  result,
+  cardFee,
+  canCollect,
+  onCardPaid,
+}: {
+  result: ScanResponse;
+  /** Montant de la carte, lu dans les réglages (« 1 000 F CFA »). */
+  cardFee: string;
+  /** Droit d'encaisser (payments.record) : bouton « Encaisser la carte maintenant ». */
+  canCollect: boolean;
+  onCardPaid: () => void;
+}) {
+  const [collected, setCollected] = useState<string>();
   if (!result.ok) {
     return (
       <div role="alert" className="flex gap-4">
@@ -82,6 +97,38 @@ export function ScanResult({ result }: { result: ScanResponse }) {
         {result.alreadyPresent ? `Déjà pointé à ${time}` : `Présence enregistrée à ${time}`}
       </p>
 
+      {member.cardPaid ? (
+        collected ? (
+          <p
+            role="status"
+            className="mt-3 flex items-center gap-2 rounded-champ bg-succes-fond px-4 py-3 font-semibold text-succes"
+          >
+            <Check aria-hidden="true" className="size-5 shrink-0" />
+            Carte réglée : {cardFee} encaissés ({collected}).
+          </p>
+        ) : null
+      ) : (
+        <div className="mt-3">
+          <p
+            role="alert"
+            className="flex items-start gap-3 rounded-champ border-l-4 border-alerte bg-alerte-fond px-4 py-3 text-[1.0625rem] leading-snug font-bold text-alerte"
+          >
+            <CreditCard aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
+            <span>Carte de membre non réglée : {cardFee} à encaisser</span>
+          </p>
+          {canCollect ? (
+            <ScanCardCollect
+              userId={member.id}
+              cardFee={cardFee}
+              onPaid={(label) => {
+                setCollected(label);
+                onCardPaid();
+              }}
+            />
+          ) : null}
+        </div>
+      )}
+
       <dl className="mt-4">
         <Line label="Participation">
           {result.paid ? (
@@ -90,13 +137,12 @@ export function ScanResult({ result }: { result: ScanResponse }) {
             <StatusPill tone="neutre">Non réglée</StatusPill>
           )}
         </Line>
-        <Line label="Carte de membre">
-          {member.cardPaid ? (
+        {/* Carte non réglée : le bandeau au-dessus tient lieu d'étiquette. */}
+        {member.cardPaid ? (
+          <Line label="Carte de membre">
             <StatusPill tone="succes">Réglée</StatusPill>
-          ) : (
-            <StatusPill tone="alerte">À régler</StatusPill>
-          )}
-        </Line>
+          </Line>
+        ) : null}
         {result.pointsAwarded > 0 ? (
           <Line label="Points">
             <span className="text-terracotta-fonce tabular-nums">+{result.pointsAwarded}</span>

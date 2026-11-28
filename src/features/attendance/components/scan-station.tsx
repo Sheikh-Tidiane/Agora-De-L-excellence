@@ -7,6 +7,7 @@ import { CameraScanner } from "@/features/attendance/components/camera-scanner";
 import { ManualCheckIn } from "@/features/attendance/components/manual-check-in";
 import {
   postScan,
+  withCardPaid,
   type ScanRequest,
   type ScanResponse,
 } from "@/features/attendance/components/scan-api";
@@ -36,10 +37,12 @@ export function ScanStation({
   events,
   canCollect,
   sessionFee,
+  cardFee,
 }: {
   events: StationEvent[];
   canCollect: boolean;
   sessionFee: string;
+  cardFee: string;
 }) {
   const [eventId, setEventId] = useState(events[0]?.id ?? "");
   const [presentByEvent, setPresentByEvent] = useState(
@@ -257,7 +260,14 @@ export function ScanStation({
           </div>
         }
       >
-        {result ? <ScanResult result={result} /> : null}
+        {result ? (
+          <ScanResult
+            result={result}
+            cardFee={cardFee}
+            canCollect={canCollect}
+            onCardPaid={() => setResult((current) => current && withCardPaid(current))}
+          />
+        ) : null}
       </SidePanel>
     </div>
   );

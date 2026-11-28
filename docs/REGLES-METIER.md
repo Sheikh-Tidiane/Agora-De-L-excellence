@@ -101,6 +101,7 @@ Précisions de mise en œuvre :
 - Durée de la carte : le comité dit « versés une fois à l'adhésion ». La durée d'adhésion de 12 mois reste en place en interne mais n'est plus affichée au public, en attendant sa décision.
 - Référence d'une transaction Wave ou Orange Money : obligatoire (contrainte `Payment_reference_check`), et jamais enregistrée deux fois pour le même moyen, casse ignorée (index unique partiel). Un encaissement annulé libère sa référence. En espèces, aucune référence n'est gardée.
 - Scan QR de présence (phase 4, partie B) : page `/admin/scan` (`attendance.record`), rencontres du jour publiées ou clôturées ; même règles que le pointage manuel. Un membre non inscrit est refusé (pas d'inscription sur place : les inscriptions ferment au début de la rencontre). Un second scan de la même carte ne change rien (« Déjà pointé à … ») ; il peut seulement ajouter la participation. Le scan ne retire jamais un encaissement.
+- Carte de membre non réglée au scan : la présence est enregistrée quand même ; l'écran du résultat affiche le bandeau « Carte de membre non réglée : <montant des réglages> à encaisser ». Un responsable qui a le droit des paiements (`payments.record`) peut « Encaisser la carte maintenant » (espèces, Wave ou Orange Money, référence obligatoire hors espèces) : même service que la fiche membre (référence jamais deux fois, entrée « payment.recorded » au journal). Au scan suivant, la carte est « Réglée ».
 
 ### Carte réglée à distance (membres qui suivent à distance)
 

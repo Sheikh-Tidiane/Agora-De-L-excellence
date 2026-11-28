@@ -80,6 +80,10 @@ async function inspect(stamp: string, title: string) {
         payments: { where: { cancelledAt: null }, select: { amount: true } },
       },
     });
+    const card = await prisma.payment.findFirst({
+      where: { userId: user.id, kind: "MEMBERSHIP_CARD", cancelledAt: null },
+      select: { id: true, method: true, reference: true },
+    });
     const sum = await prisma.pointTransaction.aggregate({
       where: { userId: user.id },
       _sum: { points: true },
@@ -91,6 +95,14 @@ async function inspect(stamp: string, title: string) {
       payments: registration?.payments.map((p) => p.amount) ?? [],
       points: sum._sum.points ?? 0,
       lines: await prisma.pointTransaction.count({ where: { userId: user.id } }),
+      // Carte de membre encaissée (moyen, référence) et sa trace au journal.
+      card: card && {
+        method: card.method,
+        reference: card.reference,
+        audited: await prisma.auditLog.count({
+          where: { action: "payment.recorded", entityId: card.id },
+        }),
+      },
     });
   }
   console.log(JSON.stringify(rows));
@@ -106,7 +118,16 @@ async function cleanup(stamp: string, title: string) {
     where: { userId: { in: ids } },
     select: { id: true },
   });
-  const entities = [...ids, ...registrations.map((r) => r.id), ...lines.map((l) => l.id)];
+  const payments = await prisma.payment.findMany({
+    where: { OR: [{ userId: { in: ids } }, { event: { title } }] },
+    select: { id: true },
+  });
+  const entities = [
+    ...ids,
+    ...registrations.map((r) => r.id),
+    ...lines.map((l) => l.id),
+    ...payments.map((p) => p.id),
+  ];
   await prisma.auditLog.deleteMany({ where: { entityId: { in: entities } } });
   await prisma.pointTransaction.deleteMany({
     where: { userId: { in: ids }, reversesId: { not: null } },

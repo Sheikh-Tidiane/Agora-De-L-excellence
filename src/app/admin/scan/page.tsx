@@ -55,6 +55,7 @@ async function Scan() {
           }))}
           canCollect={can(user, "payments.record")}
           sessionFee={formatFcfa(settings.sessionFee)}
+          cardFee={formatFcfa(settings.membershipCardFee)}
         />
       )}
     </>

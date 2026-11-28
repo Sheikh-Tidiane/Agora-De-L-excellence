@@ -71,6 +71,8 @@ export type CheckInResult =
   | {
       ok: true;
       member: {
+        /** Pour encaisser la carte depuis l'écran du scan (responsable des paiements). */
+        id: string;
         firstName: string;
         lastName: string;
         memberNumber: string | null;
@@ -200,6 +202,7 @@ async function checkIn(
       return {
         ok: true,
         member: {
+          id: input.userId,
           firstName: user.firstName,
           lastName: user.lastName,
           memberNumber: user.memberNumber,

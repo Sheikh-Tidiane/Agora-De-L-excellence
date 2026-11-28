@@ -30,6 +30,13 @@ export const paymentMethodFields = {
     .regex(/^[\p{L}\p{N} ._\-/#:]*$/u, "Lettres, chiffres, espaces et . _ - / # : seulement."),
 };
 
+/** Contrôle côté écran, avant l'envoi : le message à afficher, ou rien si la saisie convient. */
+export function missingReference(method: PaymentMethodCode, reference: string): string | undefined {
+  return needsReference(method) && reference.trim() === ""
+    ? `Indiquez la référence de la transaction ${paymentMethodLabels[method]}.`
+    : undefined;
+}
+
 export function checkReference(
   value: { method: PaymentMethodCode; reference: string },
   ctx: z.RefinementCtx,

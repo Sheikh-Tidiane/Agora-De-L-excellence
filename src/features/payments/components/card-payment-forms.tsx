@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 import { cancelPaymentAction, recordCardPaymentAction } from "@/features/payments/actions";
 import {
+  missingReference,
   needsReference,
   paymentMethodCodes,
   paymentMethodLabels,
@@ -47,13 +48,9 @@ export function CardPaymentForm({
       className="mt-6 flex flex-col gap-4 border-t border-trait pt-5"
       onSubmit={(event) => {
         event.preventDefault();
-        if (remote && reference.trim() === "") {
-          setReferenceError(
-            `Indiquez la référence de la transaction ${paymentMethodLabels[method]}.`,
-          );
-          return;
-        }
-        setReferenceError(undefined);
+        const missing = missingReference(method, reference);
+        setReferenceError(missing);
+        if (missing) return;
         void run(() => recordCardPaymentAction({ userId, method, reference, paidAt, note }), {
           success: `Carte réglée : ${amount} encaissés.`,
           onSuccess: onDone,

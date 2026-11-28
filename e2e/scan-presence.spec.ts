@@ -29,6 +29,7 @@ type Row = {
   payments: number[];
   points: number;
   lines: number;
+  card: { method: string; reference: string | null; audited: number } | null;
 };
 
 test("scan : carte, secours par recherche, participation et points", async ({
@@ -77,8 +78,9 @@ test("scan : carte, secours par recherche, participation et points", async ({
     await expect(sheet.getByText(/^Présence enregistrée à/)).toBeVisible();
     await expect(sheet.getByText(setup.awa.memberNumber)).toBeVisible();
     await expect(sheet.getByText("+20")).toBeVisible();
-    await expect(sheet.getByText("Réglée")).toBeVisible(); // participation
-    await expect(sheet.getByText("À régler")).toBeVisible(); // carte de membre
+    await expect(sheet.getByText("Réglée", { exact: true })).toBeVisible(); // participation
+    // Carte de membre non réglée : bandeau sous la présence, montant lu dans les réglages.
+    await expect(sheet.getByText(/^Carte de membre non réglée : .+ à encaisser$/)).toBeVisible();
     await expect(sheet.getByText("Carte scannée")).toBeVisible();
     await shot("resultat");
     await next.click();
@@ -107,10 +109,10 @@ test("scan : carte, secours par recherche, participation et points", async ({
     await page.getByLabel("Chercher un inscrit").fill(setup.moussa.memberNumber);
     await page.getByRole("button", { name: `Pointer Moussa ${setup.moussa.lastName}` }).click();
     await expect(sheet.getByText("Saisie manuelle")).toBeVisible();
-    await expect(sheet.getByText("Non réglée")).toBeVisible();
+    await expect(sheet.getByText("Non réglée", { exact: true })).toBeVisible();
     await sheet.getByRole("button", { name: /^Encaisser 100/ }).click();
     await expect(sheet.getByText(/^Déjà pointé à/)).toBeVisible();
-    await expect(sheet.getByText("Non réglée")).toHaveCount(0);
+    await expect(sheet.getByText("Non réglée", { exact: true })).toHaveCount(0);
     await next.click();
     await expect(page.getByText("Derniers pointages")).toBeVisible();
     await page.getByLabel("Chercher un inscrit").fill(setup.moussa.lastName);
@@ -120,7 +122,15 @@ test("scan : carte, secours par recherche, participation et points", async ({
     // En base : présence (méthode), une participation au montant du réglage, 20 points chacun.
     const rows = JSON.parse(fixture("inspect", stamp)) as Row[];
     expect(rows).toEqual([
-      { firstName: "Awa", present: true, method: "QR_SCAN", payments: [100], points: 20, lines: 1 },
+      {
+        firstName: "Awa",
+        present: true,
+        method: "QR_SCAN",
+        payments: [100],
+        points: 20,
+        lines: 1,
+        card: null,
+      },
       {
         firstName: "Moussa",
         present: true,
@@ -128,6 +138,7 @@ test("scan : carte, secours par recherche, participation et points", async ({
         payments: [100],
         points: 20,
         lines: 1,
+        card: null,
       },
     ]);
     expect(errors).toEqual([]);

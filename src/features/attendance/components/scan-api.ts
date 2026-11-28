@@ -5,6 +5,7 @@
 export type ScanSuccess = {
   ok: true;
   member: {
+    id: string;
     firstName: string;
     lastName: string;
     memberNumber: string | null;
@@ -31,6 +32,11 @@ const offline: ScanRefusal = {
   ok: false,
   message: "Connexion impossible. Vérifiez le réseau et réessayez.",
 };
+
+/** Le même résultat, carte de membre désormais réglée (encaissée depuis l'écran du scan). */
+export function withCardPaid(result: ScanResponse): ScanResponse {
+  return result.ok ? { ...result, member: { ...result.member, cardPaid: true } } : result;
+}
 
 export async function postScan(body: ScanRequest): Promise<ScanResponse> {
   try {

@@ -6,7 +6,7 @@ vi.mock("@/lib/prisma", async () => ({ prisma: (await import("@/test/real-db")).
 const { listCheckInEvents, manualCheckIn, scanCardCheckIn, searchRegistrants } =
   await import("@/features/attendance/service");
 const { issueCardToken, revokeCardToken } = await import("@/features/members/card-service");
-const { recordAttendance } = await import("@/features/payments/service");
+const { recordAttendance, recordCardPayment } = await import("@/features/payments/service");
 
 /**
  * Scan des présences contre une vraie base : les services ouvrent leurs propres transactions,
@@ -163,6 +163,48 @@ describe.skipIf(!reachable)("scan des présences (base réelle)", () => {
         where: { action: "attendance.scanned", entityId: registration.id },
       }),
     ).toBe(1);
+  });
+
+  it("carte de membre non réglée : présence enregistrée quand même, carte encaissée au scan, réglée au scan suivant", async () => {
+    const khady = await makeUser("Khady");
+    const registration = await register(today.id, khady.id);
+    const first = await scanCardCheckIn(
+      { eventId: today.id, token: khady.token, paid: false },
+      actor.id,
+      all,
+    );
+    expect(first).toMatchObject({
+      ok: true,
+      alreadyPresent: false,
+      member: { id: khady.id, cardPaid: false },
+    });
+    expect(
+      await db.eventRegistration.findUniqueOrThrow({ where: { id: registration.id } }),
+    ).toMatchObject({ checkInMethod: "QR_SCAN" });
+
+    // L'écran du scan appelle le même service que la fiche membre.
+    const payment = await recordCardPayment(
+      {
+        userId: khady.id,
+        method: "WAVE",
+        reference: `SCAN-${tag}`,
+        paidAt: new Date(),
+        note: "Encaissée au scan",
+      },
+      actor.id,
+    );
+    expect(
+      await db.auditLog.findFirstOrThrow({
+        where: { action: "payment.recorded", entityId: payment.id },
+      }),
+    ).toMatchObject({ actorId: actor.id });
+
+    const again = await scanCardCheckIn(
+      { eventId: today.id, token: khady.token, paid: false },
+      actor.id,
+      all,
+    );
+    expect(again).toMatchObject({ ok: true, alreadyPresent: true, member: { cardPaid: true } });
   });
 
   it("deux scans simultanés de la même carte : une seule présence, une seule ligne de points", async () => {

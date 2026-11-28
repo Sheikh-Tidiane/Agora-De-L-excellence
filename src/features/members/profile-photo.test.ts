@@ -41,6 +41,7 @@ const tx = {
   userRole: anyModel(),
   membership: anyModel(),
   membershipRequest: anyModel(),
+  eventFeedback: anyModel(),
   auditLog: { create: vi.fn(async () => ({})) },
 };
 

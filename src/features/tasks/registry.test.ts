@@ -25,4 +25,19 @@ describe("tâches planifiées", () => {
       }),
     ).toBe(false);
   });
+
+  it("avis : selon le réglage ; purge : à chaque passage (idempotente)", () => {
+    const now = new Date("2026-12-06T10:05:00Z");
+    expect(task("avis-rencontres").isDue(now, defaultClubSettings)).toBe(true);
+    expect(
+      task("avis-rencontres").isDue(now, {
+        ...defaultClubSettings,
+        feedbackRequestsEnabled: false,
+      }),
+    ).toBe(false);
+    expect(task("purge-avis").isDue(new Date("2026-12-06T03:05:00Z"), defaultClubSettings)).toBe(
+      true,
+    );
+    expect(task("purge-avis").isDue(now, defaultClubSettings)).toBe(true);
+  });
 });

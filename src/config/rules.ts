@@ -25,6 +25,12 @@ export const rules = {
   "events.remindersEnabled": true,
   /** Heure d'envoi du rappel la veille (heure de Dakar, 0 à 23). */
   "events.reminderHour": 10,
+  /** Avis le lendemain de la rencontre, aux membres pointés présents. */
+  "events.feedbackRequestsEnabled": true,
+  /** Heure d'envoi de l'invitation à donner son avis, le lendemain (heure de Dakar, 0 à 23). */
+  "events.feedbackRequestHour": 10,
+  /** Commentaire d'un avis et lien avec son auteur effacés après ce délai (mois après la rencontre). */
+  "feedback.retentionMonths": 24,
   /** Liste d'attente : plus d'entrée ni de promotion automatique à moins de X heures du début. */
   "events.waitlistCutoffHours": 2,
   /** Délai d'annulation d'une inscription avant le début de l'événement, en heures. */

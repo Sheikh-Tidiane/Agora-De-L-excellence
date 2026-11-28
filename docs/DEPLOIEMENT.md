@@ -230,6 +230,8 @@ Chaque tâche décide si c'est son heure et n'envoie jamais rien en double si el
 | `rappels-carte`      | À partir de 9 h                                                                               | Rappels « carte à régler » : 7 jours après l'acceptation, 3 jours avant la fin du délai                            |
 | `rappels-rencontres` | La veille de chaque rencontre, à l'heure réglée (10 h par défaut), jusqu'à 2 h avant le début | Rappel par e-mail aux inscrits confirmés (membres et invités)                                                      |
 | `liste-attente`      | Chaque heure                                                                                  | Places rendues par les invités qui n'ont pas confirmé : à la liste d'attente ; e-mails de place obtenue à renvoyer |
+| `avis-rencontres`    | Le lendemain des rencontres, à l'heure réglée (10 h), 72 h de rattrapage                      | Demande d'avis aux membres présents (e-mail et notification)                                                       |
+| `purge-avis`         | Chaque heure (presque toujours sans effet)                                                    | Avis de plus de 24 mois : commentaire et auteur effacés, la note reste                                             |
 
 Une nouvelle tâche s'ajoute dans `src/features/tasks/registry.ts` : rien à changer sur le serveur.
 Les tâches et leur description, puis une tâche lancée à la main (même hors de son heure) :

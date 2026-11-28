@@ -41,19 +41,24 @@ Elles remplacent les « trois piliers » (Culture / Compétition / Innovation) d
 Elles remplacent la liste d'activités du cahier des charges (page Activités, filtres d'événements, types d'événements en base).
 
 ### A. Les Rendez-vous lecture
+
 Des rencontres autour d’un livre, d’une nouvelle, d’un poème ou d’un discours. Chaque participant partage son interprétation et son appréciation, pour un enrichissement mutuel.
 
 ### B. Les Tournois de Scrabble
+
 D’abord des séances d’initiation pour celles et ceux qui aiment le Scrabble sans avoir jamais eu l’occasion d’y jouer. Ensuite, des compétitions individuelles ou par équipes, avec un **classement mensuel** et des **records à battre** pour donner envie de se surpasser. Les gagnants sont récompensés.
 
 ### C. Les Débats d’idées
+
 Un sujet d’actualité ou de société est choisi et débattu. Chacun a la latitude de défendre ses idées ; à la fin, on repart ensemble avec une vision plus claire et une meilleure compréhension du sujet.
 Concept associé : **l’Invité de l’Agora**. Sur les sujets qui demandent l’éclairage d’un expert, une personnalité est invitée, sur place ou en visioconférence.
 
 ### D. Les Génies du soir
+
 Quiz de culture générale, devinettes, jeux de l’esprit, concours d’éloquence et de mémorisation.
 
 ### E. L’Agora Ciné
+
 Tous les trois mois, la projection d’un film historique ou qui stimule l’intelligence, d’un documentaire ou d’une conférence, suivie d’un débat sur l’interprétation et l’appréciation du thème.
 
 ## 6. Les rencontres
@@ -74,15 +79,15 @@ Tous les trois mois, la projection d’un film historique ou qui stimule l’int
 
 Date, heure et lieu confirmés par le comité (communiqués par le porteur du projet le 21/11/2026). Les dates précédentes (samedi 26 décembre 2026, puis samedi 2 janvier 2027) sont abandonnées.
 
-| Horaire | Programme |
-|---|---|
-| 16 h 00 – 16 h 30 | Mise en place |
-| 16 h 30 – 17 h 00 | Accueil des participants |
-| 17 h 00 – 17 h 20 | Présentation du club et de sa vision |
+| Horaire           | Programme                                                                                                                      |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| 16 h 00 – 16 h 30 | Mise en place                                                                                                                  |
+| 16 h 30 – 17 h 00 | Accueil des participants                                                                                                       |
+| 17 h 00 – 17 h 20 | Présentation du club et de sa vision                                                                                           |
 | 17 h 20 – 17 h 40 | Présentation des cinq activités, chacune avec une courte démonstration (ex. tirage de lettres, question de débat à main levée) |
-| 17 h 40 – 18 h 10 | Première animation : lecture et quiz de culture générale |
-| 18 h 10 – 18 h 25 | Présentation du comité et mot de clôture |
-| 18 h 25 – 19 h 00 | Adhésions, échanges et collation |
+| 17 h 40 – 18 h 10 | Première animation : lecture et quiz de culture générale                                                                       |
+| 18 h 10 – 18 h 25 | Présentation du comité et mot de clôture                                                                                       |
+| 18 h 25 – 19 h 00 | Adhésions, échanges et collation                                                                                               |
 
 Pendant les adhésions, un QR code affiché sur place ouvre le formulaire d’adhésion du site : les participants s’inscrivent depuis leur téléphone.
 
@@ -112,6 +117,7 @@ Principes retenus, en attente du texte définitif rédigé et validé par le com
 ## 9. Conséquences pour la plateforme
 
 ### Textes et pages
+
 - **Accueil** : le slogan dans le hero ; la section « trois piliers » devient « trois dimensions » ; une section « Activités » présente les cinq activités ; le lancement du 16 janvier 2027 est mis en avant tant qu'il n'est pas passé.
 - **À propos** : objectifs, trois dimensions, comité de pilotage, rythme des rencontres, conditions d’adhésion.
 - **Activités** : une section ou page par activité (A à E), avec les événements à venir de ce type.
@@ -123,12 +129,14 @@ Principes retenus, en attente du texte définitif rédigé et validé par le com
 - Corriger la langue des textes sources si besoin, sans changer le sens.
 
 ### Modèle de données
+
 - **Types d’événements** (enum) : `RENDEZ_VOUS_LECTURE`, `INITIATION_SCRABBLE`, `TOURNOI_SCRABBLE`, `DEBAT_IDEES`, `GENIES_DU_SOIR`, `AGORA_CINE`, `LANCEMENT_AUTRE`. Le libellé affiché vient d’une table ou d’une config, pas du code.
 - **Événement** : champs optionnels `invite` (nom, qualité, présence sur place ou en visio) pour l’Invité de l’Agora, et `lienVisio` (visible uniquement par les membres inscrits) pour suivre à distance.
 - **Comité** : une entité ou un réglage modifiable depuis l’admin (nom, rôle facultatif, photo facultative, bio facultative, ordre d’affichage).
 - **Scrabble** : en plus du classement mensuel, une table de **records** (meilleur score sur une partie, meilleur mot, plus longue série de victoires… à configurer) et un champ « récompense » sur les tournois.
 
 ### Cotisations (règle par défaut)
+
 - Pas de paiement en ligne en V1. Les paiements se font en espèces sur place.
 - Un responsable enregistre dans l’admin : le paiement de la carte (1 000 F CFA, date, reçu par) et, lors du scan de présence, la participation de 100 F CFA (case « payé »).
 - Les montants sont des **réglages** modifiables (table `Setting`), jamais écrits en dur.
@@ -136,9 +144,11 @@ Principes retenus, en attente du texte définitif rédigé et validé par le com
 - Paiement mobile (Wave, Orange Money) : évolution possible plus tard, hors V1.
 
 ### Évolutions pour la V2 (Phase 4, pas maintenant)
+
 - **Quiz en ligne** : un responsable crée un quiz (questions à choix multiples, durée, période d’ouverture), les membres y répondent depuis leur téléphone, le score rapporte des points selon une `PointRule` et alimente un classement des quiz. Complète les Génies du soir.
 
 ### Données de démo
+
 - Le lancement (samedi 16 janvier 2027, 16 h, Foyer des jeunes de Yeumbeul Nord) est un **vrai événement** : date et lieu confirmés, sans statut « provisoire ».
 
 ---

@@ -155,6 +155,31 @@ export function waitlistPromotedEmail(input: {
   });
 }
 
+/** Le lendemain d'une rencontre : votre avis (note de 1 à 5, commentaire facultatif). */
+export function feedbackRequestEmail(input: {
+  to: string;
+  name: string;
+  title: string;
+  date: string;
+  url: string;
+  closesAt: string;
+}): MailMessage {
+  return build(input.to, `Votre avis sur « ${input.title} »`, {
+    preheader: "Une note, un mot si vous le souhaitez : deux minutes.",
+    surtitre: "Votre avis",
+    title: `Merci de votre présence, ${input.name}.`,
+    paragraphs: [
+      `Vous étiez à la rencontre « ${input.title} » le ${input.date}. Comment l’avez-vous trouvée ?`,
+      "Donnez une note de 1 à 5 et, si vous le voulez, un commentaire. Votre avis n’est jamais publié : seuls les responsables du club le lisent, avec votre nom, pour améliorer les prochaines rencontres.",
+    ],
+    action: { label: "Donner mon avis", url: input.url },
+    notes: [
+      `Vous pourrez le modifier jusqu’au ${input.closesAt}.`,
+      "Dans l’esprit de la charte du club : critiquer les idées, jamais les personnes.",
+    ],
+  });
+}
+
 /**
  * Rappel la veille d'une rencontre (src/features/events/reminders.ts). Le membre reçoit le lien
  * de visio (sauf s'il est masqué : carte non réglée après le délai), l'invité jamais.

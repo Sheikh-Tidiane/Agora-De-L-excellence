@@ -6,41 +6,41 @@
 
 **101 Server Actions** dans 20 fichiers `"use server"`, toutes relues une à une :
 
-| Fichier | Actions | Contrôle d'accès |
-|---|---|---|
-| `features/admin/actions.ts` | `adminSearchAction` | `admin.access`, puis une permission par famille de résultats |
-| `features/articles/actions.ts` | `saveArticleAction`, `setArticleStatusAction` | `articles.manage` |
-| `features/auth/actions.ts` | `signInAction`, `forgotPasswordAction`, `resetPasswordAction`, `activateAccountAction` (publiques) ; `signOutAction` | Zod puis débit par IP (et par e-mail pour la connexion et le mot de passe oublié) ; déconnexion sans contrôle, voulu |
-| `features/auth/roles-actions.ts` | `createStaffAccountAction`, `setUserRolesAction` | `roles.manage` |
-| `features/committee/actions.ts` | 3 actions | `settings.manage` |
-| `features/contact/actions.ts` | `sendContactMessageAction` (publique) | Zod, débit par IP, champ piège |
-| `features/events/actions.ts` | `registerMemberAction`, `cancelMemberRegistrationAction` ; `registerGuestAction`, `confirmGuestRegistrationAction`, `cancelGuestRegistrationAction` (publiques) | `requireUser` + propriété dans le service ; jeton opaque haché + débit pour les invités |
-| `features/events/admin-actions.ts` | 5 actions | `events.manage` |
-| `features/gamification/actions.ts` | 4 actions | `points.grant`, `badges.award`, `points.rules.manage` |
-| `features/library/actions.ts` | 8 actions | `books.manage` |
-| `features/members/actions.ts` | 6 actions | `members.manage` (le service refuse d'agir sur soi et sur un responsable sans `roles.manage`) |
-| `features/members/card-actions.ts` | `regenerateMyCardAction`, `revokeMemberCardAction` | `member.access` (compte de la session) / `members.manage` |
-| `features/members/profile-actions.ts` | `updateOwnProfileAction` | `member.access`, compte de la session |
-| `features/memberships/actions.ts` | `submitMembershipRequestAction` (publique) ; `approveRequestsAction`, `rejectRequestAction` | débit par IP / `memberships.review` |
-| `features/notifications/actions.ts` | 2 actions | `requireUser`, filtre `userId` de la session |
-| `features/payments/actions.ts` | 3 actions | `payments.record` ; pointage : `attendance.record` ou `payments.record`, droits passés au service |
-| `features/quizzes/actions.ts` | 11 actions d'administration, 3 de jeu | `quizzes.manage` / `member.access` + débit + tentative verrouillée sur le compte de la session |
-| `features/readings/actions.ts` | 5 actions membre, 2 de modération | `member.access` + propriété (`ownReading`) / `readings.validate`, `reviews.moderate` (refus de valider ses propres lectures) |
-| `features/scrabble/actions.ts` | 25 actions | `tournaments.manage`, `scores.enter`, `results.publish` (enveloppe `guarded`) |
-| `features/settings/actions.ts` | 2 actions | `settings.manage` |
+| Fichier                               | Actions                                                                                                                                                         | Contrôle d'accès                                                                                                             |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `features/admin/actions.ts`           | `adminSearchAction`                                                                                                                                             | `admin.access`, puis une permission par famille de résultats                                                                 |
+| `features/articles/actions.ts`        | `saveArticleAction`, `setArticleStatusAction`                                                                                                                   | `articles.manage`                                                                                                            |
+| `features/auth/actions.ts`            | `signInAction`, `forgotPasswordAction`, `resetPasswordAction`, `activateAccountAction` (publiques) ; `signOutAction`                                            | Zod puis débit par IP (et par e-mail pour la connexion et le mot de passe oublié) ; déconnexion sans contrôle, voulu         |
+| `features/auth/roles-actions.ts`      | `createStaffAccountAction`, `setUserRolesAction`                                                                                                                | `roles.manage`                                                                                                               |
+| `features/committee/actions.ts`       | 3 actions                                                                                                                                                       | `settings.manage`                                                                                                            |
+| `features/contact/actions.ts`         | `sendContactMessageAction` (publique)                                                                                                                           | Zod, débit par IP, champ piège                                                                                               |
+| `features/events/actions.ts`          | `registerMemberAction`, `cancelMemberRegistrationAction` ; `registerGuestAction`, `confirmGuestRegistrationAction`, `cancelGuestRegistrationAction` (publiques) | `requireUser` + propriété dans le service ; jeton opaque haché + débit pour les invités                                      |
+| `features/events/admin-actions.ts`    | 5 actions                                                                                                                                                       | `events.manage`                                                                                                              |
+| `features/gamification/actions.ts`    | 4 actions                                                                                                                                                       | `points.grant`, `badges.award`, `points.rules.manage`                                                                        |
+| `features/library/actions.ts`         | 8 actions                                                                                                                                                       | `books.manage`                                                                                                               |
+| `features/members/actions.ts`         | 6 actions                                                                                                                                                       | `members.manage` (le service refuse d'agir sur soi et sur un responsable sans `roles.manage`)                                |
+| `features/members/card-actions.ts`    | `regenerateMyCardAction`, `revokeMemberCardAction`                                                                                                              | `member.access` (compte de la session) / `members.manage`                                                                    |
+| `features/members/profile-actions.ts` | `updateOwnProfileAction`                                                                                                                                        | `member.access`, compte de la session                                                                                        |
+| `features/memberships/actions.ts`     | `submitMembershipRequestAction` (publique) ; `approveRequestsAction`, `rejectRequestAction`                                                                     | débit par IP / `memberships.review`                                                                                          |
+| `features/notifications/actions.ts`   | 2 actions                                                                                                                                                       | `requireUser`, filtre `userId` de la session                                                                                 |
+| `features/payments/actions.ts`        | 3 actions                                                                                                                                                       | `payments.record` ; pointage : `attendance.record` ou `payments.record`, droits passés au service                            |
+| `features/quizzes/actions.ts`         | 11 actions d'administration, 3 de jeu                                                                                                                           | `quizzes.manage` / `member.access` + débit + tentative verrouillée sur le compte de la session                               |
+| `features/readings/actions.ts`        | 5 actions membre, 2 de modération                                                                                                                               | `member.access` + propriété (`ownReading`) / `readings.validate`, `reviews.moderate` (refus de valider ses propres lectures) |
+| `features/scrabble/actions.ts`        | 25 actions                                                                                                                                                      | `tournaments.manage`, `scores.enter`, `results.publish` (enveloppe `guarded`)                                                |
+| `features/settings/actions.ts`        | 2 actions                                                                                                                                                       | `settings.manage`                                                                                                            |
 
 **9 méthodes de Route Handler** dans 8 fichiers `route.ts` :
 
-| Route | Méthode | Accès | Zod / validation | Origine (après revue) |
-|---|---|---|---|---|
-| `/api/admin/attendance/scan` | POST | `attendance.record` | `scanRequestSchema` | contrôlée |
-| `/api/admin/attendance/search` | POST | `attendance.record` | `searchRequestSchema` | contrôlée |
-| `/api/admin/events/[id]/registrations` | GET | `data.export` **et** `events.manage` | identifiant par motif | lecture (voir §5) |
-| `/api/admin/uploads` | POST | session, puis `books.manage` ou `settings.manage` selon le dossier | dossier en liste fermée, type au contenu, 2 Mo, nom régénéré | contrôlée |
-| `/api/assistant` | POST | `member.access` | `assistantRequestSchema` | contrôlée |
-| `/api/member/photo` | POST, DELETE | `member.access`, compte de la session | type au contenu, 2 Mo, nom régénéré | contrôlée |
-| `/api/member/photo/[...path]` | GET | session | nom par motif strict | lecture |
-| `/uploads/[...path]` | GET | public (couvertures, comité), photos de profil exclues | nom par motif strict | lecture |
+| Route                                  | Méthode      | Accès                                                              | Zod / validation                                             | Origine (après revue) |
+| -------------------------------------- | ------------ | ------------------------------------------------------------------ | ------------------------------------------------------------ | --------------------- |
+| `/api/admin/attendance/scan`           | POST         | `attendance.record`                                                | `scanRequestSchema`                                          | contrôlée             |
+| `/api/admin/attendance/search`         | POST         | `attendance.record`                                                | `searchRequestSchema`                                        | contrôlée             |
+| `/api/admin/events/[id]/registrations` | GET          | `data.export` **et** `events.manage`                               | identifiant par motif                                        | lecture (voir §5)     |
+| `/api/admin/uploads`                   | POST         | session, puis `books.manage` ou `settings.manage` selon le dossier | dossier en liste fermée, type au contenu, 2 Mo, nom régénéré | contrôlée             |
+| `/api/assistant`                       | POST         | `member.access`                                                    | `assistantRequestSchema`                                     | contrôlée             |
+| `/api/member/photo`                    | POST, DELETE | `member.access`, compte de la session                              | type au contenu, 2 Mo, nom régénéré                          | contrôlée             |
+| `/api/member/photo/[...path]`          | GET          | session                                                            | nom par motif strict                                         | lecture               |
+| `/uploads/[...path]`                   | GET          | public (couvertures, comité), photos de profil exclues             | nom par motif strict                                         | lecture               |
 
 Aussi relus : `src/proxy.ts`, `src/lib/permissions/`, `src/lib/rate-limit.ts`, `src/lib/request.ts`, `src/lib/auth.ts`, `src/config/auth.ts` (`safeNextPath`), `src/lib/logger.ts` et tous ses appels, `src/lib/storage*.ts`, `src/features/members/card-token.ts` et `card-service.ts`, les requêtes des pages publiques (noms, e-mails, critiques, Scrabble, lien de visio), `next.config.ts`, `.env.example`, `src/lib/env.ts`, les `dangerouslySetInnerHTML`.
 

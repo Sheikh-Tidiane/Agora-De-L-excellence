@@ -14,6 +14,7 @@ export default async function PrivacyPage() {
   const club = await getClubSettings();
   const retention = rules["membership.rejectedRetentionMonths"];
   const contactRetention = rules["contact.handledRetentionMonths"];
+  const feedbackRetention = rules["feedback.retentionMonths"];
 
   const sections: { id: string; title: string; body: React.ReactNode }[] = [
     {
@@ -51,6 +52,10 @@ export default async function PrivacyPage() {
             (conservé sous forme hachée, illisible même pour nous) et l’historique de vos
             inscriptions.
           </li>
+          <li>
+            <strong>Avis après une rencontre</strong>&nbsp;: une note de 1 à 5 et, si vous le
+            souhaitez, un commentaire. Ils ne sont jamais publiés.
+          </li>
         </ul>
       ),
     },
@@ -82,6 +87,10 @@ export default async function PrivacyPage() {
           <li>
             Une inscription de visiteur non confirmée cesse de compter après vingt-quatre heures.
           </li>
+          <li>
+            Le commentaire d’un avis et le lien avec son auteur sont effacés {feedbackRetention}{" "}
+            mois après la rencontre. Seule la note reste, sans nom, pour les statistiques du club.
+          </li>
         </ul>
       ),
     },
@@ -93,7 +102,8 @@ export default async function PrivacyPage() {
           Les responsables du club, chacun selon son rôle et pas davantage&nbsp;: un responsable de
           la bibliothèque ne voit pas les demandes d’adhésion, par exemple. Les actions sensibles
           (validation d’une adhésion, changement de rôle, suspension) sont consignées dans un
-          journal.
+          journal. Les avis donnés après une rencontre ne sont lus, avec le nom de leur auteur, que
+          par les responsables qui en ont la charge.
         </p>
       ),
     },

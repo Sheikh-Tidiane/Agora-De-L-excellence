@@ -16,6 +16,7 @@ export const NOTIFICATION_TYPES = {
   "membership.welcome": "Bienvenue",
   "event.registered": "Inscription",
   "event.waitlist_promoted": "Place obtenue",
+  "event.feedback_request": "Votre avis",
   "reading.validated": "Lecture validée",
   "reading.rejected": "Lecture",
   "review.approved": "Critique publiée",

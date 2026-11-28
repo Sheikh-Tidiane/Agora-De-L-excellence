@@ -52,6 +52,7 @@ const adminPages = [
   "/admin/articles",
   "/admin/quizzes",
   "/admin/quizzes/new",
+  "/admin/feedback",
   "/admin/scrabble",
   "/admin/scrabble/records",
   "/admin/settings",

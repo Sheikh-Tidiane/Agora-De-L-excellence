@@ -163,6 +163,18 @@ export function SettingsForm({ initial }: { initial: ClubSettingsInput }) {
           autoComplete="off"
           hint="Une place libérée avant ce moment va d’office à la première personne en attente ; après, elle est libre pour tous."
         />
+        <CheckboxField form={form} name="feedbackRequestsEnabled">
+          Demander leur avis aux membres présents, le lendemain de chaque rencontre
+        </CheckboxField>
+        <TextField
+          form={form}
+          name="feedbackRequestHour"
+          idPrefix="reg"
+          label="Heure de la demande d’avis, le lendemain (heure de Dakar, 0 à 23)"
+          inputMode="numeric"
+          autoComplete="off"
+          hint="Les avis ne sont jamais publiés : seuls les responsables les lisent."
+        />
       </Group>
       <Group
         title="Cotisations"

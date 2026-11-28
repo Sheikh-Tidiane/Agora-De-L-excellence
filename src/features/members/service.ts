@@ -180,6 +180,18 @@ export async function archiveMember(
       where: { userId, status: { in: ["ACTIVE", "SUSPENDED"] } },
       data: { status: "ENDED" },
     });
+    // Avis : le commentaire libre peut contenir des données personnelles ; la note reste, sans auteur.
+    await tx.eventFeedback.updateMany({
+      where: { registration: { userId }, anonymizedAt: null },
+      data: {
+        registrationId: null,
+        comment: null,
+        hiddenAt: null,
+        hiddenById: null,
+        hiddenReason: null,
+        anonymizedAt: new Date(),
+      },
+    });
     await tx.membershipRequest.updateMany({
       where: { userId },
       data: {

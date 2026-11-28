@@ -6,6 +6,7 @@ import * as contact from "@/features/contact/actions";
 import * as events from "@/features/events/actions";
 import * as eventsAdmin from "@/features/events/admin-actions";
 import * as gamification from "@/features/gamification/actions";
+import * as feedback from "@/features/feedback/actions";
 import { eventTypeCodes } from "@/features/events/rules";
 import * as library from "@/features/library/actions";
 import * as members from "@/features/members/actions";
@@ -142,6 +143,7 @@ const f = {
   events: "src/features/events/actions.ts",
   eventsAdmin: "src/features/events/admin-actions.ts",
   gamification: "src/features/gamification/actions.ts",
+  feedback: "src/features/feedback/actions.ts",
   library: "src/features/library/actions.ts",
   members: "src/features/members/actions.ts",
   profile: "src/features/members/profile-actions.ts",
@@ -161,7 +163,50 @@ const badIds = (field: string, base: object = {}) => ({
   [`${field} manquant`]: { ...base, [field]: undefined },
 });
 
+const feedbackValid = { eventId: ID, rating: 4, comment: "Très belle lecture." };
+const VERSION = "2026-12-01T10:00:00.000Z";
+
 export const protectedCases: ProtectedCase[] = [
+  protectedCase(
+    `${f.feedback}#saveFeedbackAction`,
+    feedback.saveFeedbackAction,
+    ["member.access"],
+    feedbackValid,
+    {
+      ...badIds("eventId", { rating: 4, comment: "" }),
+      "note 0": { ...feedbackValid, rating: 0 },
+      "note 6": { ...feedbackValid, rating: 6 },
+      "note décimale": { ...feedbackValid, rating: 2.5 },
+      "note en chaîne": { ...feedbackValid, rating: "5" },
+      "note : objet": { ...feedbackValid, rating: { gt: 0 } },
+      "note manquante": { eventId: ID, comment: "" },
+      "commentaire trop long": { ...feedbackValid, comment: "x".repeat(1001) },
+      "commentaire : objet": { ...feedbackValid, comment: { not: "" } },
+    },
+  ),
+  protectedCase(
+    `${f.feedback}#hideFeedbackCommentAction`,
+    feedback.hideFeedbackCommentAction,
+    ["feedback.moderate"],
+    { id: ID, reason: "Propos blessants", version: VERSION },
+    {
+      ...badIds("id", { reason: "Propos blessants", version: VERSION }),
+      "motif vide": { id: ID, reason: " ", version: VERSION },
+      "motif trop long": { id: ID, reason: "x".repeat(301), version: VERSION },
+      "version invalide": { id: ID, reason: "Propos blessants", version: "hier" },
+      "version manquante": { id: ID, reason: "Propos blessants" },
+    },
+  ),
+  protectedCase(
+    `${f.feedback}#restoreFeedbackCommentAction`,
+    feedback.restoreFeedbackCommentAction,
+    ["feedback.moderate"],
+    { id: ID, version: VERSION },
+    {
+      ...badIds("id", { version: VERSION }),
+      "version invalide": { id: ID, version: 12 },
+    },
+  ),
   protectedCase(
     `${f.admin}#adminSearchAction`,
     admin.adminSearchAction,
@@ -789,6 +834,9 @@ export const protectedCases: ProtectedCase[] = [
       "rappels : chaîne": { ...defaultClubSettings, eventRemindersEnabled: "true" },
       "heure du rappel : 24": { ...defaultClubSettings, eventReminderHour: 24 },
       "heure du rappel : « 10h »": { ...defaultClubSettings, eventReminderHour: "10h" },
+      "fin de liste d'attente : 73 h": { ...defaultClubSettings, waitlistCutoffHours: 73 },
+      "avis : chaîne": { ...defaultClubSettings, feedbackRequestsEnabled: "oui" },
+      "heure de l'avis : 24": { ...defaultClubSettings, feedbackRequestHour: 24 },
     },
   ),
   protectedCase(

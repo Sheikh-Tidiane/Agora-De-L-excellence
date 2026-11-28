@@ -64,3 +64,18 @@ Playwright du parcours, contrôle visuel à 375 px et 1440 px, `docs/REGLES-METI
   long, jamais la visio, e-mail de confirmation), parcours `e2e/partage-agenda.spec.ts` à 375 et
   1440 px (téléchargement .ics, Google Agenda, WhatsApp, partage natif simulé, balises og et image
   PNG 1200 × 630, e-mail de confirmation d'un invité).
+
+## Étape 4 — Avis après la rencontre
+
+- Le lendemain de chaque rencontre (10 h, réglable), les membres pointés présents reçoivent un
+  e-mail et une notification : note de 1 à 5 et commentaire facultatif, depuis « Mes rencontres »
+  (`/member/events/<adresse>/avis`), modifiable 7 jours. Une seule invitation et un seul avis par
+  participation (table `EventFeedback`, invitation `FEEDBACK_REQUEST`, réservation sans doublon).
+- Administration (`/admin/feedback`, permission `feedback.read`) : moyennes par rencontre et par
+  activité, taux de réponse, répartition des notes ; détail avec l'auteur ; masquage d'un
+  commentaire avec motif (`feedback.moderate`), consigné au journal.
+- Conservation : 24 mois, puis commentaire et auteur effacés (tâche `purge-avis`) ; `/privacy`.
+- Les invités ne reçoivent pas encore de demande d'avis : leur présence ne se pointe pas.
+- Tests : `src/features/feedback/rules.test.ts`, `feedback.db.test.ts` (invitations en parallèle,
+  un seul avis, 7 jours, absent refusé, masquage, agrégats multi-activités, purge), sécurité des
+  actions et des réglages, parcours `e2e/avis-rencontres.spec.ts` à 375 et 1440 px.

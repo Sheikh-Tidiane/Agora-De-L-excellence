@@ -46,6 +46,13 @@ import { prisma } from "@/lib/prisma";
 //   tsx e2e/support/test-user.ts create-waitlist-event E2E-<titre>
 //     Rencontre publiée, ouverte au public, d'une seule place, dans 3 jours. Affiche en JSON son
 //     adresse publique et son identifiant.
+//   tsx e2e/support/test-user.ts create-feedback-event E2E-<titre>
+//     Rencontre publiée, terminée il y a deux jours (dans la fenêtre des demandes d'avis).
+//     Affiche son adresse publique.
+//   tsx e2e/support/test-user.ts check-in <email> E2E-<titre>
+//     Inscrit le membre à cette rencontre et le pointe présent.
+//   tsx e2e/support/test-user.ts send-feedback-requests E2E-<début du titre>
+//     Envoie les demandes d'avis pour ces seules rencontres ; affiche le bilan en JSON.
 //   tsx e2e/support/test-user.ts backdate-registrations E2E-<début du titre>
 //     Inscriptions confirmées 3 jours plus tôt (avant l'ouverture de la fenêtre du rappel).
 //   tsx e2e/support/test-user.ts send-event-reminders E2E-<début du titre>
@@ -77,6 +84,8 @@ async function main() {
       [
         "create-reminder-event",
         "create-waitlist-event",
+        "create-feedback-event",
+        "send-feedback-requests",
         "backdate-registrations",
         "send-event-reminders",
       ].includes(command ?? "") && email?.startsWith("E2E-")
@@ -236,6 +245,51 @@ async function main() {
       },
     });
     console.log(JSON.stringify({ path: `/events/${slug}`, id: event.id }));
+  } else if (command === "create-feedback-event" && email?.startsWith("E2E-")) {
+    const slug = email.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    await prisma.event.create({
+      data: {
+        slug,
+        title: email,
+        type: "RENDEZ_VOUS_LECTURE",
+        activities: ["RENDEZ_VOUS_LECTURE", "GENIES_DU_SOIR"],
+        description: "Rencontre de test des avis.",
+        location: "Maison de la culture Douta Seck",
+        // Terminée il y a 48 h : la demande d'avis (lendemain à 10 h, 72 h de rattrapage) est due.
+        startsAt: new Date(Date.now() - 50 * 3_600_000),
+        endsAt: new Date(Date.now() - 48 * 3_600_000),
+        status: "PUBLISHED",
+        publishedAt: new Date(),
+        isDemo: true,
+      },
+    });
+    console.log(`/events/${slug}`);
+  } else if (command === "check-in" && firstName?.startsWith("E2E-")) {
+    const [user, event] = await Promise.all([
+      prisma.user.findUniqueOrThrow({ where: { email } }),
+      prisma.event.findFirstOrThrow({ where: { title: firstName } }),
+    ]);
+    await prisma.eventRegistration.upsert({
+      where: { eventId_userId: { eventId: event.id, userId: user.id } },
+      create: {
+        eventId: event.id,
+        userId: user.id,
+        status: "CONFIRMED",
+        confirmedAt: event.startsAt,
+        attendedAt: event.startsAt,
+        checkInMethod: "MANUAL",
+      },
+      update: { status: "CONFIRMED", attendedAt: event.startsAt, checkInMethod: "MANUAL" },
+    });
+  } else if (command === "send-feedback-requests" && email?.startsWith("E2E-")) {
+    const { sendFeedbackRequests } = await import("@/features/feedback/requests");
+    const events = await prisma.event.findMany({
+      where: { title: { startsWith: email } },
+      select: { id: true },
+    });
+    console.log(
+      JSON.stringify(await sendFeedbackRequests(new Date(), { eventIds: events.map((e) => e.id) })),
+    );
   } else if (command === "backdate-registrations" && email?.startsWith("E2E-")) {
     const past = new Date(Date.now() - 3 * 86_400_000);
     const { count } = await prisma.eventRegistration.updateMany({

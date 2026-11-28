@@ -13,6 +13,7 @@ import { loadClubSettings } from "@/features/settings/club";
 import { MemberLeaveWaitlistButton } from "@/features/events/components/registration-forms";
 import { ordinal } from "@/features/events/rules";
 import { getMyWaitlist } from "@/features/events/waitlist";
+import { canSubmit, feedbackWindow } from "@/features/feedback/rules";
 import { formatDate, formatTime } from "@/lib/dates";
 import { requirePageAccess } from "@/lib/permissions";
 
@@ -119,23 +120,44 @@ async function MyEvents() {
           </p>
         ) : (
           <ul className="mt-4 border-b border-indigo/20">
-            {attendance.map(({ id, event, payments }) => (
-              <li key={id} className="border-t border-indigo/20 py-4">
-                <p className="petit font-semibold text-gris">
-                  {activityLabels(event).join(", ")} · {formatDate(event.startsAt)}
-                </p>
-                <Link
-                  href={`/events/${event.slug}`}
-                  className="mt-0.5 block font-serif text-lg leading-snug decoration-terracotta underline-offset-4 hover:underline"
-                >
-                  {event.title}
-                </Link>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <Tag tone="succes">Présent</Tag>
-                  {payments.length > 0 ? <Tag>Participation réglée</Tag> : null}
-                </div>
-              </li>
-            ))}
+            {attendance.map(({ id, event, payments, feedback, status }) => {
+              const window = feedbackWindow(event, settings.feedbackRequestHour);
+              const open =
+                status === "CONFIRMED" &&
+                !event.archivedAt &&
+                (event.status === "PUBLISHED" || event.status === "CLOSED") &&
+                canSubmit(window, now);
+              return (
+                <li key={id} className="border-t border-indigo/20 py-4">
+                  <p className="petit font-semibold text-gris">
+                    {activityLabels(event).join(", ")} · {formatDate(event.startsAt)}
+                  </p>
+                  <Link
+                    href={`/events/${event.slug}`}
+                    className="mt-0.5 block font-serif text-lg leading-snug decoration-terracotta underline-offset-4 hover:underline"
+                  >
+                    {event.title}
+                  </Link>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Tag tone="succes">Présent</Tag>
+                    {payments.length > 0 ? <Tag>Participation réglée</Tag> : null}
+                    {feedback && !open ? (
+                      <Tag>{`Avis donné : ${feedback.rating} sur 5`}</Tag>
+                    ) : null}
+                  </div>
+                  {open ? (
+                    <Link
+                      href={`/member/events/${event.slug}/avis`}
+                      className="lien mt-2 inline-flex min-h-11 items-center"
+                    >
+                      {feedback
+                        ? `Modifier mon avis (${feedback.rating} sur 5), jusqu’au ${formatDate(window.closesAt)}`
+                        : "Donner mon avis"}
+                    </Link>
+                  ) : null}
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

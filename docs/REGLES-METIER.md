@@ -128,6 +128,18 @@ Précisions de mise en œuvre :
 | Lieu         | Non communiqué : non affiché (« à confirmer » pour le lancement uniquement)                |
 | Compte rendu | Rédigé par un responsable sur un événement passé ; visible sur sa page et dans `/archives` |
 
+### Avis après la rencontre
+
+| Règle        | Valeur                                                                                                                                                                                                                                                                         |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Qui          | Chaque membre actif pointé présent (scan ou case « présent »). Les invités ne sont pas concernés : leur présence ne se pointe pas encore                                                                                                                                       |
+| Invitation   | Le lendemain de la fin de la rencontre (heure de fin, sinon début + 3 h), à l'heure réglée (10 h par défaut, Paramètres › Règles) : e-mail et notification. Rattrapage pendant 72 h si le serveur était arrêté. Une seule par participation, même si la tâche tourne deux fois |
+| Avis         | Une note de 1 à 5 et un commentaire facultatif (1 000 caractères au plus), depuis « Mes rencontres ». Un seul par participation, déposable dès la fin de la rencontre, modifiable jusqu'à 7 jours après l'invitation (même échéance pour tous, annoncée dans l'e-mail)         |
+| Lecture      | Jamais publié. Les responsables qui ont la permission « feedback.read » (administrateurs) voient les avis avec le nom de leur auteur : `/admin/feedback`                                                                                                                       |
+| Moyennes     | Par rencontre (présents, avis, taux de réponse, répartition des notes) et par activité. Une rencontre à plusieurs activités compte pour chacune, ou pour sa seule activité principale (au choix). Moyenne affichée à partir de 3 avis                                          |
+| Charte       | Un responsable (« feedback.moderate ») peut masquer un commentaire contraire à la charte, avec un motif ; consigné au journal (jamais le texte ni le motif). Le membre ne peut plus modifier ce commentaire, mais encore sa note                                               |
+| Conservation | 24 mois après la rencontre : commentaire, motif et lien avec l'auteur effacés (tâche `purge-avis`) ; la note reste, sans nom, pour les statistiques. Annoncé sur `/privacy`                                                                                                    |
+
 ### Agenda et partage
 
 | Règle              | Valeur                                                                                                                                                                                                   |

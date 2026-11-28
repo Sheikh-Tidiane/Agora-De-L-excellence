@@ -63,6 +63,7 @@ model User {
   contactMessagesHandled ContactMessage[]        @relation("ContactMessageHandler")
   memberships            Membership[]
   cardReminders          CardReminder[]
+  feedbacksHidden        EventFeedback[]         @relation("FeedbackModerator")
   readings               Reading[]               @relation("ReadingOwner")
   readingsValidated      Reading[]               @relation("ReadingValidator")
   reviews                Review[]                @relation("ReviewAuthor")
@@ -537,6 +538,7 @@ model Event {
   updatedAt                 DateTime          @updatedAt
 
   registrations    EventRegistration[]
+  feedbacks        EventFeedback[]
   tournament       Tournament?
   monthlySelection MonthlySelection?
   payments         Payment[]
@@ -578,6 +580,7 @@ model EventRegistration {
 
   payments Payment[]
   mails    RegistrationMail[]
+  feedback EventFeedback?
 
   @@unique([eventId, userId])
   @@unique([eventId, guestEmail])
@@ -651,6 +654,30 @@ model CardReminder {
   @@unique([userId, kind])
 }
 
+/// Avis d'un participant présent sur une rencontre (note 1 à 5, commentaire facultatif). Jamais
+/// publié : lu par les responsables (`feedback.read`). Un seul par inscription. Commentaire masquable
+/// par un responsable (motif, journal). Après 24 mois : commentaire et lien avec l'auteur effacés,
+/// la note reste (statistiques).
+model EventFeedback {
+  id             String             @id @default(cuid())
+  eventId        String
+  event          Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  /// `null` après anonymisation : la note reste, sans auteur.
+  registrationId String?            @unique
+  registration   EventRegistration? @relation(fields: [registrationId], references: [id], onDelete: SetNull)
+  rating         Int
+  comment        String?
+  hiddenAt       DateTime?
+  hiddenById     String?
+  hiddenBy       User?              @relation("FeedbackModerator", fields: [hiddenById], references: [id], onDelete: SetNull)
+  hiddenReason   String?
+  anonymizedAt   DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@index([eventId, createdAt])
+}
+
 /// E-mail automatique lié à une inscription (rappel la veille ; plus tard : demande d'avis).
 /// Réservé avant l'envoi (`claimedAt`, bail de 30 min), marqué envoyé après (`sentAt`) : deux
 /// passages simultanés n'envoient qu'une fois ; un envoi échoué est retenté (3 tentatives au plus).
@@ -676,6 +703,7 @@ model RegistrationMail {
 enum RegistrationMailKind {
   EVENT_REMINDER // la veille de la rencontre
   WAITLIST_PROMOTED // place obtenue depuis la liste d'attente
+  FEEDBACK_REQUEST // le lendemain : votre avis sur la rencontre
 }
 
 enum CardReminderKind {

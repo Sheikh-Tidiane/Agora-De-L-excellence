@@ -212,7 +212,20 @@ export async function getMyAttendance(userId: string) {
     select: {
       id: true,
       attendedAt: true,
-      event: { select: { slug: true, title: true, type: true, activities: true, startsAt: true } },
+      status: true,
+      event: {
+        select: {
+          slug: true,
+          title: true,
+          type: true,
+          activities: true,
+          startsAt: true,
+          endsAt: true,
+          status: true,
+          archivedAt: true,
+        },
+      },
+      feedback: { select: { rating: true } },
       payments: {
         where: { kind: "SESSION_FEE", cancelledAt: null },
         select: { id: true },

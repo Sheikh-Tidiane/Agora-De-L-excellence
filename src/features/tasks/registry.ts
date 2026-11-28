@@ -1,5 +1,7 @@
 import { sendEventReminders } from "@/features/events/reminders";
 import { runWaitlistTask } from "@/features/events/waitlist";
+import { sendFeedbackRequests } from "@/features/feedback/requests";
+import { purgeFeedback } from "@/features/feedback/service";
 import { sendCardReminders } from "@/features/members/card-reminders";
 import type { ClubSettings } from "@/features/settings/schemas";
 import { loadClubSettings } from "@/features/settings/club";
@@ -45,6 +47,23 @@ export const tasks: ScheduledTask[] = [
       "Liste d’attente : places rendues par les invités qui n’ont pas confirmé, e-mails de place obtenue à renvoyer",
     isDue: () => true,
     run: (now) => runWaitlistTask(now),
+  },
+  {
+    name: "avis-rencontres",
+    description: "Le lendemain des rencontres : demande d’avis aux membres présents",
+    // La fenêtre (lendemain à l'heure réglée, rattrapage 72 h) est vérifiée par la tâche.
+    isDue: (_now, settings) => settings.feedbackRequestsEnabled,
+    run: async (now) => {
+      const run = await sendFeedbackRequests(now);
+      return `${run.checked} demande(s) d’avis à envoyer ; ${run.sent} envoyée(s), ${run.failed} en échec, ${run.skipped} déjà prise(s).`;
+    },
+  },
+  {
+    name: "purge-avis",
+    description: "Avis de plus de 24 mois : commentaire et auteur effacés, la note reste",
+    // Idempotente et peu coûteuse : chaque passage (une seule mise à jour, presque toujours vide).
+    isDue: () => true,
+    run: async (now) => `${(await purgeFeedback(now)).anonymized} avis anonymisé(s).`,
   },
 ];
 

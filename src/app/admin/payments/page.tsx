@@ -1,3 +1,4 @@
+import { paymentMethodText } from "@/features/payments/methods";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -47,6 +48,8 @@ async function Payments() {
         kind: true,
         amount: true,
         paidAt: true,
+        method: true,
+        reference: true,
         cancelledAt: true,
         cancelReason: true,
         user: { select: { name: true } },
@@ -91,9 +94,10 @@ async function Payments() {
   return (
     <>
       <AdminPageHeader title="Encaissements">
-        Les paiements se font en espèces, sur place. La carte s’encaisse depuis la fiche d’un membre
-        ; la participation, en pointant les présents d’une rencontre. Montants en vigueur : carte{" "}
-        {formatFcfa(settings.membershipCardFee)}, séance {formatFcfa(settings.sessionFee)}.
+        Pas de paiement en ligne : la carte se règle en espèces, ou à distance par Wave ou Orange
+        Money (référence de la transaction obligatoire), et s’encaisse depuis la fiche d’un membre ;
+        la participation, en espèces, en pointant les présents d’une rencontre. Montants en vigueur
+        : carte {formatFcfa(settings.membershipCardFee)}, séance {formatFcfa(settings.sessionFee)}.
       </AdminPageHeader>
 
       <div className="grid gap-x-8 sm:grid-cols-3">
@@ -274,6 +278,7 @@ async function Payments() {
                     <span className="petit block text-gris">
                       {kindLabels[payment.kind]}
                       {payment.event ? ` · ${payment.event.title}` : ""} ·{" "}
+                      {paymentMethodText(payment.method, payment.reference)} ·{" "}
                       {formatDate(payment.paidAt)}
                       {payment.receivedBy ? ` · reçu par ${payment.receivedBy.name}` : ""}
                     </span>

@@ -25,6 +25,12 @@ const wholeNumber = (min: number, max: number, message: string) =>
     z.number({ error: message }).int(message).min(min, message).max(max, message),
   );
 
+/** Numéro Wave ou Orange Money : chiffres, espaces, « + » en tête ; vide si le club n'en a pas. */
+const mobileMoneyNumber = text(30).refine(
+  (value) => value === "" || /^\+?[0-9 ]{7,20}$/.test(value),
+  { message: "Indiquez un numéro, par exemple 77 123 45 67." },
+);
+
 export const clubSettingsSchema = z.object({
   name: text(80).min(2, "Indiquez le nom du club."),
   shortName: text(30).min(2, "Indiquez la forme courte du nom."),
@@ -46,6 +52,11 @@ export const clubSettingsSchema = z.object({
   whatsapp: optionalUrl,
   youtube: optionalUrl,
   tiktok: optionalUrl,
+  /** Numéros du club pour régler à distance (Wave, Orange Money). Vides : non affichés. */
+  waveNumber: mobileMoneyNumber,
+  orangeMoneyNumber: mobileMoneyNumber,
+  cardGraceDays: wholeNumber(1, 365, "Entre 1 et 365 jours."),
+  hideVideoWhenCardUnpaid: z.boolean({ error: "Cochez ou décochez la case." }),
   cancellationDeadlineHours: wholeNumber(0, 720, "Entre 0 et 720 heures."),
   membershipDurationMonths: wholeNumber(1, 60, "Entre 1 et 60 mois."),
   membershipCardFee: wholeNumber(0, 1_000_000, "Un montant entier en F CFA."),
@@ -68,6 +79,10 @@ export const defaultClubSettings: ClubSettings = {
   whatsapp: "",
   youtube: "",
   tiktok: "",
+  waveNumber: "",
+  orangeMoneyNumber: "",
+  cardGraceDays: rules["membership.cardGraceDays"],
+  hideVideoWhenCardUnpaid: rules["events.hideVideoWhenCardUnpaid"],
   cancellationDeadlineHours: rules["events.cancellationDeadlineHours"],
   membershipDurationMonths: rules["membership.durationMonths"],
   membershipCardFee: rules["fees.membershipCard"],
@@ -87,6 +102,10 @@ export const settingKeys: Record<keyof ClubSettings, string> = {
   whatsapp: "social.whatsapp",
   youtube: "social.youtube",
   tiktok: "social.tiktok",
+  waveNumber: "payments.waveNumber",
+  orangeMoneyNumber: "payments.orangeMoneyNumber",
+  cardGraceDays: "membership.cardGraceDays",
+  hideVideoWhenCardUnpaid: "events.hideVideoWhenCardUnpaid",
   cancellationDeadlineHours: "events.cancellationDeadlineHours",
   membershipDurationMonths: "membership.durationMonths",
   membershipCardFee: "fees.membershipCard",

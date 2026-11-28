@@ -3,8 +3,14 @@
 import { useState } from "react";
 import type { useAdminAction } from "@/components/admin/use-admin-action";
 import { Button } from "@/components/ui/button";
-import { Field, Input } from "@/components/ui/field";
+import { Field, Input, Select } from "@/components/ui/field";
 import { cancelPaymentAction, recordCardPaymentAction } from "@/features/payments/actions";
+import {
+  needsReference,
+  paymentMethodCodes,
+  paymentMethodLabels,
+  type PaymentMethodCode,
+} from "@/features/payments/methods";
 
 /**
  * Formulaires d'encaissement de la carte de membre, ouverts dans la fiche d'un membre.
@@ -12,7 +18,10 @@ import { cancelPaymentAction, recordCardPaymentAction } from "@/features/payment
  */
 type AdminRun = ReturnType<typeof useAdminAction>["run"];
 
-/** Encaissement de la carte de membre : date (aujourd'hui par défaut) et note facultative. */
+/**
+ * Encaissement de la carte de membre : moyen de paiement (espèces, Wave, Orange Money), référence
+ * de la transaction (obligatoire pour Wave et Orange Money), date (aujourd'hui par défaut), note.
+ */
 export function CardPaymentForm({
   userId,
   amount,
@@ -28,12 +37,24 @@ export function CardPaymentForm({
 }) {
   const [paidAt, setPaidAt] = useState(() => new Date().toISOString().slice(0, 10));
   const [note, setNote] = useState("");
+  const [method, setMethod] = useState<PaymentMethodCode>("CASH");
+  const [reference, setReference] = useState("");
+  const [referenceError, setReferenceError] = useState<string>();
+  const remote = needsReference(method);
   return (
     <form
+      noValidate
       className="mt-6 flex flex-col gap-4 border-t border-trait pt-5"
       onSubmit={(event) => {
         event.preventDefault();
-        void run(() => recordCardPaymentAction({ userId, paidAt, note }), {
+        if (remote && reference.trim() === "") {
+          setReferenceError(
+            `Indiquez la référence de la transaction ${paymentMethodLabels[method]}.`,
+          );
+          return;
+        }
+        setReferenceError(undefined);
+        void run(() => recordCardPaymentAction({ userId, method, reference, paidAt, note }), {
           success: `Carte réglée : ${amount} encaissés.`,
           onSuccess: onDone,
         });
@@ -41,8 +62,39 @@ export function CardPaymentForm({
     >
       <p className="surtitre">Carte de membre · {amount}</p>
       <p className="petit text-gris">
-        Paiement en espèces, reçu par vous. L’encaissement est consigné dans le journal.
+        En espèces, reçu par vous ; ou envoyé par Wave ou Orange Money au numéro du club. Vérifiez
+        la transaction avant d’enregistrer. L’encaissement est consigné dans le journal.
       </p>
+      <Field id="carte-moyen" label="Moyen de paiement">
+        <Select
+          id="carte-moyen"
+          value={method}
+          onChange={(event) => setMethod(event.target.value as PaymentMethodCode)}
+        >
+          {paymentMethodCodes.map((code) => (
+            <option key={code} value={code}>
+              {paymentMethodLabels[code]}
+            </option>
+          ))}
+        </Select>
+      </Field>
+      {remote ? (
+        <Field
+          id="carte-reference"
+          label="Référence de la transaction"
+          error={referenceError}
+          hint="Le numéro de transaction du reçu Wave ou Orange Money (le membre indique son numéro de membre en motif)."
+        >
+          <Input
+            id="carte-reference"
+            value={reference}
+            required
+            maxLength={60}
+            autoComplete="off"
+            onChange={(event) => setReference(event.target.value)}
+          />
+        </Field>
+      ) : null}
       <Field id="carte-date" label="Date d’encaissement">
         <Input
           id="carte-date"

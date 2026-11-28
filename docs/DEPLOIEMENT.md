@@ -212,6 +212,24 @@ bash scripts/prod-compose.sh run --rm tools pnpm create-admin
 systemd, premier essai, contrôle dans B2 et healthchecks.io, puis **une restauration complète
 sur le serveur** avant l'ouverture.
 
+La même commande active la minuterie des **rappels de carte** (`agora-rappels-carte.timer`,
+chaque jour à 09:10 UTC). Elle lance, dans le conteneur d'outils :
+
+```bash
+bash scripts/prod-compose.sh run --rm -T tools pnpm exec tsx scripts/rappels-carte.ts
+```
+
+Elle envoie, une seule fois chacun, les rappels « carte à régler » (notification et e-mail) :
+7 jours après l'acceptation, puis 3 jours avant la fin du délai de grâce (`docs/REGLES-METIER.md`).
+Premier essai à la main, puis lecture du journal :
+
+```bash
+sudo systemctl start agora-rappels-carte.service && journalctl -u agora-rappels-carte -n 5
+```
+
+Dans **Administration › Paramètres**, renseigner les numéros Wave et Orange Money du club avant
+l'ouverture des adhésions.
+
 ### B5. Vérifications avant ouverture
 
 - `https://agora-exemple.com` : certificat valide ; `http://` et `www.` redirigent.

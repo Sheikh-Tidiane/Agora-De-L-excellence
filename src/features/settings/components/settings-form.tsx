@@ -1,7 +1,7 @@
 "use client";
 
 import { useAdminAction } from "@/components/admin/use-admin-action";
-import { TextField } from "@/components/shared/form-fields";
+import { CheckboxField, TextField } from "@/components/shared/form-fields";
 import { useActionForm } from "@/components/shared/use-action-form";
 import { Button } from "@/components/ui/button";
 import { FormError } from "@/features/auth/components/form-parts";
@@ -164,6 +164,42 @@ export function SettingsForm({ initial }: { initial: ClubSettingsInput }) {
           inputMode="numeric"
           autoComplete="off"
         />
+      </Group>
+      <Group
+        title="Régler à distance"
+        hint="Pas de paiement en ligne sur le site : le membre envoie la somme sur l’un de ces numéros, avec son numéro de membre en référence. Un responsable enregistre ensuite l’encaissement. Un numéro vide n’est pas affiché."
+      >
+        <TextField
+          form={form}
+          name="waveNumber"
+          idPrefix="reg"
+          label="Numéro Wave du club"
+          optional
+          type="tel"
+          autoComplete="off"
+        />
+        <TextField
+          form={form}
+          name="orangeMoneyNumber"
+          idPrefix="reg"
+          label="Numéro Orange Money du club"
+          optional
+          type="tel"
+          autoComplete="off"
+        />
+        <TextField
+          form={form}
+          name="cardGraceDays"
+          idPrefix="reg"
+          label="Délai pour régler la carte (jours après l’acceptation)"
+          inputMode="numeric"
+          autoComplete="off"
+          hint="Rappels au membre : 7 jours après l’acceptation, puis 3 jours avant la fin du délai."
+        />
+        <CheckboxField form={form} name="hideVideoWhenCardUnpaid">
+          Masquer le lien de visio d’une rencontre aux membres dont la carte n’est pas réglée après
+          ce délai
+        </CheckboxField>
       </Group>
       <div className="sticky bottom-0 -mx-4 border-t border-trait bg-ivoire px-4 py-3 lg:-mx-10 lg:px-10">
         <Button type="submit" disabled={pending}>

@@ -10,6 +10,8 @@ import {
   RewardsSection,
   UpcomingSection,
 } from "@/features/members/components/dashboard-sections";
+import { getCardDue } from "@/features/members/card-dues-queries";
+import { PayCardBox } from "@/features/members/components/pay-card";
 import { getMemberDashboard } from "@/features/members/dashboard-queries";
 import { membershipState } from "@/features/memberships/status";
 import { loadClubSettings } from "@/features/settings/club";
@@ -26,6 +28,7 @@ async function MemberHome() {
     getMemberDashboard(user.id, now),
     loadClubSettings(),
   ]);
+  const due = await getCardDue(user.id, settings.cardGraceDays, now);
   const state = membershipState(data.membership, now);
 
   return (
@@ -62,11 +65,17 @@ async function MemberHome() {
             {data.card ? (
               <p className="petit text-gris">Carte réglée le {formatDate(data.card.paidAt)}.</p>
             ) : (
-              <p className="petit">
-                Carte de membre&nbsp;: {formatFcfa(settings.membershipCardFee)}, une fois, en
-                espèces auprès d’un responsable lors d’une rencontre. Puis{" "}
-                {formatFcfa(settings.sessionFee)} par séance.
-              </p>
+              <>
+                <PayCardBox
+                  due={due}
+                  memberNumber={user.memberNumber}
+                  settings={settings}
+                  className="mt-2"
+                />
+                <p className="petit">
+                  Puis {formatFcfa(settings.sessionFee)} par séance, sur place.
+                </p>
+              </>
             )}
             {state.kind === "active" && state.expiresSoon ? (
               <p className="petit text-alerte">

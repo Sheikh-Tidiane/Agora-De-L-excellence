@@ -1,3 +1,5 @@
+import { cardDue, daysSince } from "@/features/members/card-dues";
+import { paymentMethodText } from "@/features/payments/methods";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { AdminListSkeleton, AdminPageHeader } from "@/components/admin/page-header";
@@ -13,7 +15,7 @@ async function Members({ searchParams }: Pick<PageProps<"/admin/members">, "sear
   const user = await requirePageAccess("members.read", "/admin/members");
   const { open } = await searchParams;
   const now = new Date();
-  const { membershipCardFee } = await loadClubSettings();
+  const { membershipCardFee, cardGraceDays } = await loadClubSettings();
   const users = await prisma.user.findMany({
     where: { status: { not: "ARCHIVED" }, roles: { some: { role: { code: "member" } } } },
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
@@ -29,12 +31,19 @@ async function Members({ searchParams }: Pick<PageProps<"/admin/members">, "sear
       createdAt: true,
       memberships: {
         orderBy: { endsAt: "desc" },
-        select: { status: true, endsAt: true },
+        select: { status: true, endsAt: true, startsAt: true },
       },
       payments: {
         where: { kind: "MEMBERSHIP_CARD", cancelledAt: null },
         take: 1,
-        select: { id: true, amount: true, paidAt: true, receivedBy: { select: { name: true } } },
+        select: {
+          id: true,
+          amount: true,
+          paidAt: true,
+          method: true,
+          reference: true,
+          receivedBy: { select: { name: true } },
+        },
       },
       _count: { select: { registrations: { where: { status: "CONFIRMED" } } } },
     },
@@ -42,6 +51,11 @@ async function Members({ searchParams }: Pick<PageProps<"/admin/members">, "sear
 
   const rows: MemberRow[] = users.map((member) => {
     const last = member.memberships[0] ?? null;
+    const due = cardDue(
+      { paid: member.payments.length > 0, memberships: member.memberships },
+      cardGraceDays,
+      now,
+    );
     const membership = membershipState(last, now);
     const state: MemberRow["state"] =
       member.status === "SUSPENDED"
@@ -70,10 +84,14 @@ async function Members({ searchParams }: Pick<PageProps<"/admin/members">, "sear
             paymentId: member.payments[0].id,
             amount: member.payments[0].amount,
             paidAt: member.payments[0].paidAt,
+            method: paymentMethodText(member.payments[0].method, member.payments[0].reference),
             receivedBy: member.payments[0].receivedBy?.name ?? null,
           }
         : null,
       periods: member.memberships.length,
+      acceptedAt: due.accepted,
+      daysSinceAcceptance: due.accepted ? daysSince(due.accepted, now) : null,
+      cardOverdue: due.overdue,
       registrations: member._count.registrations,
       isSelf: member.id === user.id,
     };

@@ -20,6 +20,7 @@ async function Settings() {
           ...settings,
           cancellationDeadlineHours: String(settings.cancellationDeadlineHours),
           membershipDurationMonths: String(settings.membershipDurationMonths),
+          cardGraceDays: String(settings.cardGraceDays),
         }}
       />
     </>

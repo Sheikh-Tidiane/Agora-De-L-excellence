@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { checkReference, needsReference, paymentMethodFields } from "@/features/payments/methods";
 import { cancelPayment, recordAttendance, recordCardPayment } from "@/features/payments/service";
 import { parseLocalDateTime } from "@/lib/dates";
 import { AppError, parseInput, runAction, type ActionResult } from "@/lib/errors";
@@ -9,19 +10,29 @@ import { can, requirePermission, requireUser } from "@/lib/permissions";
 /** Encaissements : chaque action vérifie sa permission ; le service trace l'opération. */
 const id = z.string().min(1).max(40);
 
-const cardSchema = z.object({
-  userId: id,
-  /** Date d'encaissement (`AAAA-MM-JJ`). */
-  paidAt: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Indiquez la date d’encaissement.")
-    .transform((value) => parseLocalDateTime(`${value}T00:00`))
-    .refine((value): value is Date => value !== null, "Indiquez la date d’encaissement."),
-  note: z.string().trim().max(200, "Pas plus de 200 caractères."),
-});
+const cardSchema = z
+  .object({
+    userId: id,
+    ...paymentMethodFields,
+    /** Date d'encaissement (`AAAA-MM-JJ`). */
+    paidAt: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Indiquez la date d’encaissement.")
+      .transform((value) => parseLocalDateTime(`${value}T00:00`))
+      .refine((value): value is Date => value !== null, "Indiquez la date d’encaissement."),
+    note: z.string().trim().max(200, "Pas plus de 200 caractères."),
+  })
+  .superRefine(checkReference)
+  // En espèces, pas de référence : un reste de saisie n'est pas enregistré.
+  .transform((value) => ({
+    ...value,
+    reference: needsReference(value.method) ? value.reference : "",
+  }));
 
 export async function recordCardPaymentAction(input: {
   userId: string;
+  method: string;
+  reference: string;
   paidAt: string;
   note: string;
 }): Promise<ActionResult<{ amount: number }>> {

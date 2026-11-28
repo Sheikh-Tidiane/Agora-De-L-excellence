@@ -1,3 +1,4 @@
+import { needsReference, type PaymentMethodCode } from "@/features/payments/methods";
 import { loadClubSettings } from "@/features/settings/club";
 import { audit } from "@/lib/audit";
 import { AppError } from "@/lib/errors";
@@ -6,24 +7,54 @@ import type { Tx } from "@/features/gamification/ledger";
 import { awardAttendancePoints, revokeAttendancePoints } from "@/features/gamification/service";
 
 /**
- * Cotisations (docs/REGLES-METIER.md) : espèces, sur place, pas de paiement en ligne en V1.
- * Un responsable enregistre la carte de membre et, au pointage de présence, la participation
- * à la séance. Les montants viennent des réglages du club, jamais du code. Rien n'est supprimé :
+ * Cotisations (docs/REGLES-METIER.md) : pas de paiement en ligne intégré. La carte se règle en
+ * espèces, ou à distance par Wave ou Orange Money (référence de la transaction obligatoire) ; un
+ * responsable enregistre l'encaissement. La participation à une séance est cochée au pointage
+ * (espèces, sur place). Les montants viennent des réglages du club, jamais du code. Rien n'est supprimé :
  * une erreur s'annule, et chaque geste passe dans `AuditLog` dans la même transaction.
  */
 
 /** Carte de membre : versée une fois. `paidAt` permet de saisir un encaissement fait la veille. */
 export async function recordCardPayment(
-  input: { userId: string; paidAt: Date; note: string },
+  input: {
+    userId: string;
+    method: PaymentMethodCode;
+    reference: string;
+    paidAt: Date;
+    note: string;
+  },
   actorId: string,
 ): Promise<{ id: string; amount: number }> {
   const { membershipCardFee } = await loadClubSettings();
+  if (needsReference(input.method) && !input.reference.trim()) {
+    throw new AppError("VALIDATION", "Indiquez la référence de la transaction.", {
+      fieldErrors: { reference: "Indiquez la référence de la transaction." },
+    });
+  }
   // `paidAt` est un jour (minuit, heure de Dakar = UTC) : aujourd'hui au plus tard.
   if (input.paidAt.getTime() > Date.now()) {
     throw new AppError("VALIDATION", "La date d’encaissement ne peut pas être dans le futur.", {
       fieldErrors: { paidAt: "La date d’encaissement ne peut pas être dans le futur." },
     });
   }
+  try {
+    return await saveCardPayment(input, actorId, membershipCardFee);
+  } catch (error) {
+    // Deux saisies simultanées de la même référence : la base refuse la seconde.
+    if ((error as { code?: string } | null)?.code === "P2002") {
+      throw new AppError("CONFLICT", "Cette référence de transaction est déjà enregistrée.", {
+        fieldErrors: { reference: "Cette référence de transaction est déjà enregistrée." },
+      });
+    }
+    throw error;
+  }
+}
+
+async function saveCardPayment(
+  input: Parameters<typeof recordCardPayment>[0],
+  actorId: string,
+  membershipCardFee: number,
+): Promise<{ id: string; amount: number }> {
   return prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${input.userId} FOR UPDATE`;
     const user = await tx.user.findUnique({
@@ -38,11 +69,31 @@ export async function recordCardPayment(
       select: { id: true },
     });
     if (existing) throw new AppError("CONFLICT", "La carte de ce membre est déjà réglée.");
+    const reference = needsReference(input.method) ? input.reference.trim() : null;
+    if (reference) {
+      // Même transaction déjà enregistrée (casse ignorée) : la base le refuserait aussi
+      // (« Payment_method_reference_active_key ») ; ici, avec un message clair.
+      const taken = await tx.payment.findFirst({
+        where: {
+          method: input.method,
+          reference: { equals: reference, mode: "insensitive" },
+          cancelledAt: null,
+        },
+        select: { id: true },
+      });
+      if (taken) {
+        throw new AppError("CONFLICT", "Cette référence de transaction est déjà enregistrée.", {
+          fieldErrors: { reference: "Cette référence de transaction est déjà enregistrée." },
+        });
+      }
+    }
     const payment = await tx.payment.create({
       data: {
         kind: "MEMBERSHIP_CARD",
         amount: membershipCardFee,
         userId: user.id,
+        method: input.method,
+        reference,
         paidAt: input.paidAt,
         receivedById: actorId,
         note: input.note || null,
@@ -55,7 +106,13 @@ export async function recordCardPayment(
         action: "payment.recorded",
         entityType: "Payment",
         entityId: payment.id,
-        metadata: { kind: "MEMBERSHIP_CARD", amount: payment.amount, userId: user.id },
+        metadata: {
+          kind: "MEMBERSHIP_CARD",
+          amount: payment.amount,
+          userId: user.id,
+          method: input.method,
+          reference,
+        },
       },
       tx,
     );

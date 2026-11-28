@@ -22,6 +22,7 @@ export const NOTIFICATION_TYPES = {
   "badge.awarded": "Nouveau badge",
   "tournament.results": "Résultats du tournoi",
   "quiz.published": "Nouveau quiz",
+  "card.reminder": "Carte de membre",
 } as const;
 
 export type NotificationType = keyof typeof NOTIFICATION_TYPES;

@@ -1,0 +1,11 @@
+# Chaque jour à 09:10 UTC (= heure de Dakar) : une heure où l'on lit ses messages.
+# Persistent=true : rattrapé au démarrage si le serveur était éteint.
+[Unit]
+Description=Rappels quotidiens de carte de membre
+
+[Timer]
+OnCalendar=*-*-* 09:10:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target

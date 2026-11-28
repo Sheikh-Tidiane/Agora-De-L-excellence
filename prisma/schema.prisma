@@ -60,6 +60,7 @@ model User {
   requestsReviewed       MembershipRequest[]     @relation("MembershipRequestReviewer")
   contactMessagesHandled ContactMessage[]        @relation("ContactMessageHandler")
   memberships            Membership[]
+  cardReminders          CardReminder[]
   readings               Reading[]               @relation("ReadingOwner")
   readingsValidated      Reading[]               @relation("ReadingValidator")
   reviews                Review[]                @relation("ReviewAuthor")
@@ -584,6 +585,15 @@ enum PaymentKind {
   SESSION_FEE // participation à une séance
 }
 
+/// Moyen de paiement d'un encaissement. Pas de paiement en ligne intégré : pour Wave et Orange
+/// Money, le membre envoie la somme au numéro du club, et un responsable enregistre l'encaissement
+/// avec la référence de la transaction (obligatoire, contrainte en base).
+enum PaymentMethod {
+  CASH
+  WAVE
+  ORANGE_MONEY
+}
+
 /// Un encaissement enregistré par un responsable. Jamais supprimé : une erreur s'annule (`cancelledAt`).
 /// Index uniques partiels en base (migration) : une seule carte active par membre,
 /// une seule participation active par inscription.
@@ -600,6 +610,10 @@ model Payment {
   eventId        String?
   event          Event?             @relation(fields: [eventId], references: [id], onDelete: Restrict)
   paidAt         DateTime
+  method         PaymentMethod      @default(CASH)
+  /// Référence de la transaction Wave ou Orange Money (obligatoire pour ces moyens). Index unique
+  /// partiel en base : une même référence ne s'enregistre pas deux fois (hors encaissement annulé).
+  reference      String?
   receivedById   String?
   receivedBy     User?              @relation("PaymentReceiver", fields: [receivedById], references: [id], onDelete: SetNull)
   note           String?
@@ -614,6 +628,23 @@ model Payment {
   @@index([userId])
   @@index([eventId])
   @@index([registrationId])
+}
+
+/// Rappel « carte à régler » envoyé à un membre (notification + e-mail). Un seul par sorte et par
+/// membre : la contrainte unique empêche tout doublon, même si la tâche quotidienne tourne deux fois.
+model CardReminder {
+  id     String           @id @default(cuid())
+  userId String
+  user   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind   CardReminderKind
+  sentAt DateTime         @default(now())
+
+  @@unique([userId, kind])
+}
+
+enum CardReminderKind {
+  AFTER_ACCEPTANCE // 7 jours après l'acceptation de l'adhésion
+  BEFORE_DEADLINE // 3 jours avant la fin du délai de grâce
 }
 
 // ============================================================================

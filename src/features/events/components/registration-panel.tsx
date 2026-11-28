@@ -20,6 +20,8 @@ import {
   registrationWindow,
   seatsLeft,
 } from "@/features/events/rules";
+import { hideVideoLink } from "@/features/members/card-dues";
+import { getCardDue } from "@/features/members/card-dues-queries";
 import { loadClubSettings } from "@/features/settings/club";
 import { formatFullDate, formatTime } from "@/lib/dates";
 import { getCurrentUser } from "@/lib/permissions";
@@ -47,8 +49,13 @@ export async function RegistrationPanel({ event }: { event: PublicEvent }) {
   const left = seatsLeft(event.capacity, taken);
   const registration = user ? await getMemberRegistration(event.id, user.id) : null;
   const registered = registration?.status === "CONFIRMED";
-  // Le lien pour suivre à distance n'est lu que pour un membre inscrit.
-  const videoLink = registered ? await getEventVideoLink(event.id) : null;
+  // Le lien pour suivre à distance n'est lu que pour un membre inscrit, et pas du tout si le club
+  // le masque aux membres dont la carte n'est pas réglée après le délai de grâce (réglage).
+  const videoHidden =
+    registered && user && settings.hideVideoWhenCardUnpaid
+      ? hideVideoLink(await getCardDue(user.id, settings.cardGraceDays, now), true)
+      : false;
+  const videoLink = registered && !videoHidden ? await getEventVideoLink(event.id) : null;
   const deadline = cancellationDeadline(event, settings.cancellationDeadlineHours);
   const cancellable = canCancel(event, now, settings.cancellationDeadlineHours);
   const canRegister = window === "open" && !registered && left !== 0;
@@ -76,6 +83,15 @@ export async function RegistrationPanel({ event }: { event: PublicEvent }) {
         {registered && registration ? (
           <>
             <FormNotice>Vous êtes inscrit. Nous vous attendons.</FormNotice>
+            {videoHidden && window !== "cancelled" ? (
+              <p className="mt-4 rounded-champ bg-alerte-fond px-4 py-3 text-alerte">
+                <span className="font-semibold">Suivre à distance&nbsp;:</span> le lien de visio est
+                réservé aux membres dont la carte est réglée.{" "}
+                <Link href="/member/card" className="lien">
+                  Régler ma carte
+                </Link>
+              </p>
+            ) : null}
             {videoLink && window !== "cancelled" ? (
               <p className="mt-4 rounded-champ bg-sable px-4 py-3">
                 <span className="font-semibold">Vous ne pouvez pas venir&nbsp;?</span>{" "}

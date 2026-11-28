@@ -65,6 +65,14 @@ export const articleValid = {
   content: "Un texte d’article suffisamment long pour passer la validation du serveur.",
   publishedAt: "",
 };
+const cardValid = {
+  userId: ID,
+  method: "WAVE",
+  reference: "T_7Q2KX9",
+  paidAt: "2026-11-01",
+  note: "",
+};
+
 export const eventValid = {
   title: "Rendez-vous lecture de janvier",
   type: eventTypeCodes[0],
@@ -617,13 +625,28 @@ export const protectedCases: ProtectedCase[] = [
     `${f.payments}#recordCardPaymentAction`,
     payments.recordCardPaymentAction,
     ["payments.record"],
-    { userId: ID, paidAt: "2026-11-01", note: "" },
+    cardValid,
     {
-      ...badIds("userId", { paidAt: "2026-11-01", note: "" }),
-      "date illisible": { userId: ID, paidAt: "hier", note: "" },
-      "date impossible": { userId: ID, paidAt: "2026-13-45", note: "" },
-      "montant glissé dans la requête, date manquante": { userId: ID, amount: 1, note: "" },
-      "note géante": { userId: ID, paidAt: "2026-11-01", note: "x".repeat(201) },
+      ...badIds("userId", { ...cardValid, userId: undefined }),
+      "date illisible": { ...cardValid, paidAt: "hier" },
+      "date impossible": { ...cardValid, paidAt: "2026-13-45" },
+      "montant glissé dans la requête, date manquante": {
+        ...cardValid,
+        paidAt: undefined,
+        amount: 1,
+      },
+      "note géante": { ...cardValid, note: "x".repeat(201) },
+      "moyen inconnu": { ...cardValid, method: "BITCOIN" },
+      "moyen manquant": { ...cardValid, method: undefined },
+      "Wave sans référence": { ...cardValid, method: "WAVE", reference: "" },
+      "Orange Money, référence d'espaces": {
+        ...cardValid,
+        method: "ORANGE_MONEY",
+        reference: "   ",
+      },
+      "référence géante": { ...cardValid, method: "WAVE", reference: "T".repeat(61) },
+      "référence piégée": { ...cardValid, method: "WAVE", reference: "<script>alert(1)</script>" },
+      "référence : objet": { ...cardValid, method: "WAVE", reference: { not: "" } },
     },
   ),
   protectedCase(
@@ -729,6 +752,11 @@ export const protectedCases: ProtectedCase[] = [
       "durée d'adhésion nulle": { ...defaultClubSettings, membershipDurationMonths: 0 },
       "réseau social sans https": { ...defaultClubSettings, facebook: "javascript:alert(1)" },
       "adresse e-mail invalide": { ...defaultClubSettings, email: "club@" },
+      "numéro Wave : texte": { ...defaultClubSettings, waveNumber: "appelez-nous" },
+      "numéro Orange Money : objet": { ...defaultClubSettings, orangeMoneyNumber: { a: 1 } },
+      "délai de grâce nul": { ...defaultClubSettings, cardGraceDays: 0 },
+      "délai de grâce au-delà d'un an": { ...defaultClubSettings, cardGraceDays: 366 },
+      "masquage : chaîne": { ...defaultClubSettings, hideVideoWhenCardUnpaid: "true" },
     },
   ),
   protectedCase(

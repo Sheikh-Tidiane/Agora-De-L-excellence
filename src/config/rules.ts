@@ -14,6 +14,13 @@ export const rules = {
   "membership.rejectedRetentionMonths": 12,
   /** Un message de contact traité est supprimé après ce délai, en mois. */
   "contact.handledRetentionMonths": 12,
+  /**
+   * Délai de grâce pour régler la carte de membre, en jours après l'acceptation de l'adhésion.
+   * Rappels : 7 jours après l'acceptation, puis 3 jours avant la fin du délai.
+   */
+  "membership.cardGraceDays": 30,
+  /** Masquer le lien de visio d'un membre dont la carte n'est pas réglée après le délai de grâce. */
+  "events.hideVideoWhenCardUnpaid": false,
   /** Délai d'annulation d'une inscription avant le début de l'événement, en heures. */
   "events.cancellationDeadlineHours": 24,
   /** Avis publics sur le catalogue (critique validée + accord du membre). */

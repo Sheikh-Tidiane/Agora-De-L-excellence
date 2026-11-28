@@ -6,10 +6,11 @@ import { memberCardQr } from "@/features/members/card-service";
 import { CardFace } from "@/features/members/components/card-face";
 import { KeepCardOffline } from "@/features/members/components/keep-card-offline";
 import { RegenerateCard } from "@/features/members/components/regenerate-card";
+import { getCardDue } from "@/features/members/card-dues-queries";
+import { PayCardBox } from "@/features/members/components/pay-card";
 import { getMembershipCardPayment } from "@/features/members/dashboard-queries";
 import { loadClubSettings } from "@/features/settings/club";
 import { formatDate } from "@/lib/dates";
-import { formatFcfa } from "@/lib/money";
 import { requirePageAccess } from "@/lib/permissions";
 
 export const metadata: Metadata = { title: "Ma carte de membre" };
@@ -21,6 +22,7 @@ async function Card() {
     getMembershipCardPayment(user.id),
     loadClubSettings(),
   ]);
+  const due = await getCardDue(user.id, settings.cardGraceDays, new Date());
 
   return (
     <div className="mt-8 grid gap-10 lg:mt-10 lg:grid-cols-9 lg:items-start lg:gap-x-10">
@@ -40,16 +42,16 @@ async function Card() {
             )
           }
         />
-        <p className="petit mt-4">
-          {card ? (
-            <>Carte réglée le {formatDate(card.paidAt)}.</>
-          ) : (
-            <>
-              Carte de membre&nbsp;: {formatFcfa(settings.membershipCardFee)}, une fois, en espèces
-              auprès d’un responsable lors d’une rencontre.
-            </>
-          )}
-        </p>
+        {card ? (
+          <p className="petit mt-4">Carte réglée le {formatDate(card.paidAt)}.</p>
+        ) : (
+          <PayCardBox
+            due={due}
+            memberNumber={user.memberNumber}
+            settings={settings}
+            className="mt-4"
+          />
+        )}
       </div>
 
       <section

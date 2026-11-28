@@ -34,8 +34,22 @@ import { prisma } from "@/lib/prisma";
 //     Affiche la règle des points de présence enregistrée (ALL_ACTIVITIES, PRIMARY_ONLY) ou « none ».
 //   tsx e2e/support/test-user.ts set-attendance-mode E2E <ALL_ACTIVITIES|PRIMARY_ONLY|none>
 //     La remet telle qu'elle était avant le parcours (« none » : aucun réglage enregistré).
+//   tsx e2e/support/test-user.ts accept <email> <jours>
+//     Adhésion acceptée il y a <jours> jours (comme une validation), pour le délai de la carte.
+//   tsx e2e/support/test-user.ts get-payment-settings E2E
+//     Affiche, en JSON, les réglages des paiements à distance (numéros, délai, masquage visio).
+//   tsx e2e/support/test-user.ts set-payment-settings E2E '<json>'
+//     Les remet tels qu'ils étaient (une clé absente du JSON est supprimée).
 //   tsx e2e/support/test-user.ts delete <email>
 //     Supprime le compte de test, sa demande d'adhésion, ses adhésions et ses encaissements.
+/** Réglages des paiements à distance, sauvegardés puis restaurés par e2e/carte-a-distance.spec.ts. */
+const PAYMENT_SETTING_KEYS = [
+  "payments.waveNumber",
+  "payments.orangeMoneyNumber",
+  "membership.cardGraceDays",
+  "events.hideVideoWhenCardUnpaid",
+];
+
 /** Code de la règle d'essai : jamais une règle du barème du club. */
 const E2E_GENIES_RULE = "e2e_genies_du_soir";
 
@@ -47,6 +61,8 @@ async function main() {
     command !== "create-genies-rule" &&
     command !== "get-attendance-mode" &&
     command !== "set-attendance-mode" &&
+    command !== "get-payment-settings" &&
+    command !== "set-payment-settings" &&
     !email?.endsWith("@e2e.agora.test")
   ) {
     throw new Error("Par sécurité, ce script n’agit que sur des adresses @e2e.agora.test.");
@@ -119,6 +135,30 @@ async function main() {
       });
       await prisma.pointTransaction.deleteMany({ where: { ruleId: rule.id } });
       await prisma.pointRule.delete({ where: { id: rule.id } });
+    }
+  } else if (command === "accept" && firstName) {
+    const user = await prisma.user.findUniqueOrThrow({ where: { email }, select: { id: true } });
+    const startsAt = new Date(Date.now() - Number(firstName) * 24 * 60 * 60 * 1000);
+    await prisma.membership.deleteMany({ where: { userId: user.id } });
+    await prisma.membership.create({
+      data: {
+        userId: user.id,
+        startsAt,
+        endsAt: new Date(startsAt.getTime() + 365 * 24 * 60 * 60 * 1000),
+      },
+    });
+  } else if (command === "get-payment-settings" && email === "E2E") {
+    const rows = await prisma.setting.findMany({ where: { key: { in: PAYMENT_SETTING_KEYS } } });
+    process.stdout.write(JSON.stringify(Object.fromEntries(rows.map((r) => [r.key, r.value]))));
+  } else if (command === "set-payment-settings" && email === "E2E" && firstName) {
+    const saved = JSON.parse(firstName) as Record<string, unknown>;
+    for (const key of PAYMENT_SETTING_KEYS) {
+      if (key in saved) {
+        const value = saved[key] as never;
+        await prisma.setting.upsert({ where: { key }, update: { value }, create: { key, value } });
+      } else {
+        await prisma.setting.deleteMany({ where: { key } });
+      }
     }
   } else if (command === "get-attendance-mode" && email === "E2E") {
     const row = await prisma.setting.findUnique({ where: { key: "points.attendance" } });

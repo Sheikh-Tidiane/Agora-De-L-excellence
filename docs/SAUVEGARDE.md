@@ -107,7 +107,7 @@ sudo cp /srv/agora/deploy/systemd/agora-*.service /srv/agora/deploy/systemd/agor
 ```
 
 ```bash
-sudo systemctl daemon-reload && sudo systemctl enable --now agora-backup.timer agora-restore-check.timer
+sudo systemctl daemon-reload && sudo systemctl enable --now agora-backup.timer agora-restore-check.timer agora-rappels-carte.timer
 ```
 
 Premier essai tout de suite, puis lecture du journal :

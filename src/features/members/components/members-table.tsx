@@ -36,11 +36,27 @@ export type MemberRow = {
   joinedAt: Date;
   endsAt: Date | null;
   /** Encaissement actif de la carte de membre ; `null` : carte non réglée. */
-  card: { paymentId: string; amount: number; paidAt: Date; receivedBy: string | null } | null;
+  card: {
+    paymentId: string;
+    amount: number;
+    paidAt: Date;
+    /** « Wave · T_123 », « Espèces ». */
+    method: string;
+    receivedBy: string | null;
+  } | null;
   periods: number;
   registrations: number;
   isSelf: boolean;
+  /** Acceptation de l'adhésion (début de la première adhésion) ; `null` : aucune adhésion. */
+  acceptedAt: Date | null;
+  /** Jours écoulés depuis l'acceptation. */
+  daysSinceAcceptance: number | null;
+  /** Carte non réglée et délai de grâce passé. */
+  cardOverdue: boolean;
 };
+
+const cardLabel = (row: MemberRow) =>
+  row.card ? "Réglée" : row.cardOverdue ? "Non réglée, délai passé" : "Non réglée";
 
 const stateLabels = {
   active: "À jour",
@@ -98,8 +114,32 @@ const columns: Column<MemberRow>[] = [
   {
     key: "fee",
     header: "Carte",
-    cell: (row) => (row.card ? "Réglée" : "Non réglée"),
-    sort: (row) => (row.card ? 1 : 0),
+    cell: (row) => (
+      <span className={row.cardOverdue ? "font-semibold text-erreur" : undefined}>
+        {cardLabel(row)}
+      </span>
+    ),
+    sort: (row) => (row.card ? 2 : row.cardOverdue ? 0 : 1),
+    className: "max-lg:hidden",
+  },
+  {
+    key: "accepted",
+    header: "Adhésion",
+    // Date d'acceptation et, tant que la carte n'est pas réglée, les jours écoulés depuis.
+    cell: (row) =>
+      row.acceptedAt ? (
+        <span className="tabular-nums">
+          {formatShortDate(row.acceptedAt)}
+          {!row.card && row.daysSinceAcceptance !== null ? (
+            <span className="petit block text-gris">
+              il y a {row.daysSinceAcceptance} jour{row.daysSinceAcceptance > 1 ? "s" : ""}
+            </span>
+          ) : null}
+        </span>
+      ) : (
+        "—"
+      ),
+    sort: (row) => row.daysSinceAcceptance,
     className: "max-lg:hidden",
   },
 ];
@@ -200,10 +240,12 @@ export function MembersTable({
           {
             key: "fee",
             label: "Carte",
-            get: (row) => (row.card ? "paid" : "unpaid"),
+            // « Non réglée » comprend les cartes en retard ; « délai passé » ne montre qu'elles.
+            get: (row) => (row.card ? "paid" : row.cardOverdue ? ["unpaid", "overdue"] : "unpaid"),
             options: [
               { value: "paid", label: "Réglée" },
               { value: "unpaid", label: "Non réglée" },
+              { value: "overdue", label: "Non réglée, délai passé" },
             ],
           },
         ]}
@@ -261,7 +303,7 @@ export function MembersTable({
               <PanelRow label="Périodes">{open.periods > 0 ? String(open.periods) : null}</PanelRow>
               <PanelRow label="Carte de membre">
                 {open.card
-                  ? `Réglée le ${formatDate(open.card.paidAt)} · ${formatFcfa(open.card.amount)}${
+                  ? `Réglée le ${formatDate(open.card.paidAt)} · ${formatFcfa(open.card.amount)} · ${open.card.method}${
                       open.card.receivedBy ? ` · reçu par ${open.card.receivedBy}` : ""
                     }`
                   : "Non réglée"}

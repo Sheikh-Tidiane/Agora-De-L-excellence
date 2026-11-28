@@ -82,16 +82,16 @@ Rôles cumulables, moindre privilège. Source : `src/lib/permissions/catalog.ts`
 
 Source : `docs/CONTENUS-CLUB.md` (sections 7 et 9), décision du comité de pilotage, novembre 2026. Remplace le défaut « adhésion gratuite » du point n° 6. État : appliquée (parcours Playwright `e2e/contenus.spec.ts`).
 
-| Règle                    | Valeur                                                                                                      | Où                     |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------- | ---------------------- |
-| Carte de membre          | 1 000 F CFA, versés une fois à l'adhésion                                                                   | `Setting`              |
-| Participation par séance | 100 F CFA par séance                                                                                        | `Setting`              |
-| Montants                 | Réglages modifiables depuis l'admin, jamais écrits en dur                                                   | `Setting`              |
-| Mode de paiement         | Espèces, sur place. Aucun paiement en ligne en V1 ; paiement mobile (Wave, Orange Money) possible plus tard | —                      |
-| Paiement de la carte     | Enregistré par un responsable dans l'admin : montant, date, reçu par                                        | Admin, fiche du membre |
-| Participation            | Case « payé » cochée par un responsable lors du pointage de présence à la séance                            | Admin, présences       |
-| Suivi                    | Total encaissé par séance et par mois ; liste des membres dont la carte n'est pas réglée                    | Admin, encaissements   |
-| Traçabilité              | Chaque enregistrement (et chaque annulation) passe dans `AuditLog`                                          | `lib/audit`            |
+| Règle                    | Valeur                                                                                                                                                                         | Où                     |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------- |
+| Carte de membre          | 1 000 F CFA, versés une fois à l'adhésion                                                                                                                                      | `Setting`              |
+| Participation par séance | 100 F CFA par séance                                                                                                                                                           | `Setting`              |
+| Montants                 | Réglages modifiables depuis l'admin, jamais écrits en dur                                                                                                                      | `Setting`              |
+| Mode de paiement         | Espèces sur place, ou à distance par Wave ou Orange Money (numéros du club dans les paramètres). Pas de paiement en ligne intégré : un responsable enregistre l'encaissement   | `Setting`              |
+| Paiement de la carte     | Enregistré par un responsable dans l'admin : moyen (espèces, Wave, Orange Money), référence de la transaction (obligatoire pour Wave et Orange Money), montant, date, reçu par | Admin, fiche du membre |
+| Participation            | Case « payé » cochée par un responsable lors du pointage de présence à la séance (espèces, sur place)                                                                          | Admin, présences       |
+| Suivi                    | Total encaissé par séance et par mois ; liste des membres dont la carte n'est pas réglée                                                                                       | Admin, encaissements   |
+| Traçabilité              | Chaque enregistrement (et chaque annulation) passe dans `AuditLog`                                                                                                             | `lib/audit`            |
 
 Précisions de mise en œuvre :
 
@@ -99,7 +99,22 @@ Précisions de mise en œuvre :
 - Un encaissement n'est jamais supprimé : il s'annule, avec un motif. Une seule carte active par membre et une seule participation active par inscription (index uniques en base).
 - Le montant est copié du réglage au moment de l'encaissement : changer le réglage ne modifie pas le passé.
 - Durée de la carte : le comité dit « versés une fois à l'adhésion ». La durée d'adhésion de 12 mois reste en place en interne mais n'est plus affichée au public, en attendant sa décision.
+- Référence d'une transaction Wave ou Orange Money : obligatoire (contrainte `Payment_reference_check`), et jamais enregistrée deux fois pour le même moyen, casse ignorée (index unique partiel). Un encaissement annulé libère sa référence. En espèces, aucune référence n'est gardée.
 - Scan QR de présence (phase 4, partie B) : page `/admin/scan` (`attendance.record`), rencontres du jour publiées ou clôturées ; même règles que le pointage manuel. Un membre non inscrit est refusé (pas d'inscription sur place : les inscriptions ferment au début de la rencontre). Un second scan de la même carte ne change rien (« Déjà pointé à … ») ; il peut seulement ajouter la participation. Le scan ne retire jamais un encaissement.
+
+### Carte réglée à distance (membres qui suivent à distance)
+
+| Règle             | Valeur                                                                                                                                                                                                                                                                                                                                                     | Où                                                                                        |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Numéros du club   | Wave et Orange Money, saisis dans Administration › Paramètres ; un numéro vide n'est pas affiché                                                                                                                                                                                                                                                           | `Setting` (`payments.waveNumber`, `payments.orangeMoneyNumber`)                           |
+| Délai de grâce    | 30 jours par défaut, comptés à partir de l'acceptation de l'adhésion (début de la première adhésion) ; de 1 à 365 jours                                                                                                                                                                                                                                    | `Setting` (`membership.cardGraceDays`)                                                    |
+| Espace membre     | Tant que la carte n'est pas réglée : encadré « Régler ma carte » avec le montant, les numéros du club, la référence à indiquer en motif (le numéro de membre) et la date limite ; mention « délai passé » une fois la date dépassée                                                                                                                        | `/member`, `/member/card`                                                                 |
+| Lien de visio     | Option « masquer le lien de visio si la carte n'est pas réglée après le délai », **désactivée par défaut**. Activée : un membre inscrit dont la carte n'est pas réglée après le délai ne reçoit pas le lien (il n'est pas lu en base, donc absent de la page) et est invité à régler sa carte. Un compte sans adhésion (responsable) n'est jamais concerné | `Setting` (`events.hideVideoWhenCardUnpaid`)                                              |
+| Liste des membres | Filtre « Carte » : réglée, non réglée, non réglée et délai passé ; colonne « Adhésion » : date d'acceptation et jours écoulés tant que la carte n'est pas réglée                                                                                                                                                                                           | Admin, membres                                                                            |
+| Rappels           | Notification et e-mail au membre actif dont la carte n'est pas réglée : **7 jours après l'acceptation**, puis **3 jours avant la fin du délai**. Un seul de chaque, jamais en double (table `CardReminder`, unique par membre et par sorte) ; aucun après la fin du délai ni une fois la carte réglée                                                      | Tâche quotidienne `scripts/rappels-carte.ts` (minuterie `agora-rappels-carte`, 09:10 UTC) |
+
+- Rappels : seul le rappel le plus proche part. Si la tâche n'a pas tourné à temps (serveur éteint) et que la date « 3 jours avant » est arrivée, c'est lui qui part, sans rattraper « 7 jours après ». Avec un délai de moins de 10 jours, les deux dates se chevauchent : seul « 3 jours avant » part.
+- Un changement du délai de grâce vaut aussitôt pour tous les membres (date limite, rappels, masquage).
 
 ## Rencontres
 

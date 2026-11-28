@@ -6,7 +6,14 @@ import { AdminListSkeleton, AdminPageHeader } from "@/components/admin/page-head
 import { buttonVariants } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/field";
 import { BarList, ChartFigure, ColumnChart } from "@/features/stats/components/charts";
-import { getEventStats, getInactiveMembers, getMemberStats } from "@/features/stats/queries";
+import {
+  countRenewals,
+  getEventStats,
+  getInactiveMembers,
+  getMemberStats,
+  getReadingStats,
+  getScrabbleStats,
+} from "@/features/stats/queries";
 import {
   INACTIVITY_WEEKS_MAX,
   INACTIVITY_WEEKS_MIN,
@@ -65,10 +72,13 @@ async function Stats({ searchParams }: Pick<PageProps<"/admin/stats">, "searchPa
   const weeks = parseThreshold(query.seuil);
   const canSeePeople = can(user, "members.read");
   const canExport = can(user, "data.export");
-  const [events, members, inactive] = await Promise.all([
+  const [events, members, inactive, reading, scrabble, renewals] = await Promise.all([
     getEventStats(period, mode, now),
     getMemberStats(period, now),
     canSeePeople ? getInactiveMembers(weeks, now) : Promise.resolve(null),
+    getReadingStats(period, now),
+    getScrabbleStats(period, now),
+    countRenewals(period, now),
   ]);
   const { summary } = events;
   const params = new URLSearchParams({
@@ -275,8 +285,147 @@ async function Stats({ searchParams }: Pick<PageProps<"/admin/stats">, "searchPa
         )}
       </Section>
 
-      <Section id="membres-titre" title="Membres">
+      <Section id="lecture-titre" title="Lecture">
+        <div className="grid gap-x-10 sm:grid-cols-2">
+          <Figure
+            label="Livres terminés"
+            value={String(reading.finished)}
+            hint="déclarés par les membres sur la période"
+          />
+          <Figure
+            label="Lectures validées"
+            value={String(reading.validated)}
+            hint="confirmées par un responsable"
+          />
+        </div>
+        <div className="mt-8 grid gap-10 xl:grid-cols-2">
+          {reading.genres.length > 0 ? (
+            <ChartFigure
+              id="genres"
+              title="Livres terminés par genre"
+              description="Catégorie du livre dans le catalogue du club."
+              columns={["Genre", "Livres terminés"]}
+              rows={reading.genres.map((g) => [g.label, g.count])}
+            >
+              <BarList
+                id="genres"
+                unit="livres terminés"
+                items={reading.genres.map((g) => ({ label: g.label, value: g.count }))}
+              />
+            </ChartFigure>
+          ) : (
+            <p className="text-gris">Aucun livre terminé sur la période.</p>
+          )}
+          <div className="min-w-0">
+            <div className="flex items-baseline justify-between gap-3">
+              <p className="font-semibold">Livre du mois</p>
+              {exportLink("lecture", "CSV")}
+            </div>
+            {reading.monthly.length === 0 ? (
+              <p className="mt-3 text-gris">Aucun livre du mois sur la période.</p>
+            ) : (
+              <div className="mt-3 overflow-x-auto">
+                <table className="w-full min-w-[26rem] border-collapse">
+                  <thead className="border-b border-indigo/30">
+                    <tr>
+                      <th className={th}>Mois</th>
+                      <th className={th}>Livre</th>
+                      <th className={`${th} ${num}`}>Lecteurs</th>
+                      <th className={`${th} ${num}`}>Présents à la rencontre</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-trait">
+                    {reading.monthly.map((m) => (
+                      <tr key={m.month}>
+                        <td className={td}>{monthLabel(m.month)}</td>
+                        <td className={td}>{m.title}</td>
+                        <td className={`${td} ${num}`}>{m.readers}</td>
+                        <td className={`${td} ${num}`}>{m.present ?? "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <p className="petit mt-2 text-gris">
+              Lecteurs : membres qui ont ajouté le livre à leurs lectures.
+            </p>
+          </div>
+        </div>
+      </Section>
+
+      <Section id="scrabble-titre" title="Scrabble">
         <div className="grid gap-x-10 sm:grid-cols-3">
+          <Figure
+            label="Tournois"
+            value={String(scrabble.tournaments)}
+            hint="joués sur la période"
+          />
+          <Figure
+            label="Participants"
+            value={String(scrabble.participants)}
+            hint="inscriptions aux tournois, extérieurs compris"
+          />
+          <Figure
+            label="Manches jouées"
+            value={String(scrabble.rounds)}
+            hint="avec des scores saisis"
+          />
+        </div>
+        {scrabble.rows.length > 0 ? (
+          <div className="mt-8 grid gap-10 xl:grid-cols-2">
+            <ChartFigure
+              id="scores"
+              title="Score moyen par partie, tournoi par tournoi"
+              description="Évolution des scores : moyenne des parties jouées (forfaits exclus)."
+              columns={["Tournoi", "Date", "Participants", "Manches", "Score moyen"]}
+              rows={scrabble.rows.map((r) => [
+                r.name,
+                formatShortDate(r.startsAt),
+                r.participants,
+                r.rounds,
+                r.averageScore === null ? "—" : Math.round(r.averageScore),
+              ])}
+            >
+              <ColumnChart
+                id="scores"
+                unit="points en moyenne"
+                points={scrabble.rows.map((r) => ({
+                  label: formatShortDate(r.startsAt),
+                  value: Math.round(r.averageScore ?? 0),
+                }))}
+              />
+            </ChartFigure>
+            <div className="min-w-0">
+              <div className="flex justify-end">{exportLink("scrabble", "CSV")}</div>
+              <ul className="mt-3 divide-y divide-trait border-y border-trait">
+                {scrabble.rows.map((r) => (
+                  <li
+                    key={r.id}
+                    className="flex flex-wrap items-baseline justify-between gap-2 py-3"
+                  >
+                    <span className="min-w-0">
+                      <span className="font-semibold">{r.name}</span>
+                      <span className="petit block text-gris">
+                        {formatShortDate(r.startsAt)}
+                        {r.interclub ? " · interclubs" : ""}
+                      </span>
+                    </span>
+                    <span className="petit text-gris tabular-nums">
+                      {r.participants} participants · {r.rounds} manches
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        ) : (
+          <p className="mt-4 text-gris">Aucun tournoi joué sur la période.</p>
+        )}
+      </Section>
+
+      <Section id="membres-titre" title="Membres">
+        <div className="grid gap-x-10 sm:grid-cols-2 xl:grid-cols-4">
           <Figure
             label="Nouveaux membres"
             value={String(members.newByMonth.reduce((t, m) => t + m.count, 0))}
@@ -291,6 +440,11 @@ async function Stats({ searchParams }: Pick<PageProps<"/admin/stats">, "searchPa
             label="Membres actifs"
             value={String(members.active)}
             hint={`venus au moins une fois (${percent(members.current ? members.active / members.current : null)} des adhérents)`}
+          />
+          <Figure
+            label="Renouvellements"
+            value={String(renewals)}
+            hint="adhésions renouvelées sur la période"
           />
         </div>
         <div className="mt-8 max-w-[48rem]">

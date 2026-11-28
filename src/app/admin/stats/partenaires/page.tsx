@@ -5,7 +5,13 @@ import { AdminListSkeleton } from "@/components/admin/page-header";
 import { site } from "@/config/site";
 import { BarList, ChartFigure, ColumnChart } from "@/features/stats/components/charts";
 import { PrintButton } from "@/features/stats/components/print-button";
-import { getEventStats, getMemberStats } from "@/features/stats/queries";
+import {
+  countRenewals,
+  getEventStats,
+  getMemberStats,
+  getReadingStats,
+  getScrabbleStats,
+} from "@/features/stats/queries";
 import { monthLabel, parseStatsPeriod, partnerView, SMALL_COUNT } from "@/features/stats/rules";
 import { formatDate } from "@/lib/dates";
 import { requirePageAccess } from "@/lib/permissions";
@@ -40,9 +46,12 @@ async function Partners({
   const now = new Date();
   const period = parseStatsPeriod(query, now);
   const mode = query.mode === "principale" ? "primary" : "all";
-  const [events, members] = await Promise.all([
+  const [events, members, reading, scrabble, renewals] = await Promise.all([
     getEventStats(period, mode, now),
     getMemberStats(period, now),
+    getReadingStats(period, now),
+    getScrabbleStats(period, now),
+    countRenewals(period, now),
   ]);
   const stats = partnerView({
     summary: events.summary,
@@ -51,6 +60,12 @@ async function Partners({
     waitlists: events.waitlists,
     newMembers: members.newByMonth.reduce((t, m) => t + m.count, 0),
     currentMembers: members.current,
+    renewals,
+    booksFinished: reading.finished,
+    genres: reading.genres,
+    tournaments: scrabble.tournaments,
+    scrabbleParticipants: scrabble.participants,
+    rounds: scrabble.rounds,
   });
 
   return (
@@ -86,6 +101,26 @@ async function Partners({
           label="Adhérents"
           value={String(stats.currentMembers)}
           hint="à la fin de la période"
+        />
+        <Figure
+          label="Renouvellements"
+          value={String(stats.renewals)}
+          hint="adhésions renouvelées"
+        />
+        <Figure
+          label="Livres terminés"
+          value={String(stats.booksFinished)}
+          hint="déclarés par les membres"
+        />
+        <Figure
+          label="Tournois de Scrabble"
+          value={String(stats.tournaments)}
+          hint={`${stats.rounds} manches jouées`}
+        />
+        <Figure
+          label="Participants aux tournois"
+          value={String(stats.scrabbleParticipants)}
+          hint="extérieurs compris"
         />
         <Figure
           label="Rencontres complètes"

@@ -1,6 +1,13 @@
 import { connection } from "next/server";
 import { z } from "zod";
-import { getEventStats, getInactiveMembers, getMemberStats } from "@/features/stats/queries";
+import {
+  countRenewals,
+  getEventStats,
+  getInactiveMembers,
+  getMemberStats,
+  getReadingStats,
+  getScrabbleStats,
+} from "@/features/stats/queries";
 import {
   day as validDay,
   monthLabel,
@@ -15,7 +22,16 @@ import { can, requirePermission } from "@/lib/permissions";
 
 const date = z.string().refine((value) => validDay(value) !== null, "Date invalide.");
 const querySchema = z.object({
-  jeu: z.enum(["presence", "activites", "membres", "attente", "relances", "partenaires"]),
+  jeu: z.enum([
+    "presence",
+    "activites",
+    "membres",
+    "attente",
+    "relances",
+    "lecture",
+    "scrabble",
+    "partenaires",
+  ]),
   du: date.optional(),
   au: date.optional(),
   mode: z.enum(["toutes", "principale"]).optional(),
@@ -73,10 +89,38 @@ export async function GET(request: Request) {
         m.lastAttended ? day(m.lastAttended) : "jamais venu",
         day(m.memberSince),
       ]);
+    } else if (query.jeu === "lecture") {
+      const reading = await getReadingStats(period, now);
+      headers = ["Indicateur", "Détail", "Valeur"];
+      rows = [
+        ["Livres terminés", "", reading.finished],
+        ["Lectures validées", "", reading.validated],
+        ...reading.genres.map((g): CsvCell[] => ["Livres terminés par genre", g.label, g.count]),
+        ...reading.monthly.map((m): CsvCell[] => [
+          `Livre du mois · ${m.month}`,
+          m.title,
+          `${m.readers} lecteurs${m.present === null ? "" : ` · ${m.present} présents`}`,
+        ]),
+      ];
+    } else if (query.jeu === "scrabble") {
+      const scrabble = await getScrabbleStats(period, now);
+      headers = ["Date", "Tournoi", "Interclubs", "Participants", "Manches", "Score moyen"];
+      rows = scrabble.rows.map((r) => [
+        day(r.startsAt),
+        r.name,
+        r.interclub,
+        r.participants,
+        r.rounds,
+        r.averageScore === null ? "" : Math.round(r.averageScore),
+      ]);
     } else if (query.jeu === "membres") {
       const members = await getMemberStats(period, now);
+      const renewals = await countRenewals(period, now);
       headers = ["Mois", "Nouveaux membres"];
-      rows = members.newByMonth.map((m) => [m.month, m.count]);
+      rows = [
+        ...members.newByMonth.map((m): CsvCell[] => [m.month, m.count]),
+        ["Renouvellements sur la période", renewals],
+      ];
     } else {
       const events = await getEventStats(period, mode, now);
       if (query.jeu === "presence") {
@@ -117,7 +161,11 @@ export async function GET(request: Request) {
           r.stayed,
         ]);
       } else {
-        const members = await getMemberStats(period, now);
+        const [members, reading, scrabble] = await Promise.all([
+          getMemberStats(period, now),
+          getReadingStats(period, now),
+          getScrabbleStats(period, now),
+        ]);
         const stats = partnerView({
           summary: events.summary,
           byMonth: events.byMonth,
@@ -125,6 +173,12 @@ export async function GET(request: Request) {
           waitlists: events.waitlists,
           newMembers: members.newByMonth.reduce((t, m) => t + m.count, 0),
           currentMembers: members.current,
+          renewals: await countRenewals(period, now),
+          booksFinished: reading.finished,
+          genres: reading.genres,
+          tournaments: scrabble.tournaments,
+          scrabbleParticipants: scrabble.participants,
+          rounds: scrabble.rounds,
         });
         headers = ["Indicateur", "Valeur"];
         rows = [
@@ -135,6 +189,12 @@ export async function GET(request: Request) {
           ["Adhérents", stats.currentMembers],
           ["Rencontres complètes", stats.waitlists.full],
           ["Personnes en attente", stats.waitlists.waited],
+          ["Renouvellements", stats.renewals],
+          ["Livres terminés", stats.booksFinished],
+          ["Tournois de Scrabble", stats.tournaments],
+          ["Participants aux tournois", stats.scrabbleParticipants],
+          ["Manches jouées", stats.rounds],
+          ...stats.genres.map((g): CsvCell[] => [`Livres terminés · ${g.label}`, g.count]),
           ["Places obtenues sur liste d'attente", stats.waitlists.promoted],
           ...stats.byMonth.map((m): CsvCell[] => [`Présences · ${monthLabel(m.month)}`, m.present]),
           ...stats.activities.map((a): CsvCell[] => [`Présences · ${a.label}`, a.present]),

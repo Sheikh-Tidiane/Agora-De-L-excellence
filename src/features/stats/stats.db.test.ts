@@ -8,8 +8,14 @@ import { databaseReachable, realPrisma as db, uniq } from "@/test/real-db";
  */
 vi.mock("@/lib/prisma", async () => ({ prisma: (await import("@/test/real-db")).realPrisma }));
 
-const { getEventStats, getMemberStats, getInactiveMembers } =
-  await import("@/features/stats/queries");
+const {
+  getEventStats,
+  getMemberStats,
+  getInactiveMembers,
+  getReadingStats,
+  getScrabbleStats,
+  countRenewals,
+} = await import("@/features/stats/queries");
 const { parseStatsPeriod } = await import("@/features/stats/rules");
 
 const reachable = await databaseReachable();
@@ -80,7 +86,15 @@ describe.skipIf(!reachable)("statistiques (base réelle)", () => {
     return user;
   };
 
+  const tournaments: string[] = [];
+  const books: string[] = [];
+  const categories: string[] = [];
+
   afterAll(async () => {
+    await db.tournament.deleteMany({ where: { id: { in: tournaments } } });
+    await db.reading.deleteMany({ where: { bookId: { in: books } } });
+    await db.book.deleteMany({ where: { id: { in: books } } });
+    await db.category.deleteMany({ where: { id: { in: categories } } });
     await db.event.deleteMany({ where: { id: { in: events } } });
     await db.membership.deleteMany({ where: { userId: { in: users } } });
     await db.user.deleteMany({ where: { id: { in: users } } });
@@ -176,5 +190,71 @@ describe.skipIf(!reachable)("statistiques (base réelle)", () => {
     const inactive = (await getInactiveMembers(6, NOW)).filter((m) => users.includes(m.id));
     expect(inactive.map((m) => m.id).sort()).toEqual([b.id, c.id].sort());
     expect(inactive.every((m) => m.lastAttended === null)).toBe(true);
+  });
+
+  it("lecture, Scrabble et renouvellements", async () => {
+    const reader = await makeMember(at("2000-01-10T10:00:00Z"), at("2001-03-15T10:00:00Z"));
+    const category = await db.category.create({
+      data: { slug: `vt-genre-${tag}`, name: `Genre ${tag}` },
+    });
+    categories.push(category.id);
+    const book = await db.book.create({
+      data: {
+        slug: `vt-livre-${tag}`,
+        title: `Livre ${tag}`,
+        summary: "Test",
+        categoryId: category.id,
+      },
+    });
+    books.push(book.id);
+    await db.reading.create({
+      data: {
+        userId: reader.id,
+        bookId: book.id,
+        status: "FINISHED",
+        progress: 100,
+        finishedAt: at("2001-03-12T10:00:00Z"),
+        completionStatus: "APPROVED",
+      },
+    });
+    const reading = await getReadingStats(period, NOW);
+    expect(reading.finished).toBeGreaterThanOrEqual(1);
+    expect(reading.genres).toContainEqual({ label: `Genre ${tag}`, count: 1 });
+
+    const tournament = await db.tournament.create({
+      data: {
+        slug: `vt-tournoi-${tag}`,
+        name: `Tournoi ${tag}`,
+        status: "COMPLETED",
+        startsAt: at("2001-03-17T15:00:00Z"),
+      },
+    });
+    tournaments.push(tournament.id);
+    const round = await db.round.create({ data: { tournamentId: tournament.id, number: 1 } });
+    for (const [name, points] of [
+      ["Awa", 400],
+      ["Moussa", 300],
+    ] as const) {
+      const p = await db.tournamentParticipant.create({
+        data: { tournamentId: tournament.id, externalName: `${name} ${tag}` },
+      });
+      await db.score.create({ data: { roundId: round.id, participantId: p.id, points } });
+    }
+    await db.tournamentParticipant.create({
+      data: {
+        tournamentId: tournament.id,
+        externalName: `Retiré ${tag}`,
+        withdrawnAt: at("2001-03-17T16:00:00Z"),
+      },
+    });
+    const scrabble = await getScrabbleStats(period, NOW);
+    expect(scrabble.rows.find((r) => r.id === tournament.id)).toMatchObject({
+      participants: 2,
+      rounds: 1,
+      averageScore: 350,
+    });
+
+    // Le lecteur a renouvelé en mars 2001 (première adhésion en 2000).
+    expect(await countRenewals(period, NOW)).toBeGreaterThanOrEqual(2);
   });
 });

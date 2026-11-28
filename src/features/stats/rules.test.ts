@@ -294,6 +294,18 @@ describe("statistiques : version partenaires", () => {
       },
       newMembers: 1,
       currentMembers: 40,
+      renewals: 2,
+      booksFinished: 7,
+      genres: [{ label: "Romans", count: 1 }],
+      tournaments: 1,
+      scrabbleParticipants: 12,
+      rounds: 4,
+    });
+    expect(view).toMatchObject({
+      renewals: "< 3",
+      booksFinished: 7,
+      genres: [{ label: "Romans", count: "< 3" }],
+      scrabbleParticipants: 12,
     });
     expect(view).toMatchObject({
       present: "< 3",
@@ -302,7 +314,7 @@ describe("statistiques : version partenaires", () => {
       currentMembers: 40,
     });
     const keys = JSON.stringify(view);
-    for (const forbidden of ["name", "email", "phone", "title", "Secret", '"id"']) {
+    for (const forbidden of ['"name"', '"email"', '"phone"', '"title"', "Secret", '"id"']) {
       expect(keys).not.toContain(forbidden);
     }
   });

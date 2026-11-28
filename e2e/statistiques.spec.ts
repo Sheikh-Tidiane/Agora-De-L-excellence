@@ -54,7 +54,14 @@ test("statistiques : chiffres, graphiques, export CSV, version partenaires, acc�
     await signInAsAdmin(page, request, adminEmail);
     await page.goto("/admin/stats?periode=3m");
     await expect(page.getByRole("heading", { level: 1, name: "Statistiques" })).toBeVisible();
-    for (const name of ["Présence", "Activités les plus suivies", "Membres", "Listes d’attente"]) {
+    for (const name of [
+      "Présence",
+      "Activités les plus suivies",
+      "Lecture",
+      "Scrabble",
+      "Membres",
+      "Listes d’attente",
+    ]) {
       await expect(page.getByRole("heading", { level: 2, name, exact: true })).toBeVisible();
     }
     await expect(

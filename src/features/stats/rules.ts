@@ -360,6 +360,12 @@ export type PartnerStats = {
     averageRating: number | null;
   }[];
   waitlists: { full: number; waited: number | string; promoted: number | string };
+  renewals: number | string;
+  booksFinished: number | string;
+  genres: { label: string; count: number | string }[];
+  tournaments: number;
+  scrabbleParticipants: number | string;
+  rounds: number;
 };
 
 export function partnerView(input: {
@@ -369,6 +375,12 @@ export function partnerView(input: {
   waitlists: ReturnType<typeof waitlistStats>;
   newMembers: number;
   currentMembers: number;
+  renewals: number;
+  booksFinished: number;
+  genres: readonly { label: string; count: number }[];
+  tournaments: number;
+  scrabbleParticipants: number;
+  rounds: number;
 }): PartnerStats {
   const { summary } = input;
   return {
@@ -397,5 +409,11 @@ export function partnerView(input: {
       waited: maskSmall(input.waitlists.waited),
       promoted: maskSmall(input.waitlists.promoted),
     },
+    renewals: maskSmall(input.renewals),
+    booksFinished: maskSmall(input.booksFinished),
+    genres: input.genres.map((g) => ({ label: g.label, count: maskSmall(g.count) })),
+    tournaments: input.tournaments,
+    scrabbleParticipants: maskSmall(input.scrabbleParticipants),
+    rounds: input.rounds,
   };
 }

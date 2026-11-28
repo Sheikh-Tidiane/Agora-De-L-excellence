@@ -1,4 +1,8 @@
-import { needsReference, type PaymentMethodCode } from "@/features/payments/methods";
+import {
+  needsReference,
+  paymentMethodLabels,
+  type PaymentMethodCode,
+} from "@/features/payments/methods";
 import { loadClubSettings } from "@/features/settings/club";
 import { audit } from "@/lib/audit";
 import { AppError } from "@/lib/errors";
@@ -40,14 +44,49 @@ export async function recordCardPayment(
   try {
     return await saveCardPayment(input, actorId, membershipCardFee);
   } catch (error) {
-    // Deux saisies simultanées de la même référence : la base refuse la seconde.
-    if ((error as { code?: string } | null)?.code === "P2002") {
-      throw new AppError("CONFLICT", "Cette référence de transaction est déjà enregistrée.", {
-        fieldErrors: { reference: "Cette référence de transaction est déjà enregistrée." },
-      });
+    // Deux saisies simultanées de la même référence : la base refuse la seconde. On relit alors
+    // l'encaissement gagnant pour dire à qui la référence est attribuée.
+    if ((error as { code?: string } | null)?.code === "P2002" && needsReference(input.method)) {
+      throw (
+        (await referenceConflict(input.method, input.reference.trim())) ??
+        new AppError("CONFLICT", "Cette référence de transaction est déjà enregistrée.", {
+          fieldErrors: { reference: "Cette référence de transaction est déjà enregistrée." },
+        })
+      );
     }
     throw error;
   }
+}
+
+/**
+ * Une référence de transaction est unique pour un même moyen de paiement (casse et espaces autour
+ * ignorés ; un encaissement annulé la libère). Si elle est déjà prise : l'erreur à afficher, avec
+ * le membre (nom et numéro) à qui elle est attribuée ; sinon `null`.
+ * Même règle en base : index unique partiel « Payment_method_reference_active_key ».
+ */
+export async function referenceConflict(
+  method: PaymentMethodCode,
+  reference: string,
+  db: Pick<Tx, "payment"> = prisma,
+): Promise<AppError | null> {
+  if (!needsReference(method) || !reference) return null;
+  const taken = await db.payment.findFirst({
+    where: { method, reference: { equals: reference, mode: "insensitive" }, cancelledAt: null },
+    select: {
+      user: { select: { firstName: true, lastName: true, memberNumber: true } },
+      registration: { select: { guestName: true } },
+    },
+  });
+  if (!taken) return null;
+  const holder = taken.user
+    ? `${taken.user.firstName} ${taken.user.lastName}${
+        taken.user.memberNumber ? ` (n° ${taken.user.memberNumber})` : ""
+      }`
+    : taken.registration?.guestName
+      ? `${taken.registration.guestName} (invité)`
+      : "un autre encaissement";
+  const message = `Cette référence ${paymentMethodLabels[method]} est déjà attribuée à ${holder}.`;
+  return new AppError("CONFLICT", message, { fieldErrors: { reference: message } });
 }
 
 async function saveCardPayment(
@@ -71,21 +110,9 @@ async function saveCardPayment(
     if (existing) throw new AppError("CONFLICT", "La carte de ce membre est déjà réglée.");
     const reference = needsReference(input.method) ? input.reference.trim() : null;
     if (reference) {
-      // Même transaction déjà enregistrée (casse ignorée) : la base le refuserait aussi
-      // (« Payment_method_reference_active_key ») ; ici, avec un message clair.
-      const taken = await tx.payment.findFirst({
-        where: {
-          method: input.method,
-          reference: { equals: reference, mode: "insensitive" },
-          cancelledAt: null,
-        },
-        select: { id: true },
-      });
-      if (taken) {
-        throw new AppError("CONFLICT", "Cette référence de transaction est déjà enregistrée.", {
-          fieldErrors: { reference: "Cette référence de transaction est déjà enregistrée." },
-        });
-      }
+      // Même transaction déjà enregistrée : la base le refuserait aussi ; ici, avec le nom du membre.
+      const conflict = await referenceConflict(input.method, reference, tx);
+      if (conflict) throw conflict;
     }
     const payment = await tx.payment.create({
       data: {

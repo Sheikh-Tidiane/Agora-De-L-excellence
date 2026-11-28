@@ -51,10 +51,24 @@ export function CardPaymentForm({
         const missing = missingReference(method, reference);
         setReferenceError(missing);
         if (missing) return;
-        void run(() => recordCardPaymentAction({ userId, method, reference, paidAt, note }), {
-          success: `Carte réglée : ${amount} encaissés.`,
-          onSuccess: onDone,
-        });
+        void run(
+          async () => {
+            const result = await recordCardPaymentAction({
+              userId,
+              method,
+              reference,
+              paidAt,
+              note,
+            });
+            // Référence déjà attribuée : le message (avec le membre) reste sous le champ.
+            if (!result.ok) setReferenceError(result.fieldErrors?.reference);
+            return result;
+          },
+          {
+            success: `Carte réglée : ${amount} encaissés.`,
+            onSuccess: onDone,
+          },
+        );
       }}
     >
       <p className="surtitre">Carte de membre · {amount}</p>
@@ -66,7 +80,10 @@ export function CardPaymentForm({
         <Select
           id="carte-moyen"
           value={method}
-          onChange={(event) => setMethod(event.target.value as PaymentMethodCode)}
+          onChange={(event) => {
+            setMethod(event.target.value as PaymentMethodCode);
+            setReferenceError(undefined);
+          }}
         >
           {paymentMethodCodes.map((code) => (
             <option key={code} value={code}>

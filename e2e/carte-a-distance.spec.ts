@@ -49,6 +49,7 @@ test("carte réglée à distance : lien de visio masqué puis rendu, encaissemen
   const title = `E2E-Visio ${stamp}`;
   const adminEmail = `visio-admin-${stamp}@e2e.agora.test`;
   const memberEmail = `visio-membre-${stamp}@e2e.agora.test`;
+  const otherEmail = `visio-autre-${stamp}@e2e.agora.test`;
   const saved = lastWord(
     execFileSync(
       "pnpm",
@@ -125,6 +126,26 @@ test("carte réglée à distance : lien de visio masqué puis rendu, encaissemen
     await page.getByRole("button", { name: "Enregistrer l’encaissement" }).click();
     await expect(page.getByText(/Carte réglée :/).first()).toBeVisible();
 
+    // Même référence Wave (autre casse) pour un autre membre : refusée, en nommant le titulaire.
+    testUser("create", otherEmail, "Moussa", "member");
+    testUser("member-number", otherEmail);
+    testUser("accept", otherEmail, "31");
+    await page.goto("/admin/members");
+    await page.getByLabel("Rechercher dans : Membres").fill(otherEmail);
+    await page.getByRole("row").filter({ hasText: otherEmail }).click();
+    await page.getByRole("button", { name: /Encaisser la carte/ }).click();
+    await page.getByLabel("Moyen de paiement").selectOption("WAVE");
+    await page.getByLabel("Référence de la transaction").fill(`e2e-wave-${stamp}`);
+    await page.getByRole("button", { name: "Enregistrer l’encaissement" }).click();
+    const taken = `Cette référence Wave est déjà attribuée à Awa Essai (n° ${memberNumber}).`;
+    // Sous le champ (durable) et dans le bandeau d'alerte.
+    await expect(page.getByText(taken)).toHaveCount(2);
+    await page.screenshot({ path: "docs/captures/paiements/1440-reference-deja-attribuee.png" });
+    // Même référence avec Orange Money : une autre transaction, acceptée.
+    await page.getByLabel("Moyen de paiement").selectOption("ORANGE_MONEY");
+    await page.getByRole("button", { name: "Enregistrer l’encaissement" }).click();
+    await expect(page.getByText(/Carte réglée :/).first()).toBeVisible();
+
     // Carte réglée : le lien de visio revient, l'encadré disparaît.
     await member.goto(publicPath);
     await expect(
@@ -138,6 +159,7 @@ test("carte réglée à distance : lien de visio masqué puis rendu, encaissemen
     testUser("set-payment-settings", "E2E", `'${saved}'`);
     testUser("delete-events", "E2E-Visio");
     testUser("delete", memberEmail);
+    testUser("delete", otherEmail);
     testUser("delete", adminEmail);
   }
 });

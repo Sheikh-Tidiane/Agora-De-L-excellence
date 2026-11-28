@@ -68,6 +68,7 @@ export function ScanCardCollect({
             note: "Encaissée au scan",
           });
           if (result.ok) onPaid(paymentMethodLabels[method]);
+          else if (result.fieldErrors?.reference) setReferenceError(result.fieldErrors.reference);
           else setError(result.message);
         });
       }}
@@ -77,7 +78,10 @@ export function ScanCardCollect({
         <Select
           id={`${ids}-moyen`}
           value={method}
-          onChange={(event) => setMethod(event.target.value as PaymentMethodCode)}
+          onChange={(event) => {
+            setMethod(event.target.value as PaymentMethodCode);
+            setReferenceError(undefined);
+          }}
         >
           {paymentMethodCodes.map((code) => (
             <option key={code} value={code}>

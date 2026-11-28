@@ -165,13 +165,31 @@ describe.skipIf(!reachable)("carte de membre à distance (base réelle)", () => 
       method: "WAVE",
       reference,
     });
-    // Même transaction saisie pour un autre membre (casse différente) : refusée.
+    // Même transaction saisie pour un autre membre (casse différente) : refusée, en nommant le
+    // membre à qui elle est déjà attribuée.
+    const owner = `Cette référence Wave est déjà attribuée à ${a.firstName} ${a.lastName} (n° ${a.memberNumber}).`;
     await expect(
       recordCardPayment(
-        { userId: b.id, method: "WAVE", reference: reference.toLowerCase(), paidAt, note: "" },
+        {
+          userId: b.id,
+          method: "WAVE",
+          reference: ` ${reference.toLowerCase()} `,
+          paidAt,
+          note: "",
+        },
         actor.id,
       ),
-    ).rejects.toMatchObject({ code: "CONFLICT" });
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      message: owner,
+      fieldErrors: { reference: owner },
+    });
+    // Même référence avec un autre moyen de paiement : c'est une autre transaction, acceptée.
+    const other = await recordCardPayment(
+      { userId: b.id, method: "ORANGE_MONEY", reference, paidAt, note: "" },
+      actor.id,
+    );
+    await cancelPayment(other.id, "Test : autre moyen de paiement", actor.id);
     // La base le refuse aussi, sans passer par le service.
     await expect(
       db.payment.create({
@@ -196,6 +214,24 @@ describe.skipIf(!reachable)("carte de membre à distance (base réelle)", () => 
       { userId: b.id, method: "WAVE", reference, paidAt, note: "" },
       actor.id,
     );
+    // Deux saisies simultanées de la même référence : une seule passe ; l'autre nomme le gagnant.
+    const [c, d] = [await member(now, 2), await member(now, 2)];
+    const race = `R_${tag}`;
+    const results = await Promise.allSettled(
+      [c, d].map((m) =>
+        recordCardPayment(
+          { userId: m.id, method: "ORANGE_MONEY", reference: race, paidAt, note: "" },
+          actor.id,
+        ),
+      ),
+    );
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    const refused = results.find((r) => r.status === "rejected") as PromiseRejectedResult;
+    const winner = results[0]!.status === "fulfilled" ? c : d;
+    expect(refused.reason).toMatchObject({
+      code: "CONFLICT",
+      message: `Cette référence Orange Money est déjà attribuée à ${winner.firstName} ${winner.lastName} (n° ${winner.memberNumber}).`,
+    });
     // En espèces, une référence saisie par erreur n'est pas gardée.
     const cash = await recordCardPayment(
       { userId: a.id, method: "CASH", reference: "reste", paidAt, note: "" },

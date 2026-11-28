@@ -175,6 +175,7 @@ async function EventAdmin({ params }: Pick<PageProps<"/admin/events/[id]">, "par
             kind: row.userId ? "member" : "guest",
             position: row.position,
             since: row.waitlistedAt,
+            blocked: row.blocked,
           }))}
         />
       </section>

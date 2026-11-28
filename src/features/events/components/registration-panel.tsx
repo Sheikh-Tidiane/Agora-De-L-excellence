@@ -136,15 +136,27 @@ export async function RegistrationPanel({ event }: { event: PublicEvent }) {
               </p>
             ) : null}
           </>
-        ) : position !== null && registration ? (
+        ) : position !== null && registration && window === "open" ? (
           <>
-            <FormNotice>
-              Vous êtes sur la liste d’attente : {ordinal(position)}
-              {position === 1 ? ", la prochaine place libérée est pour vous." : "."}
-            </FormNotice>
+            {!listOpen && left !== 0 ? (
+              <>
+                <FormNotice>
+                  Une place est libre : elle est ouverte à tous à l’approche de la rencontre.
+                </FormNotice>
+                <div className="mt-4">
+                  <MemberRegisterButton eventId={event.id} />
+                </div>
+              </>
+            ) : (
+              <FormNotice>
+                Vous êtes sur la liste d’attente : {ordinal(position)}
+                {listOpen && position === 1 ? ", la prochaine place libérée est pour vous." : "."}
+              </FormNotice>
+            )}
             <p className="petit mt-3 text-gris">
-              Si une place se libère jusqu’à {cutoffLabel} avant le début, vous êtes inscrit
-              d’office et prévenu par e-mail.
+              {listOpen
+                ? `Si une place se libère jusqu’à ${cutoffLabel} avant le début, vous êtes inscrit d’office et prévenu par e-mail.`
+                : "La liste d’attente est close : une place libérée est désormais ouverte à tous."}
             </p>
             <div className="mt-4">
               <MemberLeaveWaitlistButton registrationId={registration.id} />
@@ -187,7 +199,10 @@ export async function RegistrationPanel({ event }: { event: PublicEvent }) {
         ) : full ? (
           <p className="rounded-champ bg-alerte-fond px-4 py-3 font-semibold text-alerte">
             Toutes les places sont prises. Les membres connectés peuvent rejoindre la liste
-            d’attente.
+            d’attente.{" "}
+            <Link href={returnLogin} className="lien font-normal">
+              Se connecter
+            </Link>
           </p>
         ) : user ? (
           <>

@@ -338,6 +338,8 @@ export type WaitlistRow = {
   /** Rang ; `null` : invité qui n'a pas encore confirmé son adresse. */
   position: number | null;
   since: Date | null;
+  /** Ne recevra pas de place (compte inactif, rencontre réservée aux membres). */
+  blocked: string | null;
 };
 
 /**
@@ -356,9 +358,13 @@ export function WaitlistPanel({ rows, full }: { rows: WaitlistRow[]; full: boole
       setArmed(row.id);
       return;
     }
+    const force = armed === row.id;
     setArmed(null);
-    void run(() => promoteFromWaitlistAction({ registrationId: row.id, force: full }), {
-      success: `${row.name} est inscrit${full ? " (au-delà de la capacité)" : ""} et prévenu par e-mail.`,
+    void run(() => promoteFromWaitlistAction({ registrationId: row.id, force }), {
+      success: `${row.name} est inscrit${force ? " (au-delà de la capacité)" : ""} et prévenu par e-mail.`,
+    }).then((done) => {
+      // La rencontre s'est remplie entre l'affichage et le clic : seconde pression pour confirmer.
+      if (!done && !force) setArmed(row.id);
     });
   };
   return (
@@ -375,9 +381,11 @@ export function WaitlistPanel({ rows, full }: { rows: WaitlistRow[]; full: boole
                 {row.kind === "member" ? "Membre" : "Invité"} · {row.email}
               </span>
               <span className="petit block text-gris">
-                {row.since
-                  ? `En attente depuis le ${formatDateTime(row.since)}`
-                  : "Adresse e-mail pas encore confirmée : pas de rang"}
+                {row.blocked
+                  ? row.blocked
+                  : row.since
+                    ? `En attente depuis le ${formatDateTime(row.since)}`
+                    : "Adresse e-mail pas encore confirmée : pas de rang"}
               </span>
             </span>
             {row.position !== null ? (

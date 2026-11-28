@@ -358,6 +358,31 @@ describe.skipIf(!reachable)("liste d'attente (base réelle)", () => {
     expect((await statusOf(event.id, b.id)).status).toBe("CANCELLED");
   });
 
+  it("place rendue par un invité, inscription refusée : la promotion de la file est gardée ; rangs sans les comptes inactifs", async () => {
+    const event = await makeEvent(1);
+    const [b, c, suspended] = [await makeMember(), await makeMember(), await makeMember()];
+    const held = await db.eventRegistration.create({
+      data: {
+        eventId: event.id,
+        guestName: "Retard",
+        guestEmail: `retard2-${tag}@e2e.agora.test`,
+        status: "PENDING",
+      },
+    });
+    await joinWaitlistAsMember(event.id, suspended.id);
+    await db.user.update({ where: { id: suspended.id }, data: { status: "SUSPENDED" } });
+    await joinWaitlistAsMember(event.id, b.id);
+    // Le compte suspendu ne compte pas : B est 1er.
+    expect(await rankOf(event.id, b.id)).toBe(1);
+    await db.$executeRaw`UPDATE "EventRegistration" SET "updatedAt" = now() - interval '25 hours' WHERE id = ${held.id}`;
+    // C tente de s'inscrire : la place rendue va d'abord à B, puis C est refusé (complet).
+    await expect(
+      registerMember(event.id, { id: c.id, firstName: "C", email: c.email }),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+    expect((await statusOf(event.id, b.id)).status).toBe("CONFIRMED");
+    expect(mail.sent.filter((m) => m.to === b.email)).toHaveLength(1);
+  });
+
   it("le rappel la veille ne part pas aux personnes en attente", async () => {
     const event = await makeEvent(1, 24);
     const [a, b] = [await makeMember(), await makeMember()];

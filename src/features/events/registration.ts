@@ -15,7 +15,12 @@ import { sendMail } from "@/lib/mail";
 import { guestConfirmationEmail, registrationConfirmedEmail } from "@/lib/mail/club-templates";
 import { prisma, type Db } from "@/lib/prisma";
 import { audit } from "@/lib/audit";
-import { fillFreedSeats, sendPromotionMessages } from "@/features/events/waitlist";
+import {
+  catchUpWaitlist,
+  fillFreedSeats,
+  sendPromotionMessages,
+  type Promotion,
+} from "@/features/events/waitlist";
 import {
   cancelBeforeLabel,
   eventInfo,
@@ -49,12 +54,12 @@ export async function registerMember(
   member: { id: string; firstName: string; email: string },
 ): Promise<{ id: string }> {
   const now = new Date();
-  const { waitlistCutoffHours } = await loadClubSettings();
+  // Une place rendue (invité qui n'a pas confirmé à temps) revient d'abord à la liste d'attente.
+  await catchUpWaitlist(eventId, now);
   const { event, registration, promotions } = await prisma.$transaction(async (tx) => {
     const event = await lockEvent(tx, eventId);
     if (!event) throw new AppError("NOT_FOUND", "Cette rencontre est introuvable.");
-    // Une place rendue (invité qui n'a pas confirmé à temps) revient d'abord à la liste d'attente.
-    const promotions = await fillFreedSeats(tx, event, now, waitlistCutoffHours, "catch-up");
+    const promotions: Promotion[] = [];
     const existing = await tx.eventRegistration.findUnique({
       where: { eventId_userId: { eventId, userId: member.id } },
     });
@@ -132,11 +137,11 @@ export async function registerGuest(
 ): Promise<void> {
   const now = new Date();
   const token = randomBytes(32).toString("base64url");
-  const { waitlistCutoffHours } = await loadClubSettings();
+  await catchUpWaitlist(eventId, now);
   const { event, promotions } = await prisma.$transaction(async (tx) => {
     const event = await lockEvent(tx, eventId);
     if (!event) throw new AppError("NOT_FOUND", "Cette rencontre est introuvable.");
-    const promotions = await fillFreedSeats(tx, event, now, waitlistCutoffHours, "catch-up");
+    const promotions: Promotion[] = [];
     const existing = await tx.eventRegistration.findUnique({
       where: { eventId_guestEmail: { eventId, guestEmail: guest.email } },
     });
@@ -227,11 +232,19 @@ export async function getGuestRegistration(token: string) {
 export async function confirmGuestRegistration(token: string): Promise<void> {
   const now = new Date();
   const { waitlistCutoffHours } = await loadClubSettings();
+  const first = await prisma.eventRegistration.findUnique({
+    where: { tokenHash: hashToken(token) },
+    select: { eventId: true, status: true },
+  });
+  if (!first) throw new AppError("INVALID_TOKEN", "Ce lien d’inscription n’est plus valable.");
+  // Confirmation d'une place : les places rendues reviennent d'abord à la liste d'attente.
+  if (first.status === "PENDING") await catchUpWaitlist(first.eventId, now);
   const result = await prisma.$transaction(async (tx) => {
+    const event = await lockEvent(tx, first.eventId);
+    if (!event) throw new AppError("NOT_FOUND", "Cette rencontre est introuvable.");
+    // Relue sous le verrou : son état a pu changer (annulée, réinscrite) depuis la première lecture.
     const found = await tx.eventRegistration.findUnique({ where: { tokenHash: hashToken(token) } });
     if (!found) throw new AppError("INVALID_TOKEN", "Ce lien d’inscription n’est plus valable.");
-    const event = await lockEvent(tx, found.eventId);
-    if (!event) throw new AppError("NOT_FOUND", "Cette rencontre est introuvable.");
     if (found.status === "CONFIRMED") return null;
     if (found.status === "CANCELLED") {
       throw new AppError("CONFLICT", "Cette inscription a été annulée. Inscrivez-vous à nouveau.");
@@ -256,7 +269,7 @@ export async function confirmGuestRegistration(token: string): Promise<void> {
       const promotions = await fillFreedSeats(tx, event, now, waitlistCutoffHours, "catch-up");
       return { event, registration: found, promotions, confirmed: false };
     }
-    const promotions = await fillFreedSeats(tx, event, now, waitlistCutoffHours, "catch-up");
+    const promotions: Promotion[] = [];
     const taken = await tx.eventRegistration.count({
       where: {
         eventId: event.id,

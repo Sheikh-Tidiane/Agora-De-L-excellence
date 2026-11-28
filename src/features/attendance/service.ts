@@ -57,13 +57,16 @@ export async function listCheckInEvents(now: Date, db: Db = prisma): Promise<Che
   }));
 }
 
-export type ScanRejection = CardRejection | "not_registered" | "registration_cancelled";
+export type ScanRejection =
+  CardRejection | "not_registered" | "registration_cancelled" | "waitlisted";
 
 export const scanRejectionMessages: Record<ScanRejection, string> = {
   ...cardRejectionMessages,
   not_registered:
     "Ce membre n’est pas inscrit à cette rencontre. Les inscriptions ferment au début de la rencontre : il ne peut pas être pointé.",
   registration_cancelled: "Ce membre a annulé son inscription à cette rencontre.",
+  waitlisted:
+    "Ce membre est sur la liste d’attente, pas inscrit : il ne peut pas être pointé tant qu’un responsable ne lui a pas donné de place.",
 };
 
 export type CheckInResult =
@@ -166,11 +169,9 @@ async function checkIn(
         },
       });
       if (registration.status !== "CONFIRMED") {
-        return {
-          ok: false,
-          reason: "registration_cancelled",
-          message: scanRejectionMessages.registration_cancelled,
-        };
+        const reason =
+          registration.status === "WAITLISTED" ? "waitlisted" : "registration_cancelled";
+        return { ok: false, reason, message: scanRejectionMessages[reason] };
       }
       const alreadyPaid = registration.payments.length > 0;
       const state = await applyAttendance(

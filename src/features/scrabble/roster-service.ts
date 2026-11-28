@@ -1,3 +1,4 @@
+import { lockEvent } from "@/features/events/registration-core";
 import { AppError } from "@/lib/errors";
 import { prisma, type Db } from "@/lib/prisma";
 import { runInTransaction } from "@/features/gamification/ledger";
@@ -36,6 +37,8 @@ async function assertTeam(tx: Db, tournament: LockedTournament, teamId: string |
  * responsable qui inscrit le joueur, la capacité de la rencontre n'est pas revérifiée.
  */
 async function registerToEvent(tx: Db, eventId: string, userId: string): Promise<boolean> {
+  // Même verrou que les inscriptions et la liste d'attente : jamais deux écritures croisées.
+  await lockEvent(tx, eventId);
   const existing = await tx.eventRegistration.findUnique({
     where: { eventId_userId: { eventId, userId } },
     select: { id: true, status: true, waitlistedAt: true },

@@ -191,6 +191,21 @@ export async function fillFreedSeats(
   return promotions;
 }
 
+/**
+ * Rattrapage avant de prendre une place ou d'entrer sur la liste : une place rendue par un invité
+ * qui n'a pas confirmé à temps (aucun geste ne la libère) revient d'abord à la liste d'attente.
+ * Dans sa propre transaction, validée même si le geste qui suit est refusé.
+ */
+export async function catchUpWaitlist(eventId: string, now: Date = new Date()): Promise<void> {
+  const { waitlistCutoffHours } = await loadClubSettings();
+  const result = await prisma.$transaction(async (tx) => {
+    const event = await lockEvent(tx, eventId);
+    if (!event) return null;
+    return { event, list: await fillFreedSeats(tx, event, now, waitlistCutoffHours, "catch-up") };
+  });
+  if (result) await sendPromotionMessages(result.event, result.list, now);
+}
+
 /** E-mails « une place s'est libérée », après la transaction. Échec : renvoyé par la tâche. */
 export async function sendPromotionMessages(
   event: LockedEvent,
@@ -230,6 +245,17 @@ export async function sendPromotionMessages(
   return sent;
 }
 
+/**
+ * Personnes en attente qui seront servies : membre actif, ou invité d'une rencontre encore
+ * ouverte au public (rangs, compte affiché). Même règle que `eligibleWhere`.
+ */
+const servable = {
+  OR: [
+    { userId: null, event: { isPublic: true } },
+    { user: { status: "ACTIVE" as const, archivedAt: null } },
+  ],
+};
+
 /** Rang (1 = la prochaine personne servie) d'une inscription en attente. */
 export async function waitlistPosition(
   registration: { id: string; eventId: string; waitlistedAt: Date },
@@ -239,9 +265,14 @@ export async function waitlistPosition(
     where: {
       eventId: registration.eventId,
       status: "WAITLISTED",
-      OR: [
-        { waitlistedAt: { lt: registration.waitlistedAt } },
-        { waitlistedAt: registration.waitlistedAt, id: { lt: registration.id } },
+      AND: [
+        servable,
+        {
+          OR: [
+            { waitlistedAt: { lt: registration.waitlistedAt } },
+            { waitlistedAt: registration.waitlistedAt, id: { lt: registration.id } },
+          ],
+        },
       ],
     },
   });
@@ -251,7 +282,7 @@ export async function waitlistPosition(
 /** Nombre de personnes en attente (avec un rang). */
 export function countWaitlisted(eventId: string, db: Db = prisma): Promise<number> {
   return db.eventRegistration.count({
-    where: { eventId, status: "WAITLISTED", waitlistedAt: { not: null } },
+    where: { eventId, status: "WAITLISTED", waitlistedAt: { not: null }, ...servable },
   });
 }
 
@@ -267,21 +298,41 @@ export async function getWaitlist(eventId: string) {
       guestEmail: true,
       waitlistedAt: true,
       createdAt: true,
-      user: { select: { name: true, email: true, memberNumber: true, status: true } },
+      user: {
+        select: { name: true, email: true, memberNumber: true, status: true, archivedAt: true },
+      },
+      event: { select: { isPublic: true } },
     },
   });
+  // Ne seront pas servis : compte suspendu ou archivé, invité d'une rencontre réservée aux membres.
+  const eligible = (r: (typeof rows)[number]) =>
+    r.user ? r.user.status === "ACTIVE" && !r.user.archivedAt : r.event.isPublic;
   // Les invités qui n'ont pas encore confirmé leur adresse viennent après, sans rang.
-  const ranked = rows.filter((r) => r.waitlistedAt !== null);
-  const unverified = rows.filter((r) => r.waitlistedAt === null);
+  const ranked = rows.filter((r) => r.waitlistedAt !== null && eligible(r));
+  const others = rows.filter((r) => r.waitlistedAt === null || !eligible(r));
   return [
-    ...ranked.map((r, index) => ({ ...r, position: (index + 1) as number | null })),
-    ...unverified.map((r) => ({ ...r, position: null as number | null })),
+    ...ranked.map((r, index) => ({
+      ...r,
+      position: (index + 1) as number | null,
+      blocked: null as string | null,
+    })),
+    ...others.map((r) => ({
+      ...r,
+      position: null as number | null,
+      blocked: !eligible(r)
+        ? r.user
+          ? "Compte inactif : ne recevra pas de place"
+          : "Rencontre réservée aux membres : ne recevra pas de place"
+        : null,
+    })),
   ];
 }
 
 export type JoinOutcome =
   | { outcome: "waitlisted"; position: number }
   | { outcome: "verify" }
+  /** Déjà inscrit : il vient d'obtenir une place depuis la liste. */
+  | { outcome: "registered" }
   /** Une place est libre : l'appelant inscrit directement. */
   | { outcome: "register" };
 
@@ -309,14 +360,18 @@ export async function joinWaitlistAsMember(
 ): Promise<JoinOutcome> {
   const now = new Date();
   const { waitlistCutoffHours } = await loadClubSettings();
+  await catchUpWaitlist(eventId, now);
   const { outcome, promotions, event } = await prisma.$transaction(async (tx) => {
     const event = await lockEvent(tx, eventId);
     if (!event) throw new AppError("NOT_FOUND", "Cette rencontre est introuvable.");
-    const promotions = await fillFreedSeats(tx, event, now, waitlistCutoffHours, "catch-up");
+    const promotions: Promotion[] = [];
     const existing = await tx.eventRegistration.findUnique({
       where: { eventId_userId: { eventId, userId: memberId } },
     });
     if (existing?.status === "CONFIRMED") {
+      // Il vient peut-être d'obtenir une place depuis la liste (rattrapage) : rien d'autre à faire.
+      if (existing.promotedAt)
+        return { outcome: { outcome: "registered" } as JoinOutcome, promotions, event };
       throw new AppError("CONFLICT", "Vous êtes déjà inscrit à cette rencontre.");
     }
     if (existing?.status === "WAITLISTED" && existing.waitlistedAt) {
@@ -368,10 +423,11 @@ export async function joinWaitlistAsGuest(
   const now = new Date();
   const { waitlistCutoffHours } = await loadClubSettings();
   const token = randomBytes(32).toString("base64url");
+  await catchUpWaitlist(eventId, now);
   const { outcome, promotions, event } = await prisma.$transaction(async (tx) => {
     const event = await lockEvent(tx, eventId);
     if (!event) throw new AppError("NOT_FOUND", "Cette rencontre est introuvable.");
-    const promotions = await fillFreedSeats(tx, event, now, waitlistCutoffHours, "catch-up");
+    const promotions: Promotion[] = [];
     const existing = await tx.eventRegistration.findUnique({
       where: { eventId_guestEmail: { eventId, guestEmail: guest.email } },
     });
@@ -536,11 +592,16 @@ async function resendPromotionMessages(now: Date): Promise<number> {
       sentAt: null,
       attempts: { lt: MAX_ATTEMPTS },
       OR: [{ claimedAt: null }, { claimedAt: { lt: new Date(now.getTime() - CLAIM_LEASE_MS) } }],
-      registration: { status: "CONFIRMED", event: { archivedAt: null, startsAt: { gt: now } } },
+      registration: {
+        status: "CONFIRMED",
+        promotedAt: { not: null },
+        event: { archivedAt: null, startsAt: { gt: now } },
+      },
     },
     select: {
       id: true,
       claimedAt: true,
+      eventStartsAt: true,
       registration: { select: { ...promotedSelect, eventId: true } },
     },
     take: 100,
@@ -563,8 +624,22 @@ async function resendPromotionMessages(now: Date): Promise<number> {
       },
     });
     if (count === 0) continue;
-    const event = await prisma.event.findUnique({ where: { id: registration.eventId } });
-    if (!event) continue;
+    // Relu juste avant l'envoi : toujours inscrit depuis la liste, pour le même horaire.
+    const [event, current] = await Promise.all([
+      prisma.event.findUnique({ where: { id: registration.eventId } }),
+      prisma.eventRegistration.findUnique({
+        where: { id: registration.id },
+        select: { status: true, promotedAt: true },
+      }),
+    ]);
+    if (
+      !event ||
+      current?.status !== "CONFIRMED" ||
+      !current.promotedAt ||
+      event.startsAt.getTime() !== mail.eventStartsAt.getTime()
+    ) {
+      continue;
+    }
     resent += await sendPromotionMessages(
       event,
       [
@@ -590,7 +665,7 @@ export async function getMyWaitlist(userId: string, now: Date) {
       userId,
       status: "WAITLISTED",
       waitlistedAt: { not: null },
-      event: { startsAt: { gte: now }, archivedAt: null, status: { not: "DRAFT" } },
+      event: { startsAt: { gte: now }, archivedAt: null, status: "PUBLISHED" },
     },
     orderBy: { event: { startsAt: "asc" } },
     select: {

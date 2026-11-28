@@ -36,6 +36,7 @@ const defaults = {
   guardianName: "",
   guardianPhone: "",
   consent: false,
+  mediaConsent: false,
   charter: false,
 } as unknown as MembershipRequestInput;
 
@@ -187,6 +188,11 @@ export function MembershipForm({ charterProvisional }: { charterProvisional: boo
           page Confidentialité
         </Link>
         .
+      </CheckboxField>
+      <CheckboxField form={form} name="mediaConsent" className="-mt-3">
+        J’accepte que le club publie des photos ou vidéos où je suis reconnaissable, ou mon
+        témoignage{" "}
+        <span className="text-gris">(facultatif, modifiable à tout moment dans mon profil)</span>.
       </CheckboxField>
       <CheckboxField form={form} name="charter" className="-mt-3">
         J’accepte la{" "}

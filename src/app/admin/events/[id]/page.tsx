@@ -31,7 +31,9 @@ async function EventAdmin({ params }: Pick<PageProps<"/admin/events/[id]">, "par
         registrations: {
           orderBy: { createdAt: "asc" },
           include: {
-            user: { select: { name: true, email: true, memberNumber: true } },
+            user: {
+              select: { name: true, email: true, memberNumber: true, mediaConsentAt: true },
+            },
             payments: {
               where: { kind: "SESSION_FEE", cancelledAt: null },
               select: { amount: true },
@@ -61,6 +63,7 @@ async function EventAdmin({ params }: Pick<PageProps<"/admin/events/[id]">, "par
             createdAt: registration.createdAt,
             present: registration.attendedAt !== null,
             paid: registration.payments.length > 0,
+            mediaConsent: registration.user ? registration.user.mediaConsentAt !== null : null,
           },
         ],
   );

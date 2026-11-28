@@ -396,6 +396,12 @@ Couche serveur : `src/features/assistant/` et `src/lib/llm/` ; décisions détai
 
 ## Contenus et confidentialité
 
+- Photos, vidéos et témoignages (cahier des charges § 11.2) : accord facultatif, demandé à
+  l'adhésion (case non cochée par défaut) et modifiable à tout moment dans le profil. Sans
+  accord, le club ne publie aucune image où la personne est reconnaissable, ni son témoignage.
+  Les responsables voient l'accord (et sa date) sur la fiche du membre et dans la liste des
+  inscrits d'une rencontre (« Pas d'accord » signalé). Les invités n'ont pas donné d'accord.
+
 | Règle                          | Valeur                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Avis publics (n° 9)            | Critique validée **et** accord du membre (« publier sous mon prénom »)                                                                                                                                                                                                                                                                                                                                                                                                                |

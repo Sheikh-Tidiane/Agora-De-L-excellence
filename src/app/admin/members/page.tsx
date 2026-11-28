@@ -24,6 +24,7 @@ async function Members({ searchParams }: Pick<PageProps<"/admin/members">, "sear
       id: true,
       firstName: true,
       lastName: true,
+      mediaConsentAt: true,
       email: true,
       phone: true,
       memberNumber: true,
@@ -94,6 +95,7 @@ async function Members({ searchParams }: Pick<PageProps<"/admin/members">, "sear
       cardOverdue: due.overdue,
       registrations: member._count.registrations,
       isSelf: member.id === user.id,
+      mediaConsentAt: member.mediaConsentAt,
     };
   });
 

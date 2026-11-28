@@ -65,6 +65,8 @@ export const membershipRequestSchema = z
     consent: z.boolean().refine((value) => value === true, {
       message: "Votre accord est nécessaire pour traiter la demande.",
     }),
+    /** Facultatif : publication de photos, vidéos ou témoignage identifiables. */
+    mediaConsent: z.boolean({ error: "Cochez ou décochez la case." }),
     charter: z.boolean().refine((value) => value === true, {
       message: "L’adhésion suppose d’accepter la charte du club.",
     }),

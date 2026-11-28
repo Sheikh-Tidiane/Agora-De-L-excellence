@@ -41,6 +41,7 @@ export const membershipValid = {
   guardianName: "",
   guardianPhone: "",
   consent: true,
+  mediaConsent: false,
   charter: true,
 };
 
@@ -128,6 +129,7 @@ export const publicCases: PublicCase[] = [
     {
       "charte non acceptée": { ...membershipValid, charter: false },
       "accord : chaîne": { ...membershipValid, consent: "true" },
+      "accord images : chaîne": { ...membershipValid, mediaConsent: "oui" },
       "tranche d'âge inconnue": { ...membershipValid, ageRange: "OVER_99" },
       "mineur sans parent ou tuteur": { ...membershipValid, ageRange: "UNDER_15" },
       "centre d'intérêt inconnu": { ...membershipValid, interests: ["hacking"] },

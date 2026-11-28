@@ -53,6 +53,13 @@ export default async function PrivacyPage() {
             inscriptions.
           </li>
           <li>
+            <strong>Photos, vidéos et témoignages</strong>&nbsp;: le club ne publie une image où
+            vous êtes reconnaissable, ou votre témoignage, qu’avec votre accord, donné (ou non) à
+            l’adhésion et modifiable à tout moment dans votre profil. Retirer votre accord arrête
+            toute nouvelle publication ; vous pouvez aussi demander le retrait de ce qui a été
+            publié.
+          </li>
+          <li>
             <strong>Avis après une rencontre</strong>&nbsp;: une note de 1 à 5 et, si vous le
             souhaitez, un commentaire. Ils ne sont jamais publiés.
           </li>

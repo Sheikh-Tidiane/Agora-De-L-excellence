@@ -148,6 +148,7 @@ describe("adhésion", () => {
     guardianName: "",
     guardianPhone: "",
     consent: true,
+    mediaConsent: false,
     charter: true,
   };
 

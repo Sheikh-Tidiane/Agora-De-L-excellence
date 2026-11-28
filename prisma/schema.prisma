@@ -41,6 +41,9 @@ model User {
   hiddenFromRankings Boolean    @default(false)
   /// Rappel par e-mail la veille des rencontres où il est inscrit (désactivable dans son profil).
   eventReminders     Boolean    @default(true)
+  /// Accord pour publier des photos, vidéos ou un témoignage où il est reconnaissable (cahier des
+  /// charges § 11.2) ; `null` : pas d'accord. Modifiable à tout moment dans son profil.
+  mediaConsentAt     DateTime?
   /// Carte de membre : numéro de série aléatoire porté (signé) par le QR code, sans lien avec
   /// l'identifiant ni le numéro de membre. Créé à la première émission. Voir features/members/card-token.ts.
   cardSerial         String?    @unique
@@ -252,6 +255,8 @@ model MembershipRequest {
   guardianPhone     String?
   /// Date du consentement au traitement des données (case obligatoire).
   consentAt         DateTime
+  /// Accord (facultatif) pour publier photos, vidéos ou témoignage identifiables ; `null` : non.
+  mediaConsentAt    DateTime?
   /// Version de la charte du club acceptée avec la demande (réglage `charter.version`).
   charterVersion    Int?
   charterAcceptedAt DateTime?

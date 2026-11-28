@@ -22,6 +22,7 @@ export async function getOwnProfile(userId: string) {
       memberNumber: true,
       hiddenFromRankings: true,
       eventReminders: true,
+      mediaConsentAt: true,
     },
   });
 }
@@ -30,12 +31,18 @@ export async function updateOwnProfile(
   userId: string,
   data: z.output<typeof ownProfileSchema>,
 ): Promise<void> {
+  // Accord pour les images : la date d'origine est gardée tant qu'il n'est pas retiré.
+  const current = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { mediaConsentAt: true },
+  });
   await prisma.user.update({
     where: { id: userId },
     data: {
       phone: data.phone,
       hiddenFromRankings: data.hiddenFromRankings,
       eventReminders: data.eventReminders,
+      mediaConsentAt: data.mediaConsent ? (current?.mediaConsentAt ?? new Date()) : null,
     },
   });
 }

@@ -13,6 +13,7 @@ const membershipValid = {
   guardianName: "",
   guardianPhone: "",
   consent: true,
+  mediaConsent: false,
   charter: true,
 };
 

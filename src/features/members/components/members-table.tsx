@@ -53,6 +53,8 @@ export type MemberRow = {
   daysSinceAcceptance: number | null;
   /** Carte non réglée et délai de grâce passé. */
   cardOverdue: boolean;
+  /** Accord pour publier photos, vidéos, témoignage ; `null` : pas d'accord. */
+  mediaConsentAt: Date | null;
 };
 
 const cardLabel = (row: MemberRow) =>
@@ -307,6 +309,11 @@ export function MembersTable({
                       open.card.receivedBy ? ` · reçu par ${open.card.receivedBy}` : ""
                     }`
                   : "Non réglée"}
+              </PanelRow>
+              <PanelRow label="Photos et témoignage">
+                {open.mediaConsentAt
+                  ? `Accord donné le ${formatDate(open.mediaConsentAt)}`
+                  : "Pas d’accord : ne pas publier d’image où il est reconnaissable"}
               </PanelRow>
               <PanelRow label="Inscriptions">
                 {open.registrations > 0 ? `${open.registrations} rencontre(s)` : "Aucune"}

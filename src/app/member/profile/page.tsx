@@ -82,6 +82,7 @@ async function Profile() {
               phone: profile.phone ?? "",
               hiddenFromRankings: profile.hiddenFromRankings,
               eventReminders: profile.eventReminders,
+              mediaConsent: profile.mediaConsentAt !== null,
             }}
           />
         </div>

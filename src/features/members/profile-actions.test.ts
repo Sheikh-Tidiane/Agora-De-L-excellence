@@ -40,6 +40,7 @@ describe("noms publics du Scrabble", () => {
       phone: "",
       hiddenFromRankings: true,
       eventReminders: true,
+      mediaConsent: false,
     });
     expect(result.ok).toBe(true);
     expect(tags).toContain(cacheTags.scrabble);

@@ -34,6 +34,14 @@ export function ProfileForm({ defaults }: { defaults: OwnProfileInput }) {
           Vos points restent comptés et visibles de vous seul.
         </span>
       </CheckboxField>
+      <CheckboxField form={form} name="mediaConsent" idPrefix="profil">
+        J’accepte que le club publie des photos ou vidéos où je suis reconnaissable, ou mon
+        témoignage
+        <span className="petit mt-0.5 block text-gris">
+          Sur le site et les réseaux du club. Décochez à tout moment : rien de nouveau ne sera
+          publié, et vous pouvez demander le retrait de ce qui l’a été.
+        </span>
+      </CheckboxField>
       <CheckboxField form={form} name="eventReminders" idPrefix="profil">
         Recevoir un rappel par e-mail la veille des rencontres où je suis inscrit
         <span className="petit mt-0.5 block text-gris">

@@ -77,6 +77,7 @@ export async function submitMembershipRequest(
       guardianName: data.guardianName || null,
       guardianPhone: data.guardianPhone,
       consentAt: now,
+      mediaConsentAt: data.mediaConsent ? now : null,
       charterVersion: charter.version,
       charterAcceptedAt: now,
     },
@@ -120,7 +121,11 @@ export async function approveMembershipRequest(
       actorId,
       tx,
     );
-    await tx.user.update({ where: { id: user.id }, data: { memberNumber } });
+    // L'accord pour les photos et témoignages donné à l'adhésion suit le membre (modifiable ensuite).
+    await tx.user.update({
+      where: { id: user.id },
+      data: { memberNumber, mediaConsentAt: request.mediaConsentAt },
+    });
     await tx.membership.create({
       data: {
         userId: user.id,

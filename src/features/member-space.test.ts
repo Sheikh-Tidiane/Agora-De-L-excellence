@@ -56,6 +56,7 @@ describe("profil modifié par le membre", () => {
       phone: "77 123 45 67",
       hiddenFromRankings: true,
       eventReminders: true,
+      mediaConsent: false,
     });
     expect(parsed.phone).toBe("+221771234567");
     expect(parsed.hiddenFromRankings).toBe(true);
@@ -63,26 +64,42 @@ describe("profil modifié par le membre", () => {
 
   it("efface le téléphone laissé vide", () => {
     expect(
-      ownProfileSchema.parse({ phone: "  ", hiddenFromRankings: false, eventReminders: true })
-        .phone,
+      ownProfileSchema.parse({
+        phone: "  ",
+        hiddenFromRankings: false,
+        eventReminders: true,
+        mediaConsent: false,
+      }).phone,
     ).toBeNull();
   });
 
   it("refuse un numéro invalide et un booléen forgé", () => {
     expect(
-      ownProfileSchema.safeParse({ phone: "abc", hiddenFromRankings: false, eventReminders: true })
-        .success,
+      ownProfileSchema.safeParse({
+        phone: "abc",
+        hiddenFromRankings: false,
+        eventReminders: true,
+        mediaConsent: false,
+      }).success,
     ).toBe(false);
     expect(
-      ownProfileSchema.safeParse({ phone: "", hiddenFromRankings: "true", eventReminders: true })
-        .success,
+      ownProfileSchema.safeParse({
+        phone: "",
+        hiddenFromRankings: "true",
+        eventReminders: true,
+        mediaConsent: false,
+      }).success,
     ).toBe(false);
   });
 
   it("rappels la veille : booléen exigé", () => {
     expect(
-      ownProfileSchema.parse({ phone: "", hiddenFromRankings: false, eventReminders: false })
-        .eventReminders,
+      ownProfileSchema.parse({
+        phone: "",
+        hiddenFromRankings: false,
+        eventReminders: false,
+        mediaConsent: false,
+      }).eventReminders,
     ).toBe(false);
     expect(
       ownProfileSchema.safeParse({ phone: "", hiddenFromRankings: false, eventReminders: "non" })
@@ -98,11 +115,17 @@ describe("profil modifié par le membre", () => {
       phone: "",
       hiddenFromRankings: false,
       eventReminders: true,
+      mediaConsent: false,
       firstName: "Autre",
       email: "autre@exemple.test",
       userId: "ckx1a2b3c4d5e6f7g8h9i0j1k",
     });
-    expect(Object.keys(parsed).sort()).toEqual(["eventReminders", "hiddenFromRankings", "phone"]);
+    expect(Object.keys(parsed).sort()).toEqual([
+      "eventReminders",
+      "hiddenFromRankings",
+      "mediaConsent",
+      "phone",
+    ]);
   });
 });
 

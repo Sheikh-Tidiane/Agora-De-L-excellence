@@ -18,5 +18,7 @@ export const ownProfileSchema = z.object({
   hiddenFromRankings: z.boolean(),
   /** Rappel par e-mail la veille des rencontres où il est inscrit. */
   eventReminders: z.boolean(),
+  /** Accord pour publier photos, vidéos ou témoignage où il est reconnaissable. */
+  mediaConsent: z.boolean(),
 });
 export type OwnProfileInput = z.input<typeof ownProfileSchema>;

@@ -118,6 +118,8 @@ export type RegistrantRow = {
   present: boolean;
   /** Participation à la séance encaissée. */
   paid: boolean;
+  /** Accord pour les photos (membre) ; `null` : invité, accord non recueilli. */
+  mediaConsent: boolean | null;
 };
 
 const statusLabels = {
@@ -244,6 +246,20 @@ export function RegistrantsTable({
       header: "Inscrit le",
       cell: (row) => <span className="tabular-nums">{formatDateTime(row.createdAt)}</span>,
       sort: (row) => row.createdAt.getTime(),
+      className: "max-lg:hidden",
+    },
+    {
+      key: "photos",
+      header: "Photos",
+      cell: (row) =>
+        row.mediaConsent === null ? (
+          <span className="text-gris">Non demandé</span>
+        ) : row.mediaConsent ? (
+          "Accord"
+        ) : (
+          <StatusPill tone="alerte">Pas d’accord</StatusPill>
+        ),
+      sort: (row) => (row.mediaConsent === null ? 1 : row.mediaConsent ? 2 : 0),
       className: "max-lg:hidden",
     },
     {

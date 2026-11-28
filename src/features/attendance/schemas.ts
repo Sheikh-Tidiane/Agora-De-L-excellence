@@ -12,6 +12,8 @@ export const scanRequestSchema = z.discriminatedUnion("mode", [
     paid: z.boolean(),
   }),
   z.object({ mode: z.literal("member"), eventId: id, userId: id, paid: z.boolean() }),
+  /** Invité sans compte : son inscription, choisie dans la liste. */
+  z.object({ mode: z.literal("guest"), eventId: id, registrationId: id, paid: z.boolean() }),
 ]);
 
 export const searchRequestSchema = z.object({

@@ -23,3 +23,14 @@ test("une fiche existante répond 200", async ({ page, request }) => {
   test.skip(!href, "Aucun livre dans la base de test.");
   expect((await request.get(href!)).status()).toBe(200);
 });
+
+// Pages fixes rangées sous /events (liens personnels des invités) : ni 404, ni renvoi vers la
+// connexion, même sans session (défaut corrigé).
+for (const path of ["/events/registration", "/events/avis"]) {
+  test(`${path} : ouverte sans session, ni 404 ni connexion`, async ({ page }) => {
+    const response = await page.goto(`${path}?token=${"x".repeat(43)}`);
+    expect(response?.status()).toBe(200);
+    await expect(page).toHaveURL(new RegExp(`^[^?]*${path}\\?token=`));
+    await expect(page.getByRole("heading", { name: "Ce lien n’est plus valable." })).toBeVisible();
+  });
+}

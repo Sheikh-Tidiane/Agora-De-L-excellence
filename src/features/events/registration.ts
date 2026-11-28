@@ -124,9 +124,10 @@ async function registrationIdByGuestToken(token: string, db: Db = prisma): Promi
   if (direct) return direct.id;
   const mail = await db.registrationMail.findUnique({
     where: { tokenHash: hash },
-    select: { registrationId: true },
+    select: { registrationId: true, kind: true },
   });
-  return mail?.registrationId ?? null;
+  // Le lien d'une demande d'avis ne sert qu'à donner son avis : jamais à gérer l'inscription.
+  return mail && mail.kind !== "FEEDBACK_REQUEST" ? mail.registrationId : null;
 }
 
 /**

@@ -15,8 +15,16 @@ vi.mock("@/lib/mail", () => ({
 }));
 
 const { sendFeedbackRequests } = await import("@/features/feedback/requests");
-const { saveMemberFeedback, hideFeedbackComment, restoreFeedbackComment, purgeFeedback } =
-  await import("@/features/feedback/service");
+const {
+  saveMemberFeedback,
+  saveGuestFeedback,
+  hideFeedbackComment,
+  restoreFeedbackComment,
+  purgeFeedback,
+} = await import("@/features/feedback/service");
+const { getGuestRegistration, cancelGuestRegistration } =
+  await import("@/features/events/registration");
+const { getGuestFeedbackPage } = await import("@/features/feedback/queries");
 const { getFeedbackOverview, getEventFeedback } = await import("@/features/feedback/queries");
 
 const reachable = await databaseReachable();
@@ -125,6 +133,74 @@ describe.skipIf(!reachable)("avis après les rencontres (base réelle)", () => {
     const late = await makeMember();
     await attend(event.id, late.id);
     expect((await run([event.id], new Date("2031-03-09T10:00:00Z"))).sent).toBe(0);
+  });
+
+  it("invité présent : lien personnel par e-mail, avis par ce lien seul ; le lien ne gère pas l'inscription", async () => {
+    const event = await makeEvent();
+    const guestEmail = `avis-invite-${tag}@e2e.agora.test`;
+    await db.eventRegistration.create({
+      data: {
+        eventId: event.id,
+        guestName: "Mariama Invitée",
+        guestEmail,
+        status: "CONFIRMED",
+        confirmedAt: START,
+        attendedAt: START,
+        checkInMethod: "MANUAL",
+      },
+    });
+    // Invité absent : pas d'invitation.
+    await db.eventRegistration.create({
+      data: {
+        eventId: event.id,
+        guestName: "Absent Invité",
+        guestEmail: `avis-absent-${tag}@e2e.agora.test`,
+        status: "CONFIRMED",
+        confirmedAt: START,
+      },
+    });
+    expect((await run([event.id])).sent).toBe(1);
+    expect(mail.sent.map((m) => m.to)).toEqual([guestEmail]);
+    const text = mail.sent[0]!.text;
+    expect(text).toContain("Ce lien vous est personnel");
+    const token = /\/events\/avis\?token=([\w-]+)/.exec(text)?.[1];
+    expect(token).toBeTruthy();
+    expect(text).not.toContain("/member/events/");
+    // Jeton haché en base, jamais en clair.
+    const stored = await db.registrationMail.findFirstOrThrow({
+      where: { registration: { guestEmail }, kind: "FEEDBACK_REQUEST" },
+    });
+    expect(stored.tokenHash).toBeTruthy();
+    expect(stored.tokenHash).not.toBe(token);
+
+    const page = await getGuestFeedbackPage(token!, 10);
+    expect(page).toMatchObject({ present: true, feedback: null, name: "Mariama Invitée" });
+    const inWindow = new Date("2031-03-07T09:00:00Z");
+    expect(
+      await saveGuestFeedback(token!, { rating: 4, comment: "Belle soirée" }, inWindow),
+    ).toEqual({
+      created: true,
+    });
+    expect(await saveGuestFeedback(token!, { rating: 5, comment: null }, inWindow)).toEqual({
+      created: false,
+    });
+    expect((await getGuestFeedbackPage(token!, 10))?.feedback?.rating).toBe(5);
+    // Fenêtre close : refus.
+    await expect(
+      saveGuestFeedback(token!, { rating: 3, comment: null }, new Date("2031-03-14T10:00:00Z")),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+    // Faux jeton : refus.
+    await expect(
+      saveGuestFeedback("x".repeat(43), { rating: 3, comment: null }, inWindow),
+    ).rejects.toMatchObject({ code: "INVALID_TOKEN" });
+    // Le lien d'avis ne permet ni de voir ni d'annuler l'inscription.
+    expect(await getGuestRegistration(token!)).toBeNull();
+    await expect(cancelGuestRegistration(token!)).rejects.toBeTruthy();
+    expect((await db.eventRegistration.findFirstOrThrow({ where: { guestEmail } })).status).toBe(
+      "CONFIRMED",
+    );
+    // Pas de notification (pas de compte).
+    expect(mail.sent).toHaveLength(1);
   });
 
   it("dépôt par le membre présent, modifiable 7 jours, une seule ligne même en parallèle ; refus pour un absent", async () => {

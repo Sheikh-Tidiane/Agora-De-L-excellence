@@ -5,6 +5,7 @@ import {
   type EventTypeCode,
 } from "@/config/activities";
 import { displayAverage, feedbackWindow } from "@/features/feedback/rules";
+import { registrationIdByFeedbackToken } from "@/features/feedback/service";
 import { prisma } from "@/lib/prisma";
 
 /** Lectures des avis. Données personnelles : jamais en cache, pages rendues à la demande. */
@@ -29,6 +30,47 @@ export async function getMyFeedbackPage(userId: string, slug: string, hour: numb
     event,
     present,
     feedback: present ? (registration?.feedback ?? null) : null,
+    window: feedbackWindow(event, hour),
+  };
+}
+
+/**
+ * Page « Donner mon avis » d'un invité, par le lien personnel reçu par e-mail. `null` si le lien
+ * n'est pas celui d'une demande d'avis, ou si la rencontre n'est plus visible.
+ */
+export async function getGuestFeedbackPage(token: string, hour: number) {
+  const registrationId = await registrationIdByFeedbackToken(token);
+  if (!registrationId) return null;
+  const registration = await prisma.eventRegistration.findUnique({
+    where: { id: registrationId },
+    select: {
+      status: true,
+      attendedAt: true,
+      guestName: true,
+      feedback: { select: { rating: true, comment: true, hiddenAt: true, updatedAt: true } },
+      event: {
+        select: {
+          id: true,
+          slug: true,
+          title: true,
+          startsAt: true,
+          endsAt: true,
+          location: true,
+          status: true,
+          archivedAt: true,
+        },
+      },
+    },
+  });
+  if (!registration) return null;
+  const { event } = registration;
+  if (event.archivedAt || !["PUBLISHED", "CLOSED"].includes(event.status)) return null;
+  const present = registration.status === "CONFIRMED" && registration.attendedAt !== null;
+  return {
+    event,
+    name: registration.guestName,
+    present,
+    feedback: present ? registration.feedback : null,
     window: feedbackWindow(event, hour),
   };
 }

@@ -51,6 +51,8 @@ import { prisma } from "@/lib/prisma";
 //     Affiche son adresse publique.
 //   tsx e2e/support/test-user.ts check-in <email> E2E-<titre>
 //     Inscrit le membre à cette rencontre et le pointe présent.
+//   tsx e2e/support/test-user.ts guest-check-in <email> E2E-<titre>
+//     Inscrit un invité (sans compte, nom « Mariama Invitée ») et le pointe présent.
 //   tsx e2e/support/test-user.ts send-feedback-requests E2E-<début du titre>
 //     Envoie les demandes d'avis pour ces seules rencontres ; affiche le bilan en JSON.
 //   tsx e2e/support/test-user.ts backdate-registrations E2E-<début du titre>
@@ -281,6 +283,19 @@ async function main() {
         checkInMethod: "MANUAL",
       },
       update: { status: "CONFIRMED", attendedAt: event.startsAt, checkInMethod: "MANUAL" },
+    });
+  } else if (command === "guest-check-in" && firstName?.startsWith("E2E-")) {
+    const event = await prisma.event.findFirstOrThrow({ where: { title: firstName } });
+    await prisma.eventRegistration.create({
+      data: {
+        eventId: event.id,
+        guestName: "Mariama Invitée",
+        guestEmail: email,
+        status: "CONFIRMED",
+        confirmedAt: event.startsAt,
+        attendedAt: event.startsAt,
+        checkInMethod: "MANUAL",
+      },
     });
   } else if (command === "send-feedback-requests" && email?.startsWith("E2E-")) {
     const { sendFeedbackRequests } = await import("@/features/feedback/requests");

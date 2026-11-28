@@ -75,7 +75,7 @@ Playwright du parcours, contrôle visuel à 375 px et 1440 px, `docs/REGLES-METI
   activité, taux de réponse, répartition des notes ; détail avec l'auteur ; masquage d'un
   commentaire avec motif (`feedback.moderate`), consigné au journal.
 - Conservation : 24 mois, puis commentaire et auteur effacés (tâche `purge-avis`) ; `/privacy`.
-- Les invités ne reçoivent pas encore de demande d'avis : leur présence ne se pointe pas.
+- Invités : voir « Compléments » ci-dessous (pointage au scan et avis par lien personnel).
 - Tests : `src/features/feedback/rules.test.ts`, `feedback.db.test.ts` (invitations en parallèle,
   un seul avis, 7 jours, absent refusé, masquage, agrégats multi-activités, purge), sécurité des
   actions et des réglages, parcours `e2e/avis-rencontres.spec.ts` à 375 et 1440 px.
@@ -93,3 +93,20 @@ Playwright du parcours, contrôle visuel à 375 px et 1440 px, `docs/REGLES-METI
   déploiement, déjà dans `scripts/deploy.sh`).
 - Tests : `src/features/stats/rules.test.ts`, `stats.db.test.ts` (jeu de données contrôlé),
   sécurité de la route CSV, parcours `e2e/statistiques.spec.ts` à 375 et 1440 px.
+
+## Compléments du cahier des charges
+
+- **Pages introuvables** : une adresse inconnue de livre, d'article, de rencontre ou de tournoi
+  répond un vrai « 404 Not Found » (contrôle dans `src/proxy.ts`, avant le rendu). Les pages fixes
+  `/events/registration` et `/events/avis` restent ouvertes sans session (défaut corrigé : elles
+  renvoyaient vers la connexion). Tests : `e2e/pages-introuvables.spec.ts`.
+- **Statistiques** : sections Lecture (livres terminés, genres), Scrabble (tournois, joueurs,
+  manches, score moyen) et renouvellements d'adhésion, dans la page, le CSV et la version
+  partenaires.
+- **Accord photos, vidéos et témoignages** : case facultative à l'adhésion et dans le profil
+  (`mediaConsentAt`), visible des responsables (fiche membre, liste des inscrits). `/privacy`.
+- **Pointage et avis des invités** : au scan, la recherche trouve les invités confirmés, pointés
+  à la main (sans carte ni points) ; le compteur des inscrits les compte. Le lendemain, l'invité
+  présent reçoit un lien personnel `/events/avis?token=…` (jeton haché, propre à la demande, sans
+  pouvoir sur l'inscription). Tests : `scan.db.test.ts`, `feedback.db.test.ts`, cas de sécurité de
+  l'action publique, parcours `e2e/scan-presence.spec.ts` et `e2e/avis-rencontres.spec.ts`.

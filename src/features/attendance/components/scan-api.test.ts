@@ -10,6 +10,7 @@ const scanned: ScanResponse = {
     memberNumber: "AG-0001",
     photoUrl: null,
     cardPaid: false,
+    guest: false,
   },
   registrationId: "r1",
   alreadyPresent: false,

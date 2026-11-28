@@ -94,7 +94,7 @@ export function ManualCheckIn({
             >
               {shown.map((match) => (
                 <li
-                  key={match.userId}
+                  key={match.registrationId}
                   className="flex min-h-16 items-center justify-between gap-3 py-2"
                 >
                   <div className="min-w-0">
@@ -102,7 +102,7 @@ export function ManualCheckIn({
                       {match.firstName} {match.lastName}
                     </p>
                     <p className="petit text-gris tabular-nums">
-                      {match.memberNumber ?? "Sans numéro"}
+                      {match.guest ? "Invité" : (match.memberNumber ?? "Sans numéro")}
                     </p>
                   </div>
                   {match.present ? (
@@ -115,7 +115,7 @@ export function ManualCheckIn({
                       variant="contour"
                       disabled={busy}
                       onClick={() => onPickMember(match)}
-                      aria-label={`Pointer ${match.firstName} ${match.lastName}`}
+                      aria-label={`Pointer ${[match.firstName, match.lastName].filter(Boolean).join(" ")}`}
                     >
                       Pointer
                     </Button>

@@ -163,6 +163,8 @@ export function feedbackRequestEmail(input: {
   date: string;
   url: string;
   closesAt: string;
+  /** Invité sans compte : le lien est personnel. */
+  guest?: boolean;
 }): MailMessage {
   return build(input.to, `Votre avis sur « ${input.title} »`, {
     preheader: "Une note, un mot si vous le souhaitez : deux minutes.",
@@ -176,6 +178,7 @@ export function feedbackRequestEmail(input: {
     notes: [
       `Vous pourrez le modifier jusqu’au ${input.closesAt}.`,
       "Dans l’esprit de la charte du club : critiquer les idées, jamais les personnes.",
+      ...(input.guest ? ["Ce lien vous est personnel : ne le transférez pas."] : []),
     ],
   });
 }

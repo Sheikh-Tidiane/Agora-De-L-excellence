@@ -16,12 +16,14 @@ import { publicPageExists, type PublicSection } from "@/lib/public-pages";
  */
 const PUBLIC_SHEET = /^\/(library|news|events|scrabble)\/([^/]+)$/;
 /** Pages fixes rangées sous ces préfixes : jamais des fiches. */
-const FIXED = new Set(["/events/registration"]);
+const FIXED = new Set(["/events/registration", "/events/avis"]);
 
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
+  // Pages publiques fixes (lien personnel d'un invité) : jamais de contrôle de session.
+  if (FIXED.has(pathname)) return NextResponse.next();
   const sheet = PUBLIC_SHEET.exec(pathname);
-  if (sheet && !FIXED.has(pathname)) {
+  if (sheet) {
     try {
       const exists = await publicPageExists(
         sheet[1] as PublicSection,

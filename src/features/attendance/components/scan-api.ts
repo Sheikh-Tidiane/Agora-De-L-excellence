@@ -11,6 +11,8 @@ export type ScanSuccess = {
     memberNumber: string | null;
     photoUrl: string | null;
     cardPaid: boolean;
+    /** Invité (sans compte) : pas de carte ni de points. */
+    guest: boolean;
   };
   registrationId: string;
   alreadyPresent: boolean;
@@ -26,7 +28,8 @@ export type ScanResponse = ScanSuccess | ScanRefusal;
 
 export type ScanRequest =
   | { mode: "token"; eventId: string; token: string; paid: boolean }
-  | { mode: "member"; eventId: string; userId: string; paid: boolean };
+  | { mode: "member"; eventId: string; userId: string; paid: boolean }
+  | { mode: "guest"; eventId: string; registrationId: string; paid: boolean };
 
 const offline: ScanRefusal = {
   ok: false,
@@ -53,7 +56,9 @@ export async function postScan(body: ScanRequest): Promise<ScanResponse> {
 }
 
 export type RegistrantMatch = {
-  userId: string;
+  registrationId: string;
+  guest: boolean;
+  userId: string | null;
   firstName: string;
   lastName: string;
   memberNumber: string | null;

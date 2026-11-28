@@ -19,6 +19,14 @@ const comment = z
 export const feedbackSchema = z.object({ eventId: id, rating, comment });
 export type FeedbackInput = z.input<typeof feedbackSchema>;
 
+/** Avis d'un invité présent, par le lien personnel de la demande d'avis. */
+export const guestFeedbackSchema = z.object({
+  token: z.string().min(16).max(200),
+  rating,
+  comment,
+});
+export type GuestFeedbackInput = z.input<typeof guestFeedbackSchema>;
+
 /** Masquer un commentaire : motif obligatoire ; `version` empêche d'écraser un geste concurrent. */
 export const hideFeedbackSchema = z.object({
   id,

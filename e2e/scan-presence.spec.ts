@@ -21,7 +21,7 @@ const fixture = (...args: string[]) =>
     .pop()!;
 
 type Person = { lastName: string; memberNumber: string; token: string };
-type Setup = { eventTitle: string; awa: Person; moussa: Person };
+type Setup = { eventTitle: string; awa: Person; moussa: Person; guestName: string };
 type Row = {
   firstName: string;
   present: boolean;
@@ -118,6 +118,18 @@ test("scan : carte, secours par recherche, participation et points", async ({
     await page.getByLabel("Chercher un inscrit").fill(setup.moussa.lastName);
     await expect(page.getByRole("list", { name: "Inscrits trouvés" })).toBeVisible();
     await shot("secours");
+
+    // 5. Un invité (sans compte ni carte) : trouvé par son nom, pointé à la main.
+    await page.getByLabel("Chercher un inscrit").fill(setup.guestName);
+    const found = page.getByRole("list", { name: "Inscrits trouvés" });
+    await expect(found.getByText("Invité", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: `Pointer ${setup.guestName}` }).click();
+    await expect(sheet.getByText("Saisie manuelle")).toBeVisible();
+    await expect(sheet.getByText(setup.guestName).first()).toBeVisible();
+    await expect(sheet.getByText("Invité", { exact: true }).first()).toBeVisible();
+    await shot("invite");
+    await next.click();
+    expect(JSON.parse(fixture("guest", stamp))).toEqual({ present: true, method: "MANUAL" });
 
     // En base : présence (méthode), une participation au montant du réglage, 20 points chacun.
     const rows = JSON.parse(fixture("inspect", stamp)) as Row[];

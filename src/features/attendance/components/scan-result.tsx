@@ -80,7 +80,7 @@ export function ScanResult({
             {member.lastName}
           </p>
           <p className="mt-2 font-semibold tracking-wide text-gris tabular-nums">
-            {member.memberNumber ?? "Sans numéro de membre"}
+            {member.guest ? "Invité" : (member.memberNumber ?? "Sans numéro de membre")}
           </p>
         </div>
       </div>
@@ -138,7 +138,7 @@ export function ScanResult({
           )}
         </Line>
         {/* Carte non réglée : le bandeau au-dessus tient lieu d'étiquette. */}
-        {member.cardPaid ? (
+        {member.cardPaid && !member.guest ? (
           <Line label="Carte de membre">
             <StatusPill tone="succes">Réglée</StatusPill>
           </Line>

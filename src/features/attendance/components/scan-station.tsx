@@ -198,12 +198,16 @@ export function ScanStation({
             busy={busy}
             refreshKey={refreshKey}
             onPickMember={(match) =>
-              void submit({
-                mode: "member",
-                eventId: event.id,
-                userId: match.userId,
-                paid: collect,
-              })
+              void submit(
+                match.guest || !match.userId
+                  ? {
+                      mode: "guest",
+                      eventId: event.id,
+                      registrationId: match.registrationId,
+                      paid: collect,
+                    }
+                  : { mode: "member", eventId: event.id, userId: match.userId, paid: collect },
+              )
             }
             onToken={(token) =>
               void submit({ mode: "token", eventId: event.id, token, paid: collect })

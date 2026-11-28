@@ -2,6 +2,7 @@ import { interestLabels } from "@/config/activities";
 import * as auth from "@/features/auth/actions";
 import * as contact from "@/features/contact/actions";
 import * as events from "@/features/events/actions";
+import * as feedback from "@/features/feedback/actions";
 import * as memberships from "@/features/memberships/actions";
 import type { ActionResult } from "@/lib/errors";
 import { ID, withProto } from "@/test/security-cases";
@@ -72,6 +73,7 @@ const f = {
   auth: "src/features/auth/actions.ts",
   contact: "src/features/contact/actions.ts",
   events: "src/features/events/actions.ts",
+  feedback: "src/features/feedback/actions.ts",
   memberships: "src/features/memberships/actions.ts",
 };
 
@@ -171,6 +173,18 @@ export const publicCases: PublicCase[] = [
     events.cancelGuestRegistrationAction,
     { token: TOKEN },
     tokenInvalid,
+  ),
+  publicCase(
+    `${f.feedback}#saveGuestFeedbackAction`,
+    feedback.saveGuestFeedbackAction,
+    { token: TOKEN, rating: 4, comment: "" },
+    {
+      ...tokenInvalid,
+      "note manquante": { token: TOKEN, comment: "" },
+      "note hors bornes": { token: TOKEN, rating: 9, comment: "" },
+      "note : chaîne": { token: TOKEN, rating: "5", comment: "" },
+      "commentaire géant": { token: TOKEN, rating: 4, comment: "x".repeat(5001) },
+    },
   ),
 ];
 

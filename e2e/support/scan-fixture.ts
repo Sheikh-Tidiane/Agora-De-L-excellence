@@ -66,7 +66,31 @@ async function setup(stamp: string, title: string) {
       ),
     };
   }
+  // Un invité inscrit sans compte : pointé par la recherche (pas de carte).
+  await prisma.eventRegistration.create({
+    data: {
+      eventId: event.id,
+      guestName: `Mariama Invitée${stamp}`,
+      guestEmail: `scan-invite-${stamp}@e2e.agora.test`,
+      status: "CONFIRMED",
+      confirmedAt: new Date(),
+    },
+  });
+  out.guestName = `Mariama Invitée${stamp}`;
   console.log(JSON.stringify(out));
+}
+
+async function guest(title: string) {
+  const registration = await prisma.eventRegistration.findFirstOrThrow({
+    where: { userId: null, event: { title } },
+    select: { attendedAt: true, checkInMethod: true },
+  });
+  console.log(
+    JSON.stringify({
+      present: Boolean(registration.attendedAt),
+      method: registration.checkInMethod,
+    }),
+  );
 }
 
 async function inspect(stamp: string, title: string) {
@@ -149,6 +173,7 @@ async function main() {
   const title = `E2E-Scan ${stamp}`;
   if (command === "setup") await setup(stamp, title);
   else if (command === "inspect") await inspect(stamp, title);
+  else if (command === "guest") await guest(title);
   else if (command === "cleanup") await cleanup(stamp, title);
   else throw new Error("Usage : scan-fixture.ts setup|inspect|cleanup <stamp>");
 }

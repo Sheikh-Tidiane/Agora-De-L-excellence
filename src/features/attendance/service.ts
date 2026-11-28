@@ -46,7 +46,7 @@ export async function listCheckInEvents(now: Date, db: Db = prisma): Promise<Che
   });
   const counts = await db.eventRegistration.groupBy({
     by: ["eventId"],
-    where: { eventId: { in: events.map((e) => e.id) }, status: "CONFIRMED", userId: { not: null } },
+    where: { eventId: { in: events.map((e) => e.id) }, status: "CONFIRMED" },
     _count: { _all: true, attendedAt: true },
   });
   const byEvent = new Map(counts.map((row) => [row.eventId, row._count]));
@@ -80,8 +80,10 @@ export type CheckInResult =
         lastName: string;
         memberNumber: string | null;
         photoUrl: string | null;
-        /** Carte de membre réglée (encaissement actif). */
+        /** Carte de membre réglée (encaissement actif). Invité : sans objet (`true`). */
         cardPaid: boolean;
+        /** Invité (sans compte) : pas de carte, pas de points. */
+        guest: boolean;
       };
       registrationId: string;
       /** Déjà pointé avant ce geste : rien n'a changé côté présence ni points. */
@@ -209,6 +211,7 @@ async function checkIn(
           memberNumber: user.memberNumber,
           photoUrl: user.image ? avatarUrl(user.image) : null,
           cardPaid: user.payments.length > 0,
+          guest: false,
         },
         registrationId: registration.id,
         alreadyPresent: registration.attendedAt !== null,
@@ -248,7 +251,10 @@ export async function manualCheckIn(
 }
 
 export type RegistrantMatch = {
-  userId: string;
+  registrationId: string;
+  /** Invité (sans compte) : pointé par son inscription. */
+  guest: boolean;
+  userId: string | null;
   firstName: string;
   lastName: string;
   memberNumber: string | null;
@@ -267,36 +273,135 @@ export async function searchRegistrants(
     where: {
       eventId,
       status: "CONFIRMED",
-      user: {
-        is: {
+      OR: [
+        {
+          user: {
+            is: {
+              AND: words.map((word) => ({
+                OR: [
+                  { firstName: { contains: word, mode: "insensitive" as const } },
+                  { lastName: { contains: word, mode: "insensitive" as const } },
+                  { memberNumber: { contains: word, mode: "insensitive" as const } },
+                ],
+              })),
+            },
+          },
+        },
+        // Invités : par leur nom.
+        {
+          userId: null,
           AND: words.map((word) => ({
-            OR: [
-              { firstName: { contains: word, mode: "insensitive" as const } },
-              { lastName: { contains: word, mode: "insensitive" as const } },
-              { memberNumber: { contains: word, mode: "insensitive" as const } },
-            ],
+            guestName: { contains: word, mode: "insensitive" as const },
           })),
         },
-      },
+      ],
     },
     take: 8,
-    orderBy: { user: { lastName: "asc" } },
+    orderBy: [{ user: { lastName: "asc" } }, { guestName: "asc" }],
     select: {
+      id: true,
       attendedAt: true,
+      guestName: true,
       user: { select: { id: true, firstName: true, lastName: true, memberNumber: true } },
     },
   });
-  return rows.flatMap((row) =>
+  return rows.map((row) =>
     row.user
-      ? [
-          {
-            userId: row.user.id,
-            firstName: row.user.firstName,
-            lastName: row.user.lastName,
-            memberNumber: row.user.memberNumber,
-            present: row.attendedAt !== null,
-          },
-        ]
-      : [],
+      ? {
+          registrationId: row.id,
+          guest: false,
+          userId: row.user.id,
+          firstName: row.user.firstName,
+          lastName: row.user.lastName,
+          memberNumber: row.user.memberNumber,
+          present: row.attendedAt !== null,
+        }
+      : {
+          registrationId: row.id,
+          guest: true,
+          userId: null,
+          firstName: row.guestName ?? "Invité",
+          lastName: "",
+          memberNumber: null,
+          present: row.attendedAt !== null,
+        },
+  );
+}
+
+/**
+ * Secours pour un invité (sans compte ni carte) : inscription choisie dans la liste, pointage
+ * `MANUAL`. Mêmes règles que pour un membre (rencontre du jour, inscription confirmée, participation)
+ * ; pas de points ni de carte.
+ */
+export async function guestCheckIn(
+  input: { eventId: string; registrationId: string; paid: boolean },
+  actorId: string,
+  rights: Rights,
+  now: Date = new Date(),
+): Promise<CheckInResult> {
+  if (!rights.attendance) throw new AppError("FORBIDDEN");
+  if (input.paid && !rights.payments) throw new AppError("FORBIDDEN");
+  await assertCheckInOpen(prisma, input.eventId, now);
+  const { sessionFee } = await loadClubSettings();
+  return prisma.$transaction(
+    async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "EventRegistration" WHERE id = ${input.registrationId} FOR UPDATE`;
+      const registration = await tx.eventRegistration.findUnique({
+        where: { id: input.registrationId },
+        select: {
+          id: true,
+          eventId: true,
+          userId: true,
+          guestName: true,
+          status: true,
+          attendedAt: true,
+          payments: { where: { kind: "SESSION_FEE", cancelledAt: null }, select: { id: true } },
+        },
+      });
+      if (!registration || registration.eventId !== input.eventId || registration.userId) {
+        return {
+          ok: false,
+          reason: "not_registered",
+          message: scanRejectionMessages.not_registered,
+        };
+      }
+      if (registration.status !== "CONFIRMED") {
+        const reason =
+          registration.status === "WAITLISTED" ? "waitlisted" : "registration_cancelled";
+        return { ok: false, reason, message: scanRejectionMessages[reason] };
+      }
+      const state = await applyAttendance(
+        tx,
+        {
+          registrationId: registration.id,
+          present: true,
+          paid: registration.payments.length > 0 || input.paid,
+          method: "MANUAL",
+        },
+        actorId,
+        rights,
+        { now, sessionFee },
+      );
+      return {
+        ok: true,
+        member: {
+          id: "",
+          firstName: registration.guestName ?? "Invité",
+          lastName: "",
+          memberNumber: null,
+          photoUrl: null,
+          cardPaid: true,
+          guest: true,
+        },
+        registrationId: registration.id,
+        alreadyPresent: registration.attendedAt !== null,
+        attendedAt: state.attendedAt!,
+        method: state.checkInMethod ?? "MANUAL",
+        paid: state.paid,
+        pointsAwarded: state.pointsAwarded,
+        badges: state.badges,
+      };
+    },
+    { timeout: 15_000 },
   );
 }

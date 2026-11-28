@@ -131,3 +131,49 @@ test("avis : invitation le lendemain, dépôt et modification, lecture et masqua
     testUser("delete", adminEmail);
   }
 });
+
+test("avis d'un invité : lien personnel reçu par e-mail, dépôt, modification ; lien sans pouvoir sur l'inscription", async ({
+  page,
+  request,
+  isMobile,
+}) => {
+  test.setTimeout(180_000);
+  const stamp = Date.now();
+  const width = isMobile ? 375 : 1440;
+  const title = `E2E-AvisInvite-${stamp}-${width}`;
+  const guestEmail = `avis-invite-${stamp}-${width}@e2e.agora.test`;
+  await page.setViewportSize({ width, height: isMobile ? 812 : 900 });
+  try {
+    tool("create-feedback-event", title);
+    testUser("guest-check-in", guestEmail, title);
+    expect(JSON.parse(tool("send-feedback-requests", title))).toMatchObject({ sent: 1 });
+    const link = await linkFromEmail(request, {
+      to: guestEmail,
+      subject: "Votre avis sur",
+      path: "/events/avis",
+    });
+    await page.goto(link);
+    await expect(
+      page.getByRole("heading", { name: "Qu’avez-vous pensé de cette rencontre ?" }),
+    ).toBeVisible();
+    await expect(page.getByText(title)).toBeVisible();
+    await page.getByLabel("3 sur 5 : Bien").locator("..").click();
+    await page.getByLabel("Votre commentaire").fill("Accueil chaleureux pour une première fois.");
+    await noHorizontalScroll(page);
+    await page.screenshot({ path: `docs/captures/avis/${width}-invite.png`, fullPage: true });
+    await page.getByRole("button", { name: "Envoyer mon avis" }).click();
+    await expect(page.getByText(/Merci ! Votre avis est enregistré/)).toBeVisible();
+    await page.reload();
+    await expect(page.getByLabel("3 sur 5 : Bien")).toBeChecked();
+    await expect(page.getByRole("button", { name: "Modifier mon avis" })).toBeVisible();
+
+    // Le même jeton ne donne pas accès à la page de l'inscription (ni à son annulation).
+    await page.goto(link.replace("/events/avis", "/events/registration"));
+    await expect(page.getByRole("heading", { name: "Ce lien n’est plus valable." })).toBeVisible();
+    // Un faux jeton : lien refusé.
+    await page.goto("/events/avis?token=" + "x".repeat(43));
+    await expect(page.getByRole("heading", { name: "Ce lien n’est plus valable." })).toBeVisible();
+  } finally {
+    testUser("delete-events", title);
+  }
+});

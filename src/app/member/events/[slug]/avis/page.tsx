@@ -66,7 +66,7 @@ async function MyFeedback({ params }: Pick<PageProps<"/member/events/[slug]/avis
               {closesAt}.
             </p>
             <FeedbackForm
-              eventId={event.id}
+              target={{ eventId: event.id }}
               initial={
                 feedback ? { rating: feedback.rating, comment: feedback.comment ?? "" } : null
               }

@@ -3,7 +3,7 @@ import { databaseReachable, realPrisma as db, uniq } from "@/test/real-db";
 
 vi.mock("@/lib/prisma", async () => ({ prisma: (await import("@/test/real-db")).realPrisma }));
 
-const { listCheckInEvents, manualCheckIn, scanCardCheckIn, searchRegistrants } =
+const { guestCheckIn, listCheckInEvents, manualCheckIn, scanCardCheckIn, searchRegistrants } =
   await import("@/features/attendance/service");
 const { issueCardToken, revokeCardToken } = await import("@/features/members/card-service");
 const { recordAttendance, recordCardPayment } = await import("@/features/payments/service");
@@ -339,6 +339,58 @@ describe.skipIf(!reachable)("scan des présences (base réelle)", () => {
       all,
     );
     expect(await points(gora.id)).toBe(20);
+  });
+
+  it("invité : trouvé par son nom, pointé par son inscription, sans points ni carte ; refusé ailleurs", async () => {
+    const guest = await db.eventRegistration.create({
+      data: {
+        eventId: today.id,
+        guestName: `Moussa Invité${tag}`,
+        guestEmail: `vitest-scan-invite-${tag}@test.localhost`,
+        status: "CONFIRMED",
+        confirmedAt: new Date(),
+      },
+    });
+    const found = await searchRegistrants(today.id, `invité${tag}`);
+    expect(found).toEqual([
+      expect.objectContaining({
+        registrationId: guest.id,
+        guest: true,
+        userId: null,
+        present: false,
+      }),
+    ]);
+    const result = await guestCheckIn(
+      { eventId: today.id, registrationId: guest.id, paid: true },
+      actor.id,
+      all,
+    );
+    expect(result).toMatchObject({
+      ok: true,
+      member: { guest: true, firstName: `Moussa Invité${tag}` },
+      alreadyPresent: false,
+      paid: true,
+      pointsAwarded: 0,
+    });
+    expect(await db.eventRegistration.findUniqueOrThrow({ where: { id: guest.id } })).toMatchObject(
+      {
+        checkInMethod: "MANUAL",
+        checkedInById: actor.id,
+      },
+    );
+    // Une inscription d'une autre rencontre, ou d'un membre, n'est pas pointée par ce chemin.
+    const other = await makeEvent("autre-invite", new Date());
+    expect(
+      await guestCheckIn(
+        { eventId: other.id, registrationId: guest.id, paid: false },
+        actor.id,
+        all,
+      ),
+    ).toMatchObject({ ok: false, reason: "not_registered" });
+    await db.eventRegistration.update({ where: { id: guest.id }, data: { status: "CANCELLED" } });
+    // La rencontre d'essai ne doit pas compter parmi les rencontres du jour des autres tests.
+    await db.event.delete({ where: { id: other.id } });
+    events.splice(events.indexOf(other.id), 1);
   });
 
   it("rencontres du jour et recherche d'un inscrit confirmé (nom, numéro)", async () => {

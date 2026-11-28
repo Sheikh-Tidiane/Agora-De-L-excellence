@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Field, Textarea } from "@/components/ui/field";
 import { FormError, FormNotice } from "@/features/auth/components/form-parts";
-import { saveFeedbackAction } from "@/features/feedback/actions";
+import { saveFeedbackAction, saveGuestFeedbackAction } from "@/features/feedback/actions";
 import { COMMENT_MAX } from "@/features/feedback/rules";
 import { cn } from "@/lib/utils";
 
@@ -17,12 +17,13 @@ const labels = ["Décevante", "Moyenne", "Bien", "Très bien", "Excellente"];
  * facultatif. Le même formulaire sert à modifier l'avis tant que la fenêtre est ouverte.
  */
 export function FeedbackForm({
-  eventId,
+  target,
   initial,
   commentLocked,
   closesAt,
 }: {
-  eventId: string;
+  /** Membre connecté : la rencontre ; invité : le jeton de son lien personnel. */
+  target: { eventId: string } | { token: string };
   initial: { rating: number; comment: string } | null;
   /** Commentaire masqué par un responsable : il ne peut plus être modifié. */
   commentLocked: boolean;
@@ -48,7 +49,10 @@ export function FeedbackForm({
         }
         setErrors({});
         startTransition(async () => {
-          const result = await saveFeedbackAction({ eventId, rating, comment });
+          const result =
+            "token" in target
+              ? await saveGuestFeedbackAction({ token: target.token, rating, comment })
+              : await saveFeedbackAction({ eventId: target.eventId, rating, comment });
           if (result.ok) {
             setSaved(true);
             router.refresh();

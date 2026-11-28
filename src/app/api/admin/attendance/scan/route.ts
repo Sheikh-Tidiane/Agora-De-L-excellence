@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { failureResponse } from "@/features/attendance/http";
 import { scanRequestSchema } from "@/features/attendance/schemas";
-import { manualCheckIn, scanCardCheckIn } from "@/features/attendance/service";
+import { guestCheckIn, manualCheckIn, scanCardCheckIn } from "@/features/attendance/service";
 import { parseInput } from "@/lib/errors";
 import { can, requirePermission } from "@/lib/permissions";
 import { enforceRateLimit } from "@/lib/rate-limit";
@@ -24,7 +24,9 @@ export async function POST(request: Request) {
     const result =
       input.mode === "token"
         ? await scanCardCheckIn(input, actor.id, rights)
-        : await manualCheckIn(input, actor.id, rights);
+        : input.mode === "guest"
+          ? await guestCheckIn(input, actor.id, rights)
+          : await manualCheckIn(input, actor.id, rights);
     return NextResponse.json(result, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     return failureResponse(error, "attendance.scan");

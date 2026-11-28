@@ -1,4 +1,5 @@
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
+import { hashToken } from "@/features/auth/service";
 import { feedbackWindow, requestDue } from "@/features/feedback/rules";
 import { createNotifications } from "@/features/notifications/service";
 import { loadClubSettings } from "@/features/settings/club";
@@ -38,7 +39,11 @@ export async function sendFeedbackRequests(
       status: "CONFIRMED",
       attendedAt: { not: null },
       feedback: null,
-      user: { status: "ACTIVE", archivedAt: null },
+      // Membres actifs, et invités (lien personnel par e-mail).
+      OR: [
+        { user: { status: "ACTIVE", archivedAt: null } },
+        { userId: null, guestEmail: { not: null } },
+      ],
       ...(scope.eventIds ? { eventId: { in: scope.eventIds } } : {}),
       event: {
         status: { in: ["PUBLISHED", "CLOSED"] },
@@ -51,6 +56,8 @@ export async function sendFeedbackRequests(
     select: {
       id: true,
       userId: true,
+      guestName: true,
+      guestEmail: true,
       user: { select: { firstName: true, email: true } },
       event: { select: { slug: true, title: true, startsAt: true, endsAt: true } },
     },
@@ -63,17 +70,21 @@ export async function sendFeedbackRequests(
 
   for (const registration of due) {
     const { event } = registration;
-    const claimed = await claim(registration.id, event.startsAt, now);
+    const guest = registration.userId === null;
+    const token = guest ? randomBytes(32).toString("base64url") : null;
+    const claimed = await claim(registration.id, event.startsAt, now, token && hashToken(token));
     if (!claimed) {
       run.skipped += 1;
       continue;
     }
     const window = feedbackWindow(event, settings.feedbackRequestHour);
     const closesAt = `${formatFullDate(window.closesAt)} à ${formatTime(window.closesAt)}`;
-    const url = `${env.APP_URL}/member/events/${event.slug}/avis`;
+    const url = token
+      ? `${env.APP_URL}/events/avis?token=${token}`
+      : `${env.APP_URL}/member/events/${event.slug}/avis`;
     // Notification dans l'espace membre, une seule fois (première tentative), même si l'e-mail
     // échoue : le membre est prévenu par au moins un canal.
-    if (claimed.attempts === 1) {
+    if (claimed.attempts === 1 && registration.userId) {
       await createNotifications([
         {
           userId: registration.userId!,
@@ -87,12 +98,13 @@ export async function sendFeedbackRequests(
     try {
       await sendMail(
         feedbackRequestEmail({
-          to: registration.user!.email,
-          name: registration.user!.firstName,
+          to: registration.user?.email ?? registration.guestEmail!,
+          name: registration.user?.firstName ?? registration.guestName ?? "",
           title: event.title,
           date: formatFullDate(event.startsAt),
           url,
           closesAt,
+          guest,
         }),
       );
     } catch (error) {
@@ -122,17 +134,21 @@ async function claim(
   registrationId: string,
   startsAt: Date,
   now: Date,
+  tokenHash: string | null,
 ): Promise<{ id: string; attempts: number } | null> {
   const leaseEnd = new Date(now.getTime() - LEASE_MINUTES * 60_000);
   const rows = await prisma.$queryRaw<{ id: string; attempts: number }[]>`
     INSERT INTO "RegistrationMail"
-      ("id", "registrationId", "kind", "eventStartsAt", "claimedAt", "attempts", "updatedAt")
-    SELECT ${randomUUID()}, r."id", 'FEEDBACK_REQUEST', e."startsAt", ${now}, 1, ${now}
+      ("id", "registrationId", "kind", "eventStartsAt", "claimedAt", "attempts", "tokenHash", "updatedAt")
+    SELECT ${randomUUID()}, r."id", 'FEEDBACK_REQUEST', e."startsAt", ${now}, 1, ${tokenHash}, ${now}
     FROM "EventRegistration" r
       JOIN "Event" e ON e."id" = r."eventId"
-      JOIN "User" u ON u."id" = r."userId"
+      LEFT JOIN "User" u ON u."id" = r."userId"
     WHERE r."id" = ${registrationId} AND r."status" = 'CONFIRMED' AND r."attendedAt" IS NOT NULL
-      AND u."status" = 'ACTIVE' AND u."archivedAt" IS NULL
+      AND (
+        (r."userId" IS NULL AND r."guestEmail" IS NOT NULL)
+        OR (u."status" = 'ACTIVE' AND u."archivedAt" IS NULL)
+      )
       AND e."status" IN ('PUBLISHED', 'CLOSED') AND e."archivedAt" IS NULL
       AND e."startsAt" = ${startsAt}
       AND NOT EXISTS (SELECT 1 FROM "EventFeedback" f WHERE f."registrationId" = r."id")
@@ -145,6 +161,7 @@ async function claim(
     ON CONFLICT ("registrationId", "kind", "eventStartsAt") DO UPDATE
       SET "claimedAt" = EXCLUDED."claimedAt",
           "attempts" = "RegistrationMail"."attempts" + 1,
+          "tokenHash" = EXCLUDED."tokenHash",
           "updatedAt" = EXCLUDED."updatedAt"
       WHERE "RegistrationMail"."sentAt" IS NULL
         AND "RegistrationMail"."attempts" < ${MAX_ATTEMPTS}

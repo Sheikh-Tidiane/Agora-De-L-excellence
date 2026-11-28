@@ -1,3 +1,4 @@
+import { hashToken } from "@/features/auth/service";
 import { canSubmit, feedbackWindow } from "@/features/feedback/rules";
 import { loadClubSettings } from "@/features/settings/club";
 import { rules } from "@/config/rules";
@@ -21,13 +22,48 @@ export async function saveMemberFeedback(
   input: { eventId: string; rating: number; comment: string | null },
   now: Date = new Date(),
 ): Promise<{ created: boolean }> {
+  const found = await prisma.eventRegistration.findUnique({
+    where: { eventId_userId: { eventId: input.eventId, userId } },
+    select: { id: true },
+  });
+  if (!found) throw new AppError("NOT_FOUND", "Rencontre introuvable.");
+  return saveRegistrationFeedback(found.id, input, now);
+}
+
+/**
+ * Invité présent (sans compte) : avis depuis le lien personnel reçu par e-mail. Seul un jeton de
+ * demande d'avis est accepté (jamais celui de l'inscription ou d'un rappel).
+ */
+export async function saveGuestFeedback(
+  token: string,
+  input: { rating: number; comment: string | null },
+  now: Date = new Date(),
+): Promise<{ created: boolean }> {
+  const registrationId = await registrationIdByFeedbackToken(token);
+  if (!registrationId) {
+    throw new AppError("INVALID_TOKEN", "Ce lien n’est plus valable.");
+  }
+  return saveRegistrationFeedback(registrationId, input, now);
+}
+
+/** Inscription désignée par le jeton d'une demande d'avis (haché en base), ou `null`. */
+export async function registrationIdByFeedbackToken(token: string): Promise<string | null> {
+  if (!token || token.length < 16 || token.length > 200) return null;
+  const mail = await prisma.registrationMail.findUnique({
+    where: { tokenHash: hashToken(token) },
+    select: { kind: true, registrationId: true },
+  });
+  return mail?.kind === "FEEDBACK_REQUEST" ? mail.registrationId : null;
+}
+
+async function saveRegistrationFeedback(
+  registrationId: string,
+  input: { rating: number; comment: string | null },
+  now: Date,
+): Promise<{ created: boolean }> {
   const { feedbackRequestHour } = await loadClubSettings();
   return prisma.$transaction(async (tx) => {
-    const found = await tx.eventRegistration.findUnique({
-      where: { eventId_userId: { eventId: input.eventId, userId } },
-      select: { id: true },
-    });
-    if (!found) throw new AppError("NOT_FOUND", "Rencontre introuvable.");
+    const found = { id: registrationId };
     // Verrou de l'inscription : deux envois simultanés ne créent jamais deux avis.
     await tx.$queryRaw`SELECT id FROM "EventRegistration" WHERE id = ${found.id} FOR UPDATE`;
     const registration = await tx.eventRegistration.findUniqueOrThrow({
